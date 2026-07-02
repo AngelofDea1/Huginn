@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Huginn — Your World Cup in WhatsApp</title>
+  <meta name="description"
+    content="Live World Cup alerts in your WhatsApp group. Goals, red cards, odds shifts, AI commentary. No app. No signup. Just football." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Tourney:wght@600;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="/css/shared.css" />
+  <link rel="stylesheet" href="/css/pill-nav.css" />
+  <style>
+    /* ── HERO ─────────────────────────────────────────────────────────────────── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding-top: 140px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-glow {
+      position: absolute;
+      width: 700px;
+      height: 700px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0, 230, 118, 0.06) 0%, transparent 70%);
+      top: 30%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .hero-content {
+      max-width: 800px;
+      margin: 0 auto;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      z-index: 2;
+    }
+
+    .hero-image-wrap {
+      width: 100%;
+      max-width: 680px;
+      margin-bottom: 54px;
+      position: relative;
+      display: flex;
+      justify-content: center;
+    }
+
+    .hero-image-wrap::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 120px;
+      background: linear-gradient(to top, var(--black) 10%, transparent 100%);
+      pointer-events: none;
+    }
+
+    .hero-main-img {
+      width: 100%;
+      height: auto;
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8), 0 0 50px rgba(0, 230, 118, 0.04);
+    }
+
+    .hero-title {
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      margin-bottom: 24px;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+    }
+
+    .hero-title .accent {
+      color: var(--green);
+    }
+
+    .hero-desc {
+      font-size: 1.15rem;
+      color: var(--muted);
+      line-height: 1.6;
+      max-width: 600px;
+      margin-bottom: 40px;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 80px;
+    }
+
+    /* ── BOTTOM FEATURE STRIP ────────────────────────────────────────────────── */
+    .feature-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      width: 100%;
+      background: var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      margin-top: 20px;
+    }
+
+    .feature-strip-item {
+      background: var(--surface);
+      padding: 36px 28px;
+      text-align: center;
+      transition: background 0.2s;
+    }
+
+    .feature-strip-item:hover {
+      background: var(--card);
+    }
+
+    .fsi-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      color: var(--green);
+      margin-bottom: 12px;
+      letter-spacing: 0.08em;
+    }
+
+    .fsi-title {
+      font-family: 'Tourney', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: 8px;
+    }
+
+    .fsi-desc {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    /* ── RESPONSIVE ──────────────────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .hero {
+        padding-top: 100px;
+      }
+      .hero-image-wrap {
+        margin-bottom: 36px;
+      }
+      .hero-actions {
+        flex-direction: column;
+        width: 100%;
+        gap: 12px;
+      }
+      .hero-actions .btn-primary,
+      .hero-actions .btn-secondary {
+        width: 100%;
+        justify-content: center;
+      }
+      .feature-strip {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- PillNav injected by JS -->
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-glow"></div>
+    <div class="container">
+      <div class="hero-content">
+        
+        <!-- Premium mockup showcase visual -->
+        <div class="hero-image-wrap">
+          <img src="/hero_phone_visual_1783010156845.png" alt="Huginn WhatsApp Live Feed Mockup" class="hero-main-img" />
+        </div>
+
+        <h1 class="display hero-title">
+          Live updates in your group chat
+        </h1>
+        <p class="hero-desc">
+          Goals, red cards, and odds shifts pushed to your WhatsApp group the moment they happen. No app. No feed. Just the chat.
+        </p>
+        <div class="hero-actions">
+          <a href="/demo.html" class="btn-primary" style="padding: 16px 36px; font-size: 1rem;">Open Web Console</a>
+          <a href="/features.html" class="btn-secondary" style="padding: 16px 36px; font-size: 1rem;">See how it works</a>
+        </div>
+
+      </div>
+
+      <!-- Bottom feature strip -->
+      <div class="feature-strip">
+        <div class="feature-strip-item">
+          <div class="fsi-num">01</div>
+          <div class="fsi-title">Drop it in any group</div>
+          <p class="fsi-desc">Works in any existing WhatsApp group. No new chat, no extra setup. Add the bot number as a contact and invite it.</p>
+        </div>
+        <div class="feature-strip-item">
+          <div class="fsi-num">02</div>
+          <div class="fsi-title">One command to start</div>
+          <p class="fsi-desc">Type <span class="mono" style="color:var(--green);font-size:0.85em">/follow Brazil</span> and the bot tracks that team for the rest of the tournament. Follow multiple teams simultaneously.</p>
+        </div>
+        <div class="feature-strip-item">
+          <div class="fsi-num">03</div>
+          <div class="fsi-title">Everything else is automatic</div>
+          <p class="fsi-desc">Pre-match previews, live goal alerts, red card notifications, odds movements, half-time stats, and full-time wraps. All unprompted.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <div class="cta-glow"></div>
+    <div class="container" style="text-align:center">
+      <h2 class="display cta-title">The match starts at <span style="color:var(--green)">20:00.</span></h2>
+      <p class="cta-desc">Open the Web Console, follow any team, and watch the alerts come through in real time.</p>
+      <a href="/demo.html" class="btn-primary" style="display:inline-flex;font-size:1rem;padding:16px 36px">
+        Open the Console
+      </a>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="container">
+      <div class="footer-inner">
+        <a href="/" class="footer-logo">Huginn</a>
+        <p class="footer-note">World Cup 2026 · Built on TxLINE</p>
+        <div class="footer-links">
+          <a href="https://txline.txodds.com/documentation/worldcup" target="_blank">TxLINE</a>
+          <a href="/features.html">Features</a>
+          <a href="/commands.html">Commands</a>
+          <a href="/demo.html">Console</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="/js/pill-nav.js"></script>
+  <script>
+    initPillNav({
+      activeHref: '/',
+      baseColor: '#0d0d1a',
+      pillColor: 'rgba(255,255,255,0.06)',
+      pillTextColor: '#f0f0f8',
+      hoveredPillTextColor: '#080810',
+    });
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,235 @@
+/**
+ * chat.js - Web chat API handler
+ *
+ * Gives web users the same bot experience as WhatsApp users,
+ * without exposing any phone number.
+ */
+
+import { getLiveMatches, getUpcomingMatches, searchMatch, getFixtureSchedule } from '../services/txline.js';
+import {
+  registerGroup, getGroup, setGroupVibe,
+  followMatch, unfollowMatch, initMatchState
+} from '../utils/store.js';
+import { log } from '../utils/logger.js';
+import { VIBES } from '../services/ai.js';
+
+// Each web session gets a unique "session ID" as their group identifier
+// so their follows/vibes are tracked independently of WhatsApp users
+
+/**
+ * POST /api/chat  { sessionId: string, message: string }
+ * Returns: { reply: string }
+ */
+export async function handleChatMessage(req, res) {
+  try {
+    const { sessionId, message } = req.body;
+
+    if (!sessionId || !message) {
+      return res.status(400).json({ error: 'sessionId and message are required' });
+    }
+
+    const text = String(message).trim();
+    if (!text) return res.status(400).json({ error: 'Empty message' });
+
+    log.info(`[Web] Session ${sessionId}: ${text}`);
+
+    const reply = await routeWebCommand(sessionId, text);
+    return res.json({ reply });
+
+  } catch (err) {
+    log.error('Chat API error:', err.message);
+    return res.status(500).json({ reply: '⚽ Something went wrong. Please try again!' });
+  }
+}
+
+/**
+ * GET /api/live  - returns current live matches for the scoreboard panel
+ */
+export async function getLiveMatchesAPI(req, res) {
+  try {
+    const live = await getLiveMatches();
+    const upcoming = await getUpcomingMatches(6);
+    return res.json({ live, upcoming });
+  } catch (err) {
+    log.error('Live matches API error:', err.message);
+    return res.json({ live: [], upcoming: [] });
+  }
+}
+
+// ─── Command router (mirrors webhook.js but returns text instead of sending WhatsApp) ───
+
+async function routeWebCommand(sessionId, text) {
+  const lower = text.toLowerCase().trim();
+
+  // Register session on first contact
+  registerGroup(sessionId, 'Web User');
+
+  if (lower === 'hi' || lower === 'hello' || lower === '/help' || lower === 'help') {
+    return helpText();
+  }
+  if (lower.startsWith('/follow') || lower.startsWith('follow')) {
+    return handleFollow(sessionId, text);
+  }
+  if (lower.startsWith('/unfollow') || lower.startsWith('unfollow')) {
+    return handleUnfollow(sessionId, text);
+  }
+  if (lower.startsWith('/vibe') || lower.startsWith('vibe')) {
+    return handleVibe(sessionId, text);
+  }
+  if (lower === '/status' || lower === 'status') {
+    return handleStatus(sessionId);
+  }
+  if (lower === '/live' || lower === 'live' || lower === 'matches') {
+    return handleLive();
+  }
+  if (lower === '/schedule' || lower === 'schedule' || lower === '/fixtures' || lower === 'fixtures') {
+    return handleSchedule();
+  }
+
+  // Fallback: fuzzy "what's happening" type questions
+  return handleLive();
+}
+
+// ─── Handlers ───
+
+async function handleFollow(sessionId, text) {
+  const query = text.replace(/\/?(follow)\s*/i, '').trim();
+  if (!query) {
+    return '⚽ Tell me which team! Example:\n/follow Nigeria';
+  }
+
+  const matches = await searchMatch(query);
+  if (!matches.length) {
+    return `❌ No upcoming or live matches found for *${query}*.\n\nTry a different spelling or check back closer to the match.`;
+  }
+
+  const m = matches[0];
+  followMatch(sessionId, m.id);
+  initMatchState(m.id, {});
+
+  const kickoff = new Date(m.kickoff_time).toLocaleString('en-GB', {
+    weekday: 'short', hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short'
+  });
+
+  return `✅ Following!\n\n🏟️ *${m.home_team?.name} vs ${m.away_team?.name}*\n⏰ Kickoff: ${kickoff}\n\nI'll send you goal alerts, red cards, half-time report, and full-time wrap-up automatically here in this chat.`;
+}
+
+async function handleUnfollow(sessionId, text) {
+  const query = text.replace(/\/?(unfollow)\s*/i, '').trim();
+  const matches = query ? await searchMatch(query) : [];
+
+  if (matches.length) {
+    unfollowMatch(sessionId, matches[0].id);
+    return `🔕 Unfollowed *${matches[0].home_team?.name} vs ${matches[0].away_team?.name}*`;
+  }
+  return `❓ Which match? E.g. /unfollow Nigeria`;
+}
+
+async function handleVibe(sessionId, text) {
+  const mode = text.replace(/\/?(vibe)\s*/i, '').trim().toLowerCase();
+  const valid = Object.keys(VIBES);
+
+  if (!valid.includes(mode)) {
+    return (
+      `🎙️ Pick a vibe:\n\n` +
+      `*/vibe hype* - Over-the-top African pundit energy 🔥\n` +
+      `*/vibe tactical* - Calm analyst, stats & formations 📊\n` +
+      `*/vibe funny* - Pure banter and roasts 😂\n` +
+      `*/vibe balanced* - Friendly match coverage ⚽`
+    );
+  }
+
+  setGroupVibe(sessionId, mode);
+  const vibeNames = { hype: '🔥 HYPE FC', tactical: '📊 The Analyst', funny: '😂 Banter FC', balanced: '⚽ Match Day' };
+  return `✅ Vibe set to *${vibeNames[mode]}*!\n\nAll future alerts will come in this style.`;
+}
+
+async function handleStatus(sessionId) {
+  const group = getGroup(sessionId);
+  if (!group || group.followedMatchIds.size === 0) {
+    return `📭 You're not following any matches yet.\n\nTry: /follow Nigeria`;
+  }
+  const count = group.followedMatchIds.size;
+  return (
+    `📋 *Your Status*\n\n` +
+    `Following: ${count} match${count > 1 ? 'es' : ''}\n` +
+    `Vibe: ${group.vibe}\n\n` +
+    `Type /vibe to change your commentary style.`
+  );
+}
+
+async function handleLive() {
+  try {
+    const live = await getLiveMatches();
+    const upcoming = await getUpcomingMatches(6);
+
+    let reply = '';
+
+    if (live.length) {
+      reply += `🔴 *LIVE NOW:*\n`;
+      for (const m of live.slice(0, 5)) {
+        reply += `• ${m.home_team?.name} vs ${m.away_team?.name} (${m.status})\n`;
+      }
+      reply += '\n';
+    }
+
+    if (upcoming.length) {
+      reply += `📅 *COMING UP (next 6h):*\n`;
+      for (const m of upcoming.slice(0, 5)) {
+        const kick = new Date(m.kickoff_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        reply += `• ${m.home_team?.name} vs ${m.away_team?.name} @ ${kick}\n`;
+      }
+      reply += '\nType */follow <team>* to get alerts for any match!';
+    }
+
+    if (!live.length && !upcoming.length) {
+      reply = `😴 No matches right now.\n\nType */schedule* to see the tournament calendar.\n\nType /help to see all commands.`;
+    }
+
+    return reply;
+  } catch {
+    return `⚽ Couldn't fetch match data right now. Try again in a moment!`;
+  }
+}
+
+async function handleSchedule() {
+  try {
+    const upcoming = await getFixtureSchedule();
+    if (!upcoming.length) {
+      return `📅 No upcoming matches found in the current schedule.`;
+    }
+    
+    let reply = `📅 *TOURNAMENT FIXTURES:*\n\n`;
+    for (const m of upcoming.slice(0, 10)) {
+      const date = new Date(m.kickoff_time).toLocaleDateString('en-GB', {
+        weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+      });
+      reply += `• *${m.home_team?.name} vs ${m.away_team?.name}*\n  ${date}\n\n`;
+    }
+    reply += `Type */follow <team>* to register live updates for any match!`;
+    return reply;
+  } catch {
+    return `⚽ Could not load tournament fixtures right now.`;
+  }
+}
+
+function helpText() {
+  return (
+    `🏆 *Huginn Companion Bot* — World Cup 2026\n\n` +
+    `*Commands:*\n` +
+    `*/follow <team>* — Get live alerts for a match\n` +
+    `*/unfollow <team>* — Stop following a match\n` +
+    `*/vibe <mode>* — Change commentary style\n` +
+    `*/live* — See live matches\n` +
+    `*/schedule* — See upcoming tournament fixtures\n` +
+    `*/status* — See what you're following\n\n` +
+    `*What I send automatically:*\n` +
+    `🔔 Pre-match bulletin (30 mins before)\n` +
+    `⚽ Goal alerts with odds context\n` +
+    `🟥 Red card alerts\n` +
+    `📊 Half-time report\n` +
+    `🏁 Full-time wrap-up\n` +
+    `📈 Big odds shift alerts\n\n` +
+    `Powered by TxLINE + Groq AI 🤖`
+  );
+}

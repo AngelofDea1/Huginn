@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Features — Huginn</title>
+<meta name="description" content="How Huginn works: goal alerts, red card updates, half-time reports, odds shifts, and AI commentary vibes — all inside WhatsApp."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Tourney:wght@600;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/shared.css"/>
+<link rel="stylesheet" href="/css/pill-nav.css"/>
+<style>
+/* ── Steps ───────────────────────────────────────────────────────────────── */
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  margin-top: 60px;
+  background: var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.step {
+  background: var(--surface);
+  padding: 40px 32px;
+  position: relative;
+}
+.step-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--green);
+  margin-bottom: 20px;
+  letter-spacing: 0.05em;
+}
+.step-title { font-family: 'Tourney', sans-serif; font-weight: 700; font-size: 1.1rem; margin-bottom: 10px; }
+.step-desc { font-size: 0.875rem; color: var(--muted); line-height: 1.65; }
+
+/* ── Alerts grid ─────────────────────────────────────────────────────────── */
+.alerts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-top: 60px;
+}
+.alert-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.alert-card:hover { border-color: rgba(0,230,118,0.3); transform: translateY(-2px); }
+.alert-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--green), transparent);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.alert-card:hover::before { opacity: 1; }
+.alert-type {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--green);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.alert-type-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+.alert-bubble {
+  background: var(--card);
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 0.83rem;
+  line-height: 1.6;
+  color: #c8c8e0;
+  border: 1px solid var(--border);
+}
+.alert-bubble strong { color: var(--white); }
+.alert-trigger {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Vibes ───────────────────────────────────────────────────────────────── */
+.vibes-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 60px;
+}
+.vibe-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 28px 20px;
+  text-align: center;
+  transition: all 0.2s;
+  cursor: default;
+}
+.vibe-card:hover { border-color: rgba(0,230,118,0.3); background: var(--card); }
+.vibe-name { font-family: 'Tourney', sans-serif; font-weight: 700; font-size: 0.95rem; margin-bottom: 8px; }
+.vibe-cmd {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--green);
+  background: var(--green-glow);
+  padding: 4px 10px;
+  border-radius: 6px;
+  display: inline-block;
+  margin-bottom: 12px;
+}
+.vibe-desc { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+
+/* ── Tech strip ──────────────────────────────────────────────────────────── */
+.tech-section { background: var(--deep); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.tech-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  background: var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-top: 60px;
+}
+.tech-card {
+  background: var(--surface);
+  padding: 32px 24px;
+  text-align: center;
+}
+.tech-name { font-family: 'Tourney', sans-serif; font-weight: 700; font-size: 0.9rem; margin-bottom: 6px; }
+.tech-role { font-size: 0.75rem; color: var(--muted); }
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .steps { grid-template-columns: 1fr; }
+  .alerts-grid { grid-template-columns: 1fr; }
+  .vibes-grid { grid-template-columns: repeat(2, 1fr); }
+  .tech-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- HOW IT WORKS -->
+<section class="section" style="padding-top:140px" id="how">
+  <div class="container">
+    <h1 class="display section-title">Follow matches with zero maintenance</h1>
+    <p class="section-desc">Add the bot to your WhatsApp group, send one command per team you want to track, and that's it. Everything from kick-off previews to full-time wraps fires automatically from there.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-title">Drop it in your group</div>
+        <p class="step-desc">Any WhatsApp group works. Add the bot the same way you add a contact. Everyone already in the chat gets updates instantly.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-title">Type /follow</div>
+        <p class="step-desc">Send <span class="mono" style="color:var(--green);font-size:0.85em">/follow Brazil</span>. The bot locks onto that match. Run multiple follows at once, with one command per team.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-title">It runs itself</div>
+        <p class="step-desc">Pre-match build-up 30 minutes before kickoff. Goal and card alerts within seconds. Odds shifts flagged as they happen. Half-time and full-time summaries, unprompted.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ALERTS -->
+<section class="section" style="padding-top:0" id="alerts">
+  <div class="container">
+    <h2 class="display section-title">Real-time alerts sent automatically</h2>
+    <div class="alerts-grid">
+      <div class="alert-card">
+        <div class="alert-type"><div class="alert-type-dot"></div>Goal Alert</div>
+        <div class="alert-bubble"><strong>GOAL · 67'</strong><br/>Vinícius Jr scores for Brazil. 2–1.<br/><br/>Brazil win odds drop from 2.10 to 1.45. The market has moved sharply on that goal.</div>
+        <div class="alert-trigger">Fires within 30 seconds of the event</div>
+      </div>
+      <div class="alert-card">
+        <div class="alert-type"><div class="alert-type-dot"></div>Red Card Alert</div>
+        <div class="alert-bubble"><strong>RED CARD · 54'</strong><br/>Müller dismissed for Germany. Straight red.<br/><br/>Germany down to 10 men. Win odds shift from 1.80 to 3.20. A significant change in the match dynamic.</div>
+        <div class="alert-trigger">Instant — includes odds impact</div>
+      </div>
+      <div class="alert-card">
+        <div class="alert-type"><div class="alert-type-dot"></div>Half-Time Report</div>
+        <div class="alert-bubble"><strong>HALF TIME · Spain 1–0 England</strong><br/><br/>Spain dominated with 68% possession, 7 shots to 2. Odds: Spain 1.55 / Draw 4.20 / England 6.50.<br/><br/>England will need to change shape in the second half.</div>
+        <div class="alert-trigger">Auto-sent at the half-time whistle</div>
+      </div>
+      <div class="alert-card">
+        <div class="alert-type"><div class="alert-type-dot"></div>Odds Shift Alert</div>
+        <div class="alert-bubble"><strong>MARKET MOVE · 31'</strong><br/>Portugal odds drifted from 2.10 to 3.40 in under two minutes, representing a 62% swing.<br/><br/>Something changed in the market. Late team news or significant positioning.</div>
+        <div class="alert-trigger">Triggers on 15%+ odds movement</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- VIBES -->
+<section class="section" style="padding-top:0" id="vibes">
+  <div class="container">
+    <h2 class="display section-title">Customize the commentary voice</h2>
+    <p class="section-desc">Every alert type fires the moment the event is confirmed by the live feed — goals, cards, odds shifts, and match summaries. Nothing is batched or delayed.</p>
+    <div class="vibes-grid">
+      <div class="vibe-card">
+        <div class="vibe-name">Hype FC</div>
+        <div class="vibe-cmd">/vibe hype</div>
+        <p class="vibe-desc">Every goal treated like a cup final. Loud, dramatic, and relentless. Made for groups where the match is all that exists.</p>
+      </div>
+      <div class="vibe-card">
+        <div class="vibe-name">The Analyst</div>
+        <div class="vibe-cmd">/vibe tactical</div>
+        <p class="vibe-desc">xG, formation shifts, and market movements explained cleanly. Built for groups that read the numbers, not just the scoreline.</p>
+      </div>
+      <div class="vibe-card">
+        <div class="vibe-name">Banter FC</div>
+        <div class="vibe-cmd">/vibe funny</div>
+        <p class="vibe-desc">Nothing is presented straight. Works best in groups where the banter lasts longer than the match does.</p>
+      </div>
+      <div class="vibe-card">
+        <div class="vibe-name">Match Day</div>
+        <div class="vibe-cmd">/vibe balanced</div>
+        <p class="vibe-desc">Factual and easy to read. Covers every event without editorialising. The default mode — works in any group.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TECH STACK -->
+<section class="section tech-section">
+  <div class="container">
+    <h2 class="display section-title">System infrastructure</h2>
+    <div class="tech-grid">
+      <div class="tech-card">
+        <div class="tech-name">TxLINE</div>
+        <div class="tech-role">Live odds and match data across all 104 World Cup fixtures</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-name">Llama 3.3 70B</div>
+        <div class="tech-role">AI commentary generation running on match events in real time</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-name">WhatsApp</div>
+        <div class="tech-role">Direct delivery to your group chat without extra apps</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-name">Node.js</div>
+        <div class="tech-role">Always-on event processing and alert scheduling</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="cta-glow"></div>
+  <div class="container" style="text-align:center">
+    <h2 class="display cta-title">Try it in your browser</h2>
+    <p class="cta-desc">Open our console window below to send follow commands, check active scores, and see the AI assistant respond instantly.</p>
+    <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
+      <a href="/demo.html" class="btn-primary" style="font-size:1rem;padding:16px 36px">Open the Console</a>
+      <a href="/commands.html" class="btn-secondary" style="font-size:1rem;padding:16px 28px">Full command list</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <a href="/" class="footer-logo">Huginn</a>
+      <p class="footer-note">World Cup 2026 · Built on TxLINE</p>
+      <div class="footer-links">
+        <a href="https://txline.txodds.com/documentation/worldcup" target="_blank">TxLINE</a>
+        <a href="/commands.html">Commands</a>
+        <a href="/demo.html">Console</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="/js/pill-nav.js"></script>
+<script>
+  initPillNav({
+    activeHref: '/features.html',
+    baseColor: '#0d0d1a',
+    pillColor: 'rgba(255,255,255,0.06)',
+    pillTextColor: '#f0f0f8',
+    hoveredPillTextColor: '#080810',
+  });
+</script>
+</body>
+</html>

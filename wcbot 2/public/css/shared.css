@@ -1,0 +1,170 @@
+/* ── Tokens ──────────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Tourney:wght@600;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap');
+
+:root {
+  --black:   #080810;
+  --deep:    #0d0d1a;
+  --surface: #131320;
+  --card:    #1a1a2e;
+  --border:  rgba(255,255,255,0.07);
+  --green:   #00e676;
+  --green-d: #00c853;
+  --green-glow: rgba(0,230,118,0.15);
+  --white:   #f0f0f8;
+  --muted:   #7070a0;
+  --wa:      #25D366;
+}
+
+/* ── Reset ───────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--black);
+  color: var(--white);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* ── Typography ──────────────────────────────────────────────────────────── */
+.display {
+  font-family: 'Tourney', sans-serif;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+.mono { font-family: 'JetBrains Mono', monospace; }
+
+/* ── Noise texture overlay ───────────────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Layout ──────────────────────────────────────────────────────────────── */
+.container { max-width: 1100px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--wa);
+  color: #000;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 14px 28px;
+  border-radius: 10px;
+  text-decoration: none;
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(37,211,102,0.3);
+}
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--white);
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 14px 24px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  text-decoration: none;
+  transition: border-color 0.2s, background 0.2s;
+  cursor: pointer;
+}
+.btn-secondary:hover { border-color: rgba(255,255,255,0.2); background: var(--surface); }
+
+/* ── Pulse animation ─────────────────────────────────────────────────────── */
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 8px var(--green); }
+  50% { box-shadow: 0 0 20px var(--green), 0 0 40px rgba(0,230,118,0.3); }
+}
+@keyframes msgIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Page top offset (for fixed PillNav) ─────────────────────────────────── */
+.page-body { padding-top: 80px; }
+
+/* ── Section helpers ─────────────────────────────────────────────────────── */
+.section { padding: 100px 0; position: relative; z-index: 1; }
+
+.section-title {
+  font-size: clamp(2rem, 3.5vw, 2.8rem);
+  margin-bottom: 16px;
+  text-align: center;
+}
+.section-desc {
+  color: var(--muted);
+  font-size: 1rem;
+  max-width: 600px;
+  line-height: 1.7;
+  text-align: justify;
+  margin: 0 auto 48px;
+}
+
+
+/* ── CTA ─────────────────────────────────────────────────────────────────── */
+.cta-section {
+  text-align: center;
+  padding: 120px 0;
+  position: relative;
+  z-index: 1;
+}
+.cta-glow {
+  position: absolute;
+  width: 500px; height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,230,118,0.06) 0%, transparent 70%);
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.cta-title { font-size: clamp(2.4rem, 4vw, 3.5rem); margin-bottom: 20px; }
+.cta-desc { color: var(--muted); font-size: 1.05rem; max-width: 480px; margin: 0 auto 40px; }
+
+/* ── FOOTER ──────────────────────────────────────────────────────────────── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 40px 0;
+  position: relative;
+  z-index: 1;
+}
+.footer-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.footer-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Tourney', sans-serif;
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--muted);
+  text-decoration: none;
+}
+.footer-note { font-size: 0.8rem; color: var(--muted); }
+.footer-links { display: flex; gap: 24px; }
+.footer-links a { font-size: 0.8rem; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+.footer-links a:hover { color: var(--white); }
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .section { padding: 64px 0; }
+  .cta-section { padding: 80px 0; }
+}

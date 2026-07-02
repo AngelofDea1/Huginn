@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Demo — Huginn Live</title>
+<meta name="description" content="Live Huginn demo — try commands, track World Cup matches, and see the AI assistant respond in real time."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Tourney:wght@600;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/shared.css"/>
+<link rel="stylesheet" href="/css/pill-nav.css"/>
+<style>
+/* ── Demo layout ─────────────────────────────────────────────────────────── */
+.demo-section {
+  padding: 120px 0 80px;
+  min-height: 100vh;
+}
+.demo-header {
+  margin-bottom: 40px;
+}
+.demo-header .eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--green);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.demo-header .eyebrow-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: dot-pulse 1.5s infinite;
+}
+@keyframes dot-pulse {
+  0%,100% { box-shadow: 0 0 6px var(--green); }
+  50%      { box-shadow: 0 0 16px var(--green); }
+}
+.demo-title {
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  margin-bottom: 10px;
+}
+.demo-desc { color: var(--muted); font-size: 0.95rem; max-width: 580px; }
+
+/* ── App container ────────────────────────────────────────────────────────── */
+.app-container {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 800px) {
+  .app-container { grid-template-columns: 1fr; }
+}
+
+/* ── Scoreboard ──────────────────────────────────────────────────────────── */
+.scoreboard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  position: sticky;
+  top: 88px;
+}
+.scoreboard-header {
+  padding: 16px 20px;
+  background: linear-gradient(135deg, rgba(0,230,118,0.08), transparent);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.scoreboard-header h2 {
+  font-family: 'Tourney', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+.live-dot {
+  width: 8px; height: 8px;
+  background: var(--green);
+  border-radius: 50%;
+  animation: dot-pulse 1.5s infinite;
+}
+.match-list {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+.match-list::-webkit-scrollbar { width: 3px; }
+.match-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+.match-item {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 11px 13px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.match-item:hover {
+  border-color: rgba(0,230,118,0.4);
+  background: rgba(0,230,118,0.05);
+}
+.match-teams { font-size: 0.82rem; font-weight: 600; margin-bottom: 4px; }
+.match-meta { display: flex; gap: 6px; align-items: center; font-size: 0.72rem; }
+.badge-live {
+  background: rgba(255,75,75,0.15);
+  border: 1px solid rgba(255,75,75,0.3);
+  color: #ff4b4b;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.62rem;
+}
+.badge-soon {
+  background: rgba(0,230,118,0.1);
+  border: 1px solid rgba(0,230,118,0.25);
+  color: var(--green);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.62rem;
+}
+.match-time { color: var(--muted); }
+.scoreboard-empty {
+  text-align: center;
+  padding: 28px 16px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+.refresh-btn {
+  display: block;
+  width: calc(100% - 20px);
+  margin: 0 10px 10px;
+  padding: 9px;
+  background: rgba(0,230,118,0.07);
+  border: 1px solid rgba(0,230,118,0.2);
+  color: var(--green);
+  border-radius: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.refresh-btn:hover { background: rgba(0,230,118,0.15); }
+
+/* ── Chat console ─────────────────────────────────────────────────────────── */
+.chat-wrapper {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  height: 640px;
+}
+.chat-header {
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, rgba(0,230,118,0.05), transparent);
+  flex-shrink: 0;
+}
+.chat-avatar {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--green), #00bcd4);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.72rem; font-weight: 700; color: #000;
+  box-shadow: 0 0 14px rgba(0,230,118,0.25);
+  flex-shrink: 0;
+}
+.chat-info h3 { font-family: 'Tourney', sans-serif; font-size: 0.95rem; font-weight: 700; }
+.chat-info p  { font-size: 0.76rem; color: var(--muted); }
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.chat-messages::-webkit-scrollbar { width: 4px; }
+.chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.09); border-radius: 4px; }
+
+.msg { display: flex; gap: 10px; animation: msgIn 0.25s ease both; }
+.msg.user { flex-direction: row-reverse; }
+@keyframes msgIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.msg-bubble {
+  max-width: 75%;
+  padding: 12px 16px;
+  border-radius: 14px;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.msg.bot  .msg-bubble {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 3px;
+  color: var(--white);
+}
+.msg.user .msg-bubble {
+  background: var(--wa);
+  color: #000;
+  border-bottom-right-radius: 3px;
+  font-weight: 500;
+}
+
+.msg-avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.65rem; font-weight: 700;
+  flex-shrink: 0;
+  align-self: flex-end;
+}
+.msg.bot  .msg-avatar { background: linear-gradient(135deg, var(--green), #00bcd4); color: #000; }
+.msg.user .msg-avatar { background: rgba(255,255,255,0.08); border: 1px solid var(--border); color: var(--muted); }
+
+.typing-indicator { display: none; gap: 10px; align-items: flex-end; padding: 0 20px 4px; }
+.typing-indicator.active { display: flex; }
+.typing-dots {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  border-bottom-left-radius: 3px;
+  padding: 12px 16px;
+  display: flex;
+  gap: 4px;
+}
+.typing-dots span {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+  animation: dot-bounce 1.2s ease-in-out infinite;
+}
+.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dot-bounce {
+  0%,80%,100% { transform: translateY(0); opacity: 0.4; }
+  40%          { transform: translateY(-5px); opacity: 1; }
+}
+
+.quick-cmds {
+  padding: 0 16px 10px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.quick-btn {
+  background: rgba(0,230,118,0.07);
+  border: 1px solid rgba(0,230,118,0.2);
+  color: var(--green);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.73rem;
+  font-weight: 700;
+  padding: 5px 11px;
+  border-radius: 100px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+.quick-btn:hover { background: rgba(0,230,118,0.17); transform: translateY(-1px); }
+
+.chat-input-area {
+  padding: 14px 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+#chat-input {
+  flex: 1;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--white);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.9rem;
+  padding: 12px 16px;
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+#chat-input:focus { border-color: rgba(0,230,118,0.4); }
+#chat-input::placeholder { color: var(--muted); }
+#send-btn {
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  background: var(--wa);
+  border: none;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; color: #000;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(37,211,102,0.25);
+}
+#send-btn:hover { transform: scale(1.06); }
+</style>
+</head>
+<body>
+
+<section class="demo-section">
+  <div class="container">
+
+    <div class="demo-header" style="text-align: center; display: flex; flex-direction: column; align-items: center; margin-bottom: 48px;">
+      <h1 class="display demo-title">Try it in your browser</h1>
+      <p class="demo-desc" style="text-align: justify; margin: 0 auto; max-width: 600px;">Open our console window below to send follow commands, check active scores, and see the AI assistant respond instantly.</p>
+    </div>
+
+    <div class="app-container">
+
+      <!-- Scoreboard -->
+      <div class="scoreboard">
+        <div class="scoreboard-header">
+          <h2>Match Feeds</h2>
+          <div class="live-dot"></div>
+        </div>
+        <div class="match-list" id="match-list">
+          <div class="scoreboard-empty">Loading matches...</div>
+        </div>
+        <button class="refresh-btn" onclick="loadMatches()">↻ Refresh</button>
+      </div>
+
+      <!-- Chat console -->
+        <div class="chat-wrapper">
+        <div class="chat-header">
+          <div class="chat-avatar">HG</div>
+          <div class="chat-info">
+            <h3>Huginn Assistant</h3>
+            <p>Live match intelligence · World Cup 2026</p>
+          </div>
+        </div>
+
+        <div class="chat-messages" id="chat-messages"></div>
+
+        <div class="typing-indicator" id="typing">
+          <div class="msg-avatar" style="background:linear-gradient(135deg,var(--green),#00bcd4);color:#000;">HG</div>
+          <div class="typing-dots">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+
+        <div class="quick-cmds">
+          <button class="quick-btn" onclick="sendQuick('/live')">Live matches</button>
+          <button class="quick-btn" onclick="sendQuick('/follow Brazil')">Follow Brazil</button>
+          <button class="quick-btn" onclick="sendQuick('/follow Argentina')">Follow Argentina</button>
+          <button class="quick-btn" onclick="sendQuick('/vibe hype')">Vibe: Hype</button>
+          <button class="quick-btn" onclick="sendQuick('/vibe tactical')">Vibe: Tactical</button>
+          <button class="quick-btn" onclick="sendQuick('/status')">My Status</button>
+          <button class="quick-btn" onclick="sendQuick('/help')">Help</button>
+        </div>
+
+        <div class="chat-input-area">
+          <input type="text" id="chat-input" placeholder="Type a command (e.g. /live, /follow Brazil, /vibe hype)..." autocomplete="off"/>
+          <button id="send-btn" onclick="sendMessage()">→</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <a href="/" class="footer-logo">Huginn</a>
+      <p class="footer-note">World Cup 2026 · Built on TxLINE</p>
+      <div class="footer-links">
+        <a href="https://txline.txodds.com/documentation/worldcup" target="_blank">TxLINE</a>
+        <a href="/commands.html">Commands</a>
+        <a href="/features.html">Features</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="/js/pill-nav.js"></script>
+<script>
+  initPillNav({
+    activeHref: '/demo.html',
+    baseColor: '#0d0d1a',
+    pillColor: 'rgba(255,255,255,0.06)',
+    pillTextColor: '#f0f0f8',
+    hoveredPillTextColor: '#080810',
+  });
+
+  /* ── Chat logic ───────────────────────────────────────────────────────── */
+  const SESSION_ID = 'web_' + Math.random().toString(36).slice(2, 10) + '_' + Date.now();
+  const $msgs   = document.getElementById('chat-messages');
+  const $input  = document.getElementById('chat-input');
+  const $typing = document.getElementById('typing');
+
+  function scrollBottom() { $msgs.scrollTop = $msgs.scrollHeight; }
+
+  function escapeHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function addMessage(text, role = 'bot') {
+    const wrapper = document.createElement('div');
+    wrapper.className = `msg ${role}`;
+
+    const avatar = document.createElement('div');
+    avatar.className = 'msg-avatar';
+    avatar.textContent = role === 'bot' ? 'MP' : 'You';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'msg-bubble';
+    bubble.innerHTML = escapeHtml(text)
+      .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
+      .replace(/\n/g, '<br/>');
+
+    wrapper.appendChild(avatar);
+    wrapper.appendChild(bubble);
+    $msgs.appendChild(wrapper);
+    scrollBottom();
+    return wrapper;
+  }
+
+  async function sendMessage() {
+    const text = $input.value.trim();
+    if (!text) return;
+
+    addMessage(text, 'user');
+    $input.value = '';
+    $typing.classList.add('active');
+    scrollBottom();
+
+    try {
+      const res  = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: SESSION_ID, message: text }),
+      });
+      const data = await res.json();
+      $typing.classList.remove('active');
+      addMessage(data.reply || 'No response received.', 'bot');
+    } catch {
+      $typing.classList.remove('active');
+      addMessage('Server offline. Check that the Node.js server is running.', 'bot');
+    }
+  }
+
+  function sendQuick(cmd) {
+    $input.value = cmd;
+    sendMessage();
+  }
+
+  $input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); sendMessage(); }
+  });
+
+  /* ── Scoreboard logic ─────────────────────────────────────────────────── */
+  async function loadMatches() {
+    const list = document.getElementById('match-list');
+    list.innerHTML = '<div class="scoreboard-empty">Loading...</div>';
+    try {
+      const res  = await fetch('/api/live');
+      const data = await res.json();
+      const all  = [
+        ...(data.live     || []).map(m => ({ ...m, _status: 'LIVE' })),
+        ...(data.upcoming || []).map(m => ({ ...m, _status: 'SOON' })),
+      ];
+
+      if (!all.length) {
+        list.innerHTML = '<div class="scoreboard-empty">No active matches at this time</div>';
+        return;
+      }
+
+      list.innerHTML = '';
+      all.slice(0, 8).forEach(m => {
+        const div  = document.createElement('div');
+        div.className = 'match-item';
+        const kick = m.kickoff_time
+          ? new Date(m.kickoff_time).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' })
+          : '';
+        const badge = m._status === 'LIVE'
+          ? '<span class="badge-live">● LIVE</span>'
+          : '<span class="badge-soon">SOON</span>';
+
+        div.innerHTML = `
+          <div class="match-teams">${m.home_team?.name || '?'} vs ${m.away_team?.name || '?'}</div>
+          <div class="match-meta">${badge}<span class="match-time">${kick}</span></div>
+        `;
+        div.onclick = () => sendQuick(`/follow ${m.home_team?.name}`);
+        list.appendChild(div);
+      });
+    } catch {
+      list.innerHTML = '<div class="scoreboard-empty">Failed to load — check server</div>';
+    }
+  }
+
+  /* ── Init ─────────────────────────────────────────────────────────────── */
+  addMessage(
+    `*Huginn* · connected to TxLINE.\n\n/follow [team] · start tracking a match\n/live · see what is on right now\n/vibe [mode] · hype, tactical, funny, balanced\n/status · check your active follows\n/help · full list\n\nClick a match on the left, or type below.`,
+    'bot'
+  );
+  loadMatches();
+  setInterval(loadMatches, 60000);
+</script>
+</body>
+</html>

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Commands — Huginn</title>
+<meta name="description" content="Full command reference for Huginn. Manual commands and automatic alerts for every World Cup match."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Tourney:wght@600;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/shared.css"/>
+<link rel="stylesheet" href="/css/pill-nav.css"/>
+<style>
+/* ── Commands table ───────────────────────────────────────────────────────── */
+.cmd-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--card);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+.cmd-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--card);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+.cmd-tag.auto { color: var(--green); border-color: rgba(0,230,118,0.25); background: var(--green-glow); }
+
+.commands-table {
+  margin-top: 60px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.cmd-row {
+  display: grid;
+  grid-template-columns: 200px 1fr auto;
+  gap: 24px;
+  padding: 18px 28px;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+.cmd-row:last-child { border-bottom: none; }
+.cmd-row:hover { background: var(--card); }
+.cmd-row:first-child {
+  background: rgba(0,230,118,0.04);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: default;
+}
+.cmd-row:first-child:hover { background: rgba(0,230,118,0.04); }
+.cmd-code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;
+  color: var(--green);
+  background: var(--green-glow);
+  padding: 4px 10px;
+  border-radius: 6px;
+  width: fit-content;
+}
+.cmd-desc { font-size: 0.875rem; color: var(--muted); }
+
+/* ── Section divider label ────────────────────────────────────────────────── */
+.cmd-section-label {
+  padding: 12px 28px 8px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--green);
+  border-bottom: 1px solid var(--border);
+  background: rgba(0,230,118,0.02);
+}
+
+/* ── Quick-try panel ─────────────────────────────────────────────────────── */
+.try-panel {
+  margin-top: 60px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 36px;
+  display: flex;
+  gap: 40px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.try-panel-text h3 {
+  font-family: 'Tourney', sans-serif;
+  font-size: 1.3rem;
+  margin-bottom: 8px;
+}
+.try-panel-text p { color: var(--muted); font-size: 0.9rem; max-width: 400px; }
+.try-panel-actions { display: flex; gap: 12px; flex-wrap: wrap; flex-shrink: 0; }
+
+@media (max-width: 768px) {
+  .cmd-row { grid-template-columns: 1fr; gap: 8px; }
+  .cmd-row:first-child { display: none; }
+  .try-panel { flex-direction: column; gap: 24px; }
+}
+</style>
+</head>
+<body>
+
+<section class="section" style="padding-top:140px">
+  <div class="container">
+    <h1 class="display section-title">Command and alert reference</h1>
+    <p class="section-desc">Manual commands are sent by any user in the group. Automatic alerts fire directly from live match events with no input required.</p>
+
+    <div class="commands-table">
+
+      <!-- Header row -->
+      <div class="cmd-row">
+        <div>Command</div>
+        <div>What it does</div>
+        <div>Type</div>
+      </div>
+
+      <!-- Manual commands section -->
+      <div class="cmd-section-label">Manual — you send these</div>
+
+      <div class="cmd-row">
+        <div class="cmd-code">/follow [team]</div>
+        <div class="cmd-desc">Start receiving live alerts for any match featuring that team</div>
+        <div class="cmd-badge">Manual</div>
+      </div>
+      <div class="cmd-row">
+        <div class="cmd-code">/unfollow [team]</div>
+        <div class="cmd-desc">Stop alerts for a specific team</div>
+        <div class="cmd-badge">Manual</div>
+      </div>
+      <div class="cmd-row">
+        <div class="cmd-code">/live</div>
+        <div class="cmd-desc">Show all currently active World Cup matches and their live odds</div>
+        <div class="cmd-badge">Manual</div>
+      </div>
+      <div class="cmd-row">
+        <div class="cmd-code">/vibe hype</div>
+        <div class="cmd-desc">Switch to high-energy, dramatic commentary mode</div>
+        <div class="cmd-badge">Manual</div>
+      </div>
+      <div class="cmd-row">
+        <div class="cmd-code">/vibe tactical</div>
+        <div class="cmd-desc">Switch to calm, data-driven analytical commentary</div>
+        <div class="cmd-badge">Manual</div>
+      </div>
+      <div class="cmd-row">
+        <div class="cmd-code">/vibe funny</div>
+        <div class="cmd-desc">Switch to light-hearted, irreverent banter mode</div>
+        <div class="cmd-badge">Manual</div>
+      </div>
+      <div class="cmd-row">
+        <div class="cmd-code">/vibe balanced</div>
+        <div class="cmd-desc">Switch to the default friendly and informative style</div>
+        <div class="cmd-badge">Manual</div>
+      </div>
+      <div class="cmd-row">
+        <div class="cmd-code">/status</div>
+        <div class="cmd-desc">See which teams you are currently following and your active vibe</div>
+        <div class="cmd-badge">Manual</div>
+      </div>
+      <div class="cmd-row">
+        <div class="cmd-code">/schedule</div>
+        <div class="cmd-desc">View the list of all upcoming matches and kickoff times in the tournament schedule</div>
+        <div class="cmd-badge">Manual</div>
+      </div>
+      <div class="cmd-row">
+        <div class="cmd-code">/help</div>
+        <div class="cmd-desc">Show all available commands</div>
+        <div class="cmd-badge">Manual</div>
+      </div>
+
+      <!-- Automatic alerts section -->
+      <div class="cmd-section-label">Automatic — sent without any prompt</div>
+
+      <div class="cmd-row">
+        <div style="color:var(--muted);font-size:0.8rem;font-style:italic">Pre-match bulletin</div>
+        <div class="cmd-desc">Sent 30 minutes before kickoff — odds, key storylines, team news, and a match preview</div>
+        <div class="cmd-tag auto">Auto</div>
+      </div>
+      <div class="cmd-row">
+        <div style="color:var(--muted);font-size:0.8rem;font-style:italic">Goal alert</div>
+        <div class="cmd-desc">Fires within 30 seconds of a goal — scorer, minute, score, odds movement, and AI commentary</div>
+        <div class="cmd-tag auto">Auto</div>
+      </div>
+      <div class="cmd-row">
+        <div style="color:var(--muted);font-size:0.8rem;font-style:italic">Red card alert</div>
+        <div class="cmd-desc">Instant notification — player name, minute, and updated odds after the dismissal</div>
+        <div class="cmd-tag auto">Auto</div>
+      </div>
+      <div class="cmd-row">
+        <div style="color:var(--muted);font-size:0.8rem;font-style:italic">Odds shift alert</div>
+        <div class="cmd-desc">Sent when odds move by 15% or more in a short window — something significant changed in the market</div>
+        <div class="cmd-tag auto">Auto</div>
+      </div>
+      <div class="cmd-row">
+        <div style="color:var(--muted);font-size:0.8rem;font-style:italic">Half-time report</div>
+        <div class="cmd-desc">Automatic summary at the half-time whistle — possession, shots, xG, and updated odds</div>
+        <div class="cmd-tag auto">Auto</div>
+      </div>
+      <div class="cmd-row">
+        <div style="color:var(--muted);font-size:0.8rem;font-style:italic">Full-time wrap</div>
+        <div class="cmd-desc">Complete match story at the final whistle — result, key moments, standout stats, and what is next</div>
+        <div class="cmd-tag auto">Auto</div>
+      </div>
+
+    </div>
+
+    <!-- Quick-try panel -->
+    <div class="try-panel">
+      <div class="try-panel-text">
+        <h3>See it respond</h3>
+        <p>Open the Console and type anything from this list. The bot is live and connected right now, no account needed.</p>
+      </div>
+      <div class="try-panel-actions">
+        <a href="/demo.html" class="btn-primary">Open Console</a>
+        <a href="/features.html" class="btn-secondary">How it works</a>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <a href="/" class="footer-logo">Huginn</a>
+      <p class="footer-note">World Cup 2026 · Built on TxLINE</p>
+      <div class="footer-links">
+        <a href="https://txline.txodds.com/documentation/worldcup" target="_blank">TxLINE</a>
+        <a href="/features.html">Features</a>
+        <a href="/demo.html">Console</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="/js/pill-nav.js"></script>
+<script>
+  initPillNav({
+    activeHref: '/commands.html',
+    baseColor: '#0d0d1a',
+    pillColor: 'rgba(255,255,255,0.06)',
+    pillTextColor: '#f0f0f8',
+    hoveredPillTextColor: '#080810',
+  });
+</script>
+</body>
+</html>

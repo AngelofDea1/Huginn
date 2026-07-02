@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MatchPulse — Font Pairing Tester</title>
+
+  <!-- Load all candidates from Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Inter:wght@400;500;600;700&family=Lato:wght@400;700&family=Montserrat:wght@800;900&family=Oswald:wght@600;700&family=Space+Grotesk:wght@500;700&family=Syne:wght@700;800&family=Tourney:ital,wght@0,600;0,800;1,600&display=swap" rel="stylesheet">
+
+  <style>
+    /* ── Tester Bar Styling ── */
+    #tester-bar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      background: #111116;
+      border-bottom: 2px solid #00ff87;
+      padding: 12px 24px;
+      z-index: 9999;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+    .font-btn {
+      background: #1d1d26;
+      border: 1px solid #333;
+      color: #ccc;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .font-btn:hover {
+      border-color: #00ff87;
+      color: #fff;
+    }
+    .font-btn.active {
+      background: #00ff87;
+      border-color: #00ff87;
+      color: #000;
+    }
+
+    /* ── Page Base Styles ── */
+    :root {
+      --bg: #080810;
+      --surface: #131320;
+      --card: #1a1a2e;
+      --border: rgba(255,255,255,0.07);
+      --green: #00e676;
+      --white: #f0f0f8;
+      --muted: #7070a0;
+      --wa: #25D366;
+    }
+    body {
+      background: var(--bg);
+      color: var(--white);
+      margin: 0;
+      padding-top: 80px; /* offset for bar */
+    }
+    .container { max-width: 1000px; margin: 0 auto; padding: 40px 24px; }
+    h1 { font-size: clamp(2.5rem, 5vw, 4rem); margin-bottom: 16px; }
+    h2 { font-size: 2rem; margin-bottom: 12px; }
+    p { font-size: 1.05rem; color: var(--muted); line-height: 1.6; max-width: 600px; margin-bottom: 24px; }
+    .btn { display: inline-block; padding: 12px 24px; background: var(--green); color: #000; text-decoration: none; border-radius: 8px; font-weight: 700; }
+    
+    /* ── Sections to test ── */
+    .section-preview {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 40px;
+      margin-bottom: 30px;
+    }
+    .step-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px;
+      margin-top: 20px;
+    }
+    .step-no { color: var(--green); font-size: 0.8rem; font-weight: 700; margin-bottom: 8px; }
+    .step-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+
+  <!-- Switcher Interface -->
+  <div id="tester-bar">
+    <span style="color:#fff; font-size:0.9rem; font-weight:700;">Select Font Pairing:</span>
+    <button class="font-btn active" onclick="setFont('Syne', 'Inter', this)">1. Syne + Inter (Original)</button>
+    <button class="font-btn" onclick="setFont('Oswald', 'Inter', this)">2. Oswald + Inter (Dynamic Sport)</button>
+    <button class="font-btn" onclick="setFont('Tourney', 'DM Sans', this)">3. Tourney + DM Sans (Digital Scoreboard)</button>
+    <button class="font-btn" onclick="setFont('Montserrat', 'Lato', this)">4. Montserrat + Lato (Premium Modern)</button>
+    <button class="font-btn" onclick="setFont('Space Grotesk', 'Inter', this)">5. Space Grotesk + Inter (Clean Tech)</button>
+  </div>
+
+  <div class="container">
+    
+    <div class="section-preview">
+      <div style="font-size:0.75rem; text-transform:uppercase; color:var(--green); letter-spacing:0.1em; margin-bottom:12px;">Live · World Cup 2026</div>
+      <h1 class="header-el">Your World Cup.<br/><span style="color:var(--green)">Inside WhatsApp.</span></h1>
+      <p class="body-el">MatchPulse turns any WhatsApp group into a live football studio. Goals, red cards, odds shifts, and AI commentary — delivered the moment it happens. No app to install. No account to create.</p>
+      <a href="#" class="btn body-el">⚽ Join Live Feed</a>
+    </div>
+
+    <div class="section-preview">
+      <h2 class="header-el">Oracle Alerts Dispatch</h2>
+      <p class="body-el">The bot monitors live soccer data feeds directly from the TxLINE decentralised sports oracle network.</p>
+      
+      <div class="step-card">
+        <div class="step-no body-el">STEP 01</div>
+        <div class="step-title header-el">Oracle Setup</div>
+        <p class="body-el" style="margin-bottom:0;">The system processes raw event data streams directly from active stadium tracking grids.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function setFont(headerFont, bodyFont, btn) {
+      // Set styles dynamically
+      const headers = document.querySelectorAll('.header-el');
+      const bodies = document.querySelectorAll('.body-el');
+      
+      headers.forEach(h => {
+        h.style.fontFamily = `"${headerFont}", sans-serif`;
+      });
+      
+      bodies.forEach(b => {
+        b.style.fontFamily = `"${bodyFont}", sans-serif`;
+      });
+
+      // Update button active state
+      document.querySelectorAll('.font-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+    // Init original state
+    document.addEventListener("DOMContentLoaded", () => {
+      setFont('Syne', 'Inter', document.querySelector('.font-btn'));
+    });
+  </script>
+</body>
+</html>
