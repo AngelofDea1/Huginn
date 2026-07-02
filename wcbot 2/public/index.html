@@ -156,6 +156,7 @@
       width: 232px; height: 476px;
       left: 50%; top: 50%;
       transform: translate(-50%, -50%);
+      clip-path: inset(0 -4px 22% -4px);
       z-index: 3;
       border-radius: 48px;
       background: linear-gradient(155deg, #3a3a3e, #0f0f11 60%);
@@ -190,7 +191,8 @@
     .samsung-old {
       width: 196px; height: 412px;
       left: 50%; top: 50%;
-      transform: translate(-128%, -46%) rotate(-6deg);
+      transform: translate(-128%, -50%);
+      clip-path: inset(0 -4px 22% -4px);
       z-index: 1;
       border-radius: 24px;
       background: linear-gradient(155deg, #2e2e32, #0d0d0f 60%);
@@ -237,7 +239,8 @@
     .samsung-new {
       width: 196px; height: 412px;
       left: 50%; top: 50%;
-      transform: translate(28%, -46%) rotate(6deg);
+      transform: translate(28%, -50%);
+      clip-path: inset(0 -4px 22% -4px);
       z-index: 1;
       border-radius: 28px;
       background: linear-gradient(155deg, #2e2e32, #0d0d0f 60%);
@@ -331,11 +334,11 @@
       .iphone .dynamic-island { width: 52px; height: 15px; top: 9px; }
       .samsung-old {
         width: 124px; height: 262px; border-radius: 16px; padding: 9px 5px;
-        transform: translate(-128%, -46%) rotate(-6deg);
+        transform: translate(-128%, -50%);
       }
       .samsung-new {
         width: 124px; height: 262px; border-radius: 18px; padding: 3px;
-        transform: translate(28%, -46%) rotate(6deg);
+        transform: translate(28%, -50%);
       }
       .hero-actions {
         flex-direction: column;
@@ -373,6 +376,7 @@
           <div class="device samsung-old">
             <div class="screen">
               <div class="content-layer">
+                <!-- DROP IMAGE HERE LATER: <img src="/screens/samsung-left.png" alt=""> -->
                 <div class="content-placeholder">
                   <div class="chat-line"></div>
                   <div class="chat-line green"></div>
@@ -395,6 +399,7 @@
           <div class="device samsung-new">
             <div class="screen">
               <div class="content-layer">
+                <!-- DROP IMAGE HERE LATER: <img src="/screens/samsung-right.png" alt=""> -->
                 <div class="content-placeholder">
                   <div class="chat-line green"></div>
                   <div class="chat-line"></div>
@@ -414,6 +419,7 @@
           <div class="device iphone">
             <div class="screen">
               <div class="content-layer">
+                <!-- DROP IMAGE HERE LATER: <img src="/screens/iphone-center.png" alt=""> -->
                 <div class="content-placeholder">
                   <div class="chat-line"></div>
                   <div class="chat-line green"></div>
