@@ -27,7 +27,7 @@ function initPillNav(options = {}) {
     { label: 'Home',     href: '/' },
     { label: 'Features', href: '/features.html' },
     { label: 'Commands', href: '/commands.html' },
-    { label: 'Console',  href: '/demo.html' },
+    { label: 'Live Demo',  href: '/demo.html' },
   ];
 
   // ── Build DOM ──────────────────────────────────────────────────────────────
