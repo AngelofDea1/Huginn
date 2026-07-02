@@ -19,7 +19,7 @@ function initPillNav(options = {}) {
     baseColor      = '#0d0d1a',
     pillColor      = 'rgba(255,255,255,0.06)',
     pillTextColor  = '#f0f0f8',
-    hoveredPillTextColor = '#080810',
+    hoveredPillTextColor = '#ffffff',
     initialLoad    = true,
   } = options;
 
