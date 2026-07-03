@@ -90,11 +90,11 @@
       position: relative;
       width: 820px;
       max-width: 100%;
-      height: 380px;
+      height: 476px;
       display: flex;
       align-items: flex-start;
       justify-content: center;
-      margin: 0 auto 10px;
+      margin: 0 auto;
       pointer-events: none;
       flex-shrink: 0;
     }
@@ -191,15 +191,15 @@
     /*  top: 0  →  full top of device is always visible, never clipped.      */
     /*  clip-path cuts the bottom 20% only, so the phone merges into the bg. */
     .iphone {
-      width: 250px;
-      height: 520px;
+      width: 290px;
+      height: 595px;
       left: 50%;
       top: 0;
       transform: translateX(-50%);
       z-index: 3;
-      border-radius: 46px;
+      border-radius: 54px;
       background: linear-gradient(155deg, #4a4a4d, #111113 60%);
-      padding: 11px;
+      padding: 13px;
       box-shadow: 0 0 0 2px rgba(255,255,255,0.08) inset;
       clip-path: inset(0 -6px 20% -6px);
     }
@@ -233,7 +233,7 @@
       width: 250px;
       height: 520px;
       left: 50%;
-      top: 0;
+      top: 30px;
       transform: translateX(-125%);
       z-index: 1;
       border-radius: 26px;
@@ -282,7 +282,7 @@
       width: 250px;
       height: 520px;
       left: 50%;
-      top: 0;
+      top: 30px;
       transform: translateX(25%);
       z-index: 1;
       border-radius: 30px;
@@ -369,12 +369,13 @@
     /* ── RESPONSIVE ──────────────────────────────────────────────────── */
     @media (max-width: 768px) {
       .hero { padding-top: 100px; }
-      .stage { height: 260px; margin-bottom: 20px; }
-      .iphone { width: 160px; height: 330px; border-radius: 30px; padding: 7px; top: 0; transform: translateX(-50%); }
-      .iphone .screen { border-radius: 24px; }
-      .iphone .dynamic-island { width: 50px; height: 14px; top: 8px; }
-      .samsung-old { width: 160px; height: 330px; border-radius: 16px; padding: 10px 5px; top: 0; transform: translateX(-120%); }
-      .samsung-new { width: 160px; height: 330px; border-radius: 18px; padding: 4px; top: 0; transform: translateX(20%); }
+      /* Scale proportionally for mobile layout */
+      .stage { height: 320px; }
+      .iphone { width: 196px; height: 402px; border-radius: 36px; padding: 9px; top: 0; transform: translateX(-50%); }
+      .iphone .screen { border-radius: 28px; }
+      .iphone .dynamic-island { width: 64px; height: 18px; top: 10px; }
+      .samsung-old { width: 168px; height: 350px; border-radius: 18px; padding: 10px 5px; top: 20px; transform: translateX(-120%); }
+      .samsung-new { width: 168px; height: 350px; border-radius: 20px; padding: 4px; top: 20px; transform: translateX(20%); }
       .hero-title { white-space: normal; margin-top: 0; }
       .hero-actions { flex-direction: column; width: 100%; gap: 12px; }
       .hero-actions .btn-primary, .hero-actions .btn-secondary { width: 100%; justify-content: center; }
