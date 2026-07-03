@@ -241,8 +241,8 @@
       border-radius: 26px;
       background: linear-gradient(155deg, #3a3a3e, #0f0f11 60%);
       padding: 16px 8px;
-      /* Clean cut matching the horizontal line */
-      clip-path: inset(0 -6px 0 -6px);
+      /* Cropped bottom 20% so it is cut horizontally at the baseline */
+      clip-path: inset(0 -6px 20% -6px);
     }
     .samsung-old::before {
       content: "";
@@ -291,7 +291,8 @@
       border-radius: 30px;
       background: linear-gradient(155deg, #3a3a3e, #0f0f11 60%);
       padding: 6px;
-      clip-path: inset(0 -6px 0 -6px);
+      /* Cropped bottom 20% to cut horizontally */
+      clip-path: inset(0 -6px 20% -6px);
     }
     .samsung-new::before {
       content: "";
@@ -376,8 +377,8 @@
       .iphone { width: 196px; height: 400px; border-radius: 36px; padding: 9px; top: 0; transform: translateX(-50%); clip-path: inset(0 -6px 20% -6px); }
       .iphone .screen { border-radius: 28px; }
       .iphone .dynamic-island { width: 64px; height: 18px; top: 10px; }
-      .samsung-old { width: 154px; height: 320px; border-radius: 16px; padding: 10px 5px; top: 64px; transform: translateX(-112%); clip-path: inset(0 -6px 0 -6px); }
-      .samsung-new { width: 154px; height: 320px; border-radius: 18px; padding: 4px; top: 64px; transform: translateX(12%); clip-path: inset(0 -6px 0 -6px); }
+      .samsung-old { width: 154px; height: 320px; border-radius: 16px; padding: 10px 5px; top: 64px; transform: translateX(-112%); clip-path: inset(0 -6px 20% -6px); }
+      .samsung-new { width: 154px; height: 320px; border-radius: 18px; padding: 4px; top: 64px; transform: translateX(12%); clip-path: inset(0 -6px 20% -6px); }
       .hero-title { white-space: normal; margin-top: 0; }
       .hero-actions { flex-direction: column; width: 100%; gap: 12px; }
       .hero-actions .btn-primary, .hero-actions .btn-secondary { width: 100%; justify-content: center; }
