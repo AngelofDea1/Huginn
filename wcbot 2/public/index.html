@@ -82,49 +82,40 @@
     /* ── THREE PHONE STAGE ───────────────────────────────────────────────────── */
     .stage {
       position: relative;
-      width: 100%;
-      max-width: 480px;
-      height: 220px;
+      width: 820px;
+      max-width: 100%;
+      height: 560px;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 16px;
+      margin: 0 auto 0;
       pointer-events: none;
       flex-shrink: 0;
+      overflow: hidden;
     }
 
-    /* Soft bottom fade so phones dissolve into the background before the headline */
-    .stage::after {
-      content: '';
+    .blob {
       position: absolute;
-      bottom: 0; left: 0;
-      width: 100%; height: 70px;
-      background: linear-gradient(to top, var(--black) 10%, transparent 100%);
-      z-index: 10;
-      pointer-events: none;
-    }
-
-    .stage-blob {
-      position: absolute;
-      bottom: 40px; left: 50%;
-      transform: translateX(-15%);
-      width: 380px; height: 380px;
+      top: 4%;
+      right: 6%;
+      width: 420px;
+      height: 420px;
       background:
-        radial-gradient(circle at 30% 30%, rgba(0,230,118,0.35), transparent 60%),
-        radial-gradient(circle at 65% 65%, rgba(0,200,83,0.25), transparent 55%);
-      filter: blur(55px);
-      opacity: 0.55;
+        radial-gradient(circle at 30% 30%, var(--orange-soft, #ff8c3d), transparent 60%),
+        radial-gradient(circle at 65% 65%, var(--orange, #ff6a00), transparent 55%);
+      filter: blur(50px);
+      opacity: 0.5;
       z-index: 0;
       border-radius: 50%;
       pointer-events: none;
     }
 
-    .stage-shadow {
+    .floor-shadow {
       position: absolute;
-      bottom: 6px; left: 50%;
-      transform: translateX(-50%);
-      width: 520px; height: 44px;
-      background: radial-gradient(ellipse, rgba(0,0,0,0.65), transparent 70%);
+      bottom: 10px;
+      width: 560px;
+      height: 50px;
+      background: radial-gradient(ellipse, rgba(0,0,0,0.6), transparent 70%);
       z-index: 0;
       pointer-events: none;
     }
@@ -132,165 +123,172 @@
     .device {
       position: absolute;
       z-index: 1;
-      filter: drop-shadow(0 20px 32px rgba(0,0,0,0.55));
+      filter: drop-shadow(0 35px 45px rgba(0,0,0,0.55));
     }
 
-    .device .screen {
+    .screen {
       position: relative;
-      width: 100%; height: 100%;
+      width: 100%;
+      height: 100%;
       overflow: hidden;
     }
 
-    .device .content-layer {
+    .content-layer {
       position: absolute;
-      inset: 0; z-index: 1;
-      background: linear-gradient(160deg, #0d0d1a, #080810);
+      inset: 0;
+      z-index: 1;
+      background: linear-gradient(160deg, #151517, #0a0a0b);
     }
-    .device .content-layer img,
-    .device .content-layer video {
+    .content-layer img,
+    .content-layer video,
+    .content-layer iframe {
       width: 100%; height: 100%;
       object-fit: cover;
-      border: 0; display: block;
+      border: 0;
+      display: block;
     }
-    .device .content-placeholder {
+    .content-placeholder {
       width: 100%; height: 100%;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      gap: 10px; padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ff8c3d;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-align: center;
+      padding: 10px;
     }
-    .device .content-placeholder .chat-line {
-      width: 85%; height: 9px;
-      border-radius: 6px;
-      background: rgba(255,255,255,0.07);
-    }
-    .device .content-placeholder .chat-line.green {
-      background: rgba(0,230,118,0.22);
-      width: 65%;
-    }
-    .device .content-placeholder .chat-line.short { width: 50%; }
 
     /* CENTER: iPhone 16 */
     .iphone {
-      width: 138px; height: 284px;
-      left: 50%; top: 50%;
+      width: 290px;
+      height: 595px;
+      left: 50%;
+      top: 50%;
       transform: translate(-50%, -50%);
       z-index: 3;
-      border-radius: 30px;
-      background: linear-gradient(155deg, #3a3a3e, #0f0f11 60%);
-      padding: 7px;
-      box-shadow: 0 0 0 1.5px rgba(255,255,255,0.09) inset;
+      border-radius: 54px;
+      background: linear-gradient(155deg, #4a4a4d, #111113 60%);
+      padding: 13px;
+      box-shadow: 0 0 0 2px rgba(255,255,255,0.08) inset;
+      clip-path: inset(0 -6px 20% -6px);
     }
     .iphone::before {
       content: "";
       position: absolute;
-      right: -2px; top: 78px;
-      width: 2px; height: 36px;
-      background: #222224; border-radius: 2px;
+      right: -3px; top: 160px;
+      width: 3px; height: 70px;
+      background: #2a2a2c; border-radius: 2px;
     }
     .iphone::after {
       content: "";
       position: absolute;
-      left: -2px; top: 62px;
-      width: 2px; height: 10px;
-      background: #222224; border-radius: 2px;
-      box-shadow: 0 20px 0 #222224, 0 40px 0 #222224;
+      left: -3px; top: 130px;
+      width: 3px; height: 20px;
+      background: #2a2a2c; border-radius: 2px;
+      box-shadow: 0 40px 0 #2a2a2c, 0 80px 0 #2a2a2c;
     }
-    .iphone .screen { border-radius: 24px; background: #000; }
+    .iphone .screen { border-radius: 42px; background: #000; }
     .iphone .dynamic-island {
       position: absolute;
-      top: 8px; left: 50%;
+      top: 15px; left: 50%;
       transform: translateX(-50%);
-      width: 50px; height: 14px;
-      background: #000; border-radius: 12px; z-index: 20;
+      width: 96px; height: 26px;
+      background: #000; border-radius: 20px; z-index: 20;
     }
 
     /* LEFT: older Samsung */
     .samsung-old {
-      width: 116px; height: 246px;
-      left: 50%; top: 50%;
-      transform: translate(-118%, -50%);
+      width: 250px;
+      height: 520px;
+      left: 50%;
+      top: 50%;
+      transform: translate(-125%, -46%);
       z-index: 1;
-      border-radius: 16px;
-      background: linear-gradient(155deg, #2e2e32, #0d0d0f 60%);
-      padding: 9px 5px;
-      box-shadow: 0 0 0 1.5px rgba(255,255,255,0.06) inset;
+      border-radius: 26px;
+      background: linear-gradient(155deg, #3a3a3e, #0f0f11 60%);
+      padding: 16px 8px;
+      clip-path: inset(0 -6px 20% -6px);
     }
     .samsung-old::before {
       content: "";
       position: absolute;
-      right: -2px; top: 66px;
-      width: 2px; height: 26px;
-      background: #222224; border-radius: 2px;
+      right: -3px; top: 140px;
+      width: 3px; height: 55px;
+      background: #2a2a2c; border-radius: 2px;
     }
     .samsung-old::after {
       content: "";
       position: absolute;
-      left: -2px; top: 57px;
-      width: 2px; height: 22px;
-      background: #222224; border-radius: 2px;
+      left: -3px; top: 120px;
+      width: 3px; height: 45px;
+      background: #2a2a2c; border-radius: 2px;
     }
-    .samsung-old .screen { border-radius: 5px; background: #000; }
+    .samsung-old .screen { border-radius: 8px; background: #000; }
     .samsung-old .nav-bar {
       position: absolute;
       bottom: 0; left: 0; right: 0; z-index: 20;
-      height: 16px; background: #080808;
+      height: 28px; background: #0a0a0a;
       display: flex; align-items: center; justify-content: space-around;
     }
     .samsung-old .nav-bar .tri {
       width: 0; height: 0;
-      border-top: 3px solid transparent;
-      border-bottom: 3px solid transparent;
-      border-right: 5px solid #555;
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+      border-right: 7px solid #999;
     }
     .samsung-old .nav-bar .circ {
-      width: 6px; height: 6px;
-      border: 1.5px solid #777; border-radius: 50%;
+      width: 11px; height: 11px;
+      border: 1.5px solid #ccc; border-radius: 50%;
     }
     .samsung-old .nav-bar .sq {
-      width: 6px; height: 6px;
-      border: 1.5px solid #555; border-radius: 2px;
+      width: 10px; height: 10px;
+      border: 1.5px solid #999; border-radius: 2px;
     }
 
     /* RIGHT: Samsung S25 Ultra */
     .samsung-new {
-      width: 116px; height: 246px;
-      left: 50%; top: 50%;
-      transform: translate(18%, -50%);
+      width: 250px;
+      height: 520px;
+      left: 50%;
+      top: 50%;
+      transform: translate(25%, -46%);
       z-index: 1;
-      border-radius: 18px;
-      background: linear-gradient(155deg, #2e2e32, #0d0d0f 60%);
-      padding: 4px;
-      box-shadow: 0 0 0 1.5px rgba(255,255,255,0.06) inset;
+      border-radius: 30px;
+      background: linear-gradient(155deg, #3a3a3e, #0f0f11 60%);
+      padding: 6px;
+      clip-path: inset(0 -6px 20% -6px);
     }
     .samsung-new::before {
       content: "";
       position: absolute;
-      right: -2px; top: 66px;
-      width: 2px; height: 26px;
-      background: #222224; border-radius: 2px;
+      right: -3px; top: 140px;
+      width: 3px; height: 55px;
+      background: #2a2a2c; border-radius: 2px;
     }
     .samsung-new::after {
       content: "";
       position: absolute;
-      left: -2px; top: 57px;
-      width: 2px; height: 22px;
-      background: #222224; border-radius: 2px;
+      left: -3px; top: 120px;
+      width: 3px; height: 45px;
+      background: #2a2a2c; border-radius: 2px;
     }
-    .samsung-new .screen { border-radius: 15px; background: #000; }
+    .samsung-new .screen { border-radius: 25px; background: #000; }
     .samsung-new .punch-hole {
       position: absolute;
-      top: 7px; left: 50%;
+      top: 12px; left: 50%;
       transform: translateX(-50%);
-      width: 6px; height: 6px;
-      background: #000; border: 1px solid #1a1a1a;
+      width: 10px; height: 10px;
+      background: #000; border: 1px solid #1c1c1c;
       border-radius: 50%; z-index: 20;
     }
     .samsung-new .gesture-pill {
       position: absolute;
-      bottom: 3px; left: 50%;
+      bottom: 6px; left: 50%;
       transform: translateX(-50%);
-      width: 44px; height: 2.5px;
-      background: rgba(255,255,255,0.45);
+      width: 90px; height: 4px;
+      background: rgba(255,255,255,0.55);
       border-radius: 3px; z-index: 20;
     }
 
@@ -340,35 +338,17 @@
 
     /* ── RESPONSIVE ──────────────────────────────────────────────────────────── */
     @media (max-width: 768px) {
-      .hero {
-        padding-top: 100px;
-      }
-      .stage { height: 180px; max-width: 340px; margin-bottom: 12px; }
-      .iphone { width: 100px; height: 206px; border-radius: 22px; padding: 5px; }
-      .iphone .screen { border-radius: 18px; }
-      .iphone .dynamic-island { width: 36px; height: 10px; top: 6px; }
-      .samsung-old {
-        width: 84px; height: 176px; border-radius: 12px; padding: 7px 4px;
-        transform: translate(-118%, -50%);
-      }
-      .samsung-new {
-        width: 84px; height: 176px; border-radius: 14px; padding: 3px;
-        transform: translate(34%, -50%);
-      }
+      .hero { padding-top: 100px; }
+      .stage { height: 340px; }
+      .iphone { width: 174px; height: 357px; border-radius: 32px; padding: 8px; }
+      .iphone .screen { border-radius: 26px; }
+      .iphone .dynamic-island { width: 58px; height: 16px; top: 9px; }
+      .samsung-old { width: 150px; height: 312px; border-radius: 16px; padding: 10px 5px; transform: translate(-125%, -46%); }
+      .samsung-new { width: 150px; height: 312px; border-radius: 18px; padding: 4px; transform: translate(25%, -46%); }
       .hero-title { white-space: normal; }
-      .hero-actions {
-        flex-direction: column;
-        width: 100%;
-        gap: 12px;
-      }
-      .hero-actions .btn-primary,
-      .hero-actions .btn-secondary {
-        width: 100%;
-        justify-content: center;
-      }
-      .feature-strip {
-        grid-template-columns: 1fr;
-      }
+      .hero-actions { flex-direction: column; width: 100%; gap: 12px; }
+      .hero-actions .btn-primary, .hero-actions .btn-secondary { width: 100%; justify-content: center; }
+      .feature-strip { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -385,23 +365,15 @@
 
         <!-- Three-phone stage (above the headline, in normal document flow) -->
         <div class="stage">
-          <div class="stage-blob"></div>
-          <div class="stage-shadow"></div>
+          <div class="blob"></div>
+          <div class="floor-shadow"></div>
 
           <!-- LEFT: older Samsung -->
           <div class="device samsung-old">
             <div class="screen">
               <div class="content-layer">
-                <!-- DROP IMAGE HERE LATER: <img src="/screens/samsung-left.png" alt=""> -->
-                <div class="content-placeholder">
-                  <div class="chat-line"></div>
-                  <div class="chat-line green"></div>
-                  <div class="chat-line short"></div>
-                  <div class="chat-line"></div>
-                  <div class="chat-line green"></div>
-                  <div class="chat-line short"></div>
-                  <div class="chat-line"></div>
-                </div>
+                <div class="content-placeholder">older samsung<br>image here</div>
+                <!-- <img src="screenshot-left.png" alt=""> -->
               </div>
               <div class="nav-bar">
                 <div class="tri"></div>
@@ -411,20 +383,12 @@
             </div>
           </div>
 
-          <!-- RIGHT: Samsung S25 Ultra -->
+          <!-- RIGHT: newest Samsung -->
           <div class="device samsung-new">
             <div class="screen">
               <div class="content-layer">
-                <!-- DROP IMAGE HERE LATER: <img src="/screens/samsung-right.png" alt=""> -->
-                <div class="content-placeholder">
-                  <div class="chat-line green"></div>
-                  <div class="chat-line"></div>
-                  <div class="chat-line short"></div>
-                  <div class="chat-line green"></div>
-                  <div class="chat-line"></div>
-                  <div class="chat-line short"></div>
-                  <div class="chat-line"></div>
-                </div>
+                <div class="content-placeholder">newest samsung<br>image here</div>
+                <!-- <img src="screenshot-right.png" alt=""> -->
               </div>
               <div class="punch-hole"></div>
               <div class="gesture-pill"></div>
@@ -435,18 +399,8 @@
           <div class="device iphone">
             <div class="screen">
               <div class="content-layer">
-                <!-- DROP IMAGE HERE LATER: <img src="/screens/iphone-center.png" alt=""> -->
-                <div class="content-placeholder">
-                  <div class="chat-line"></div>
-                  <div class="chat-line green"></div>
-                  <div class="chat-line short"></div>
-                  <div class="chat-line green"></div>
-                  <div class="chat-line"></div>
-                  <div class="chat-line green"></div>
-                  <div class="chat-line short"></div>
-                  <div class="chat-line"></div>
-                  <div class="chat-line green"></div>
-                </div>
+                <div class="content-placeholder">center iphone<br>image or live iframe here</div>
+                <!-- <img src="screenshot-main.png" alt=""> -->
               </div>
               <div class="dynamic-island"></div>
             </div>
