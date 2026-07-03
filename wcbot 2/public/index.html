@@ -87,19 +87,17 @@
      * needed — so the headline sits flush right below the stage with zero gap.
      */
     .stage {
-      position: absolute;
-      top: 240px;
-      left: 50%;
-      transform: translateX(-50%);
+      position: relative;
       width: 820px;
       max-width: 100%;
-      height: 480px;
+      height: 520px; /* iPhone visible height (650px * 80%) = 520px */
       display: flex;
       align-items: flex-start;
       justify-content: center;
+      margin: 0 auto 20px;
       pointer-events: none;
       flex-shrink: 0;
-      z-index: -1; /* Placed behind the text */
+      z-index: 2;
     }
 
 
@@ -194,18 +192,18 @@
     /*  top: 0  →  full top of device is always visible, never clipped.      */
     /*  clip-path cuts the bottom 20% only, so the phone merges into the bg. */
     .iphone {
-      width: 290px;
-      height: 595px;
+      width: 320px;
+      height: 650px;
       left: 50%;
-      top: 0; /* Kept top:0 so the top is higher than the side phones */
+      top: 0;
       transform: translateX(-50%);
       z-index: 3;
       border-radius: 54px;
       background: linear-gradient(155deg, #4a4a4d, #111113 60%);
       padding: 13px;
       box-shadow: 0 0 0 2px rgba(255,255,255,0.08) inset;
-      /* Cropped extra from the bottom (30%) so the cut line matches the side Samsungs perfectly */
-      clip-path: inset(0 -6px 30.5% -6px);
+      /* Crops the bottom 20% (130px), leaving exactly 520px visible height */
+      clip-path: inset(0 -6px 20% -6px);
     }
     .iphone::before {
       content: "";
@@ -237,13 +235,14 @@
       width: 250px;
       height: 520px;
       left: 50%;
-      top: 30px;
-      transform: translateX(-125%);
+      top: 104px; /* Placed 104px down so its baseline sits at exactly 520px */
+      transform: translateX(-116%);
       z-index: 1;
       border-radius: 26px;
       background: linear-gradient(155deg, #3a3a3e, #0f0f11 60%);
       padding: 16px 8px;
-      clip-path: inset(0 -6px 20% -6px);
+      /* Clean cut matching the horizontal line */
+      clip-path: inset(0 -6px 0 -6px);
     }
     .samsung-old::before {
       content: "";
@@ -286,13 +285,13 @@
       width: 250px;
       height: 520px;
       left: 50%;
-      top: 30px;
-      transform: translateX(25%);
+      top: 104px; /* Placed 104px down to sit baseline flush at 520px */
+      transform: translateX(16%);
       z-index: 1;
       border-radius: 30px;
       background: linear-gradient(155deg, #3a3a3e, #0f0f11 60%);
       padding: 6px;
-      clip-path: inset(0 -6px 20% -6px);
+      clip-path: inset(0 -6px 0 -6px);
     }
     .samsung-new::before {
       content: "";
@@ -373,13 +372,13 @@
     /* ── RESPONSIVE ──────────────────────────────────────────────────── */
     @media (max-width: 768px) {
       .hero { padding-top: 100px; }
-      .stage { position: absolute; top: 160px; height: 320px; z-index: -1; }
-      .iphone { width: 196px; height: 402px; border-radius: 36px; padding: 9px; top: 0; transform: translateX(-50%); clip-path: inset(0 -6px 30.5% -6px); }
+      .stage { position: relative; top: 0; height: 320px; }
+      .iphone { width: 196px; height: 400px; border-radius: 36px; padding: 9px; top: 0; transform: translateX(-50%); clip-path: inset(0 -6px 20% -6px); }
       .iphone .screen { border-radius: 28px; }
       .iphone .dynamic-island { width: 64px; height: 18px; top: 10px; }
-      .samsung-old { width: 168px; height: 350px; border-radius: 18px; padding: 10px 5px; top: 20px; transform: translateX(-120%); }
-      .samsung-new { width: 168px; height: 350px; border-radius: 20px; padding: 4px; top: 20px; transform: translateX(20%); }
-      .hero-title { white-space: normal; margin-top: 260px; }
+      .samsung-old { width: 154px; height: 320px; border-radius: 16px; padding: 10px 5px; top: 64px; transform: translateX(-112%); clip-path: inset(0 -6px 0 -6px); }
+      .samsung-new { width: 154px; height: 320px; border-radius: 18px; padding: 4px; top: 64px; transform: translateX(12%); clip-path: inset(0 -6px 0 -6px); }
+      .hero-title { white-space: normal; margin-top: 0; }
       .hero-actions { flex-direction: column; width: 100%; gap: 12px; }
       .hero-actions .btn-primary, .hero-actions .btn-secondary { width: 100%; justify-content: center; }
       .feature-strip { grid-template-columns: 1fr; }
@@ -395,7 +394,7 @@
   <section class="hero">
     <div class="hero-glow"></div>
     <div class="container">
-      <div class="hero-content" style="padding-top: 360px;">
+      <div class="hero-content">
 
         <!-- Three-phone stage: sits above the headline in normal document flow.
              To add your screenshots later, uncomment the <img> tag inside each
