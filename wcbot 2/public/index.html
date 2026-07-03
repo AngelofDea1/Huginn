@@ -373,16 +373,18 @@
     /* ── RESPONSIVE ──────────────────────────────────────────────────── */
     @media (max-width: 768px) {
       .hero { padding-top: 100px; }
-      .stage { position: relative; top: 0; height: 320px; }
-      .iphone { width: 196px; height: 400px; border-radius: 36px; padding: 9px; top: 0; transform: translateX(-50%); clip-path: inset(0 -6px 20% -6px); }
-      .iphone .screen { border-radius: 28px; }
-      .iphone .dynamic-island { width: 64px; height: 18px; top: 10px; }
-      .samsung-old { width: 154px; height: 320px; border-radius: 16px; padding: 10px 5px; top: 64px; transform: translateX(-112%); clip-path: inset(0 -6px 20% -6px); }
-      .samsung-new { width: 154px; height: 320px; border-radius: 18px; padding: 4px; top: 64px; transform: translateX(12%); clip-path: inset(0 -6px 20% -6px); }
+      /* Scale proportionally for mobile layout so they fit inside screen bounds */
+      .stage { height: 260px; margin-bottom: 20px; }
+      .iphone { width: 140px; height: 288px; border-radius: 24px; padding: 6px; top: 0; transform: translateX(-50%); clip-path: inset(0 -6px 20% -6px); }
+      .iphone .screen { border-radius: 20px; }
+      .iphone .dynamic-island { width: 44px; height: 12px; top: 7px; }
+      .samsung-old { width: 120px; height: 250px; border-radius: 12px; padding: 7px 4px; top: 50px; transform: translateX(-110%); clip-path: inset(0 -6px 20% -6px); }
+      .samsung-new { width: 120px; height: 250px; border-radius: 14px; padding: 3px; top: 50px; transform: translateX(10%); clip-path: inset(0 -6px 20% -6px); }
       .hero-title { white-space: normal; margin-top: 0; }
       .hero-actions { flex-direction: column; width: 100%; gap: 12px; }
       .hero-actions .btn-primary, .hero-actions .btn-secondary { width: 100%; justify-content: center; }
       .feature-strip { grid-template-columns: 1fr; }
+      .footer-inner { flex-direction: column; text-align: center; gap: 16px; }
     }
   </style>
 </head>
@@ -478,7 +480,7 @@
           Goals, red cards, and odds shifts pushed to your WhatsApp. Chat directly with Huginn or invite it to any group.
         </p>
         <div class="hero-actions">
-          <a href="/api/join" target="_blank" rel="noopener" class="btn-primary" style="padding: 16px 36px; font-size: 1rem;">
+          <a href="/api/join" target="_blank" rel="noopener noreferrer" class="btn-primary" style="padding: 16px 36px; font-size: 1rem;">
             Chat on WhatsApp
           </a>
           <a href="/demo.html" class="btn-secondary" style="padding: 16px 36px; font-size: 1rem;">Live Chat in Browser</a>
@@ -514,7 +516,7 @@
       <h2 class="display cta-title">Get live updates in your chats</h2>
       <p class="cta-desc">Chat directly with Huginn or invite it to any WhatsApp group. Simply send a message to get started.</p>
       <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-top:8px">
-        <a href="/api/join" target="_blank" rel="noopener" class="btn-primary" style="display:inline-flex;font-size:1rem;padding:16px 36px">
+        <a href="/api/join" target="_blank" rel="noopener noreferrer" class="btn-primary" style="display:inline-flex;font-size:1rem;padding:16px 36px">
           Chat on WhatsApp
         </a>
         <a href="/demo.html" class="btn-secondary" style="display:inline-flex;font-size:1rem;padding:16px 36px">

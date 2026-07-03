@@ -210,39 +210,45 @@
 /* ── Mobile popover ──────────────────────────────────────────────────────── */
 .mobile-menu-popover {
   position: absolute;
-  top: calc(var(--nav-h) + 8px);
-  left: 0;
+  top: calc(var(--nav-h) + 12px);
+  left: auto;
   right: 0;
-  background: var(--base, #000);
-  border-radius: 20px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  width: 200px;
+  background: #0d0d1a;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
   z-index: 998;
   opacity: 0;
-  transform-origin: top center;
+  transform-origin: top right;
   visibility: hidden;
+  padding: 8px;
 }
 .mobile-menu-list {
   list-style: none;
   margin: 0;
-  padding: 6px;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 .mobile-menu-popover .mobile-menu-link {
   display: block;
-  padding: 13px 18px;
-  color: var(--pill-text, #fff);
-  background: var(--pill-bg, rgba(255,255,255,0.06));
+  padding: 10px 16px;
+  color: var(--muted);
   text-decoration: none;
   font-family: 'DM Sans', sans-serif;
-  font-size: 0.9rem;
-  font-weight: 600;
-  border-radius: 14px;
-  transition: background 0.15s, color 0.15s;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 10px;
+  transition: all 0.2s;
 }
-.mobile-menu-popover .mobile-menu-link:hover,
+.mobile-menu-popover .mobile-menu-link:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--white);
+}
 .mobile-menu-popover .mobile-menu-link.is-active {
-  background: var(--green, #00e676);
-  color: #000;
+  background: rgba(0, 230, 118, 0.08);
+  color: var(--green);
+  font-weight: 600;
 }
