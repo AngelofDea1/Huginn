@@ -1,0 +1,22 @@
+{
+  "name": "Huginn Live Sports Tracker",
+  "short_name": "Huginn",
+  "description": "Live match alerts, odds shifts, and AI commentary pushed to your device.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080810",
+  "theme_color": "#00e676",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/img/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/img/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}

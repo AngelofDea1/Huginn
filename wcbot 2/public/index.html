@@ -11,6 +11,11 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Tourney:wght@600;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap"
     rel="stylesheet" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Huginn" />
+  <link rel="apple-touch-icon" href="/img/icon-192.png" />
   <link rel="stylesheet" href="/css/shared.css" />
   <link rel="stylesheet" href="/css/pill-nav.css" />
   <style>
@@ -519,6 +524,15 @@
       pillTextColor: '#f0f0f8',
       hoveredPillTextColor: '#ffffff',
     });
+
+    // Register service worker for PWA support
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('Service Worker registered successfully:', reg.scope))
+          .catch(err => console.log('Service Worker registration failed:', err));
+      });
+    }
   </script>
 </body>
 

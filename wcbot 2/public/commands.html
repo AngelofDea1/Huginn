@@ -7,6 +7,11 @@
 <meta name="description" content="Full command reference for Huginn. Manual commands and automatic alerts for every World Cup match."/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Tourney:wght@600;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"/>
+<link rel="manifest" href="/manifest.json" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Huginn" />
+<link rel="apple-touch-icon" href="/img/icon-192.png" />
 <link rel="stylesheet" href="/css/shared.css"/>
 <link rel="stylesheet" href="/css/pill-nav.css"/>
 <style>
@@ -255,8 +260,17 @@
     baseColor: '#0d0d1a',
     pillColor: 'rgba(255,255,255,0.06)',
     pillTextColor: '#f0f0f8',
-    hoveredPillTextColor: '#080810',
+    hoveredPillTextColor: '#ffffff',
   });
+
+  // Register service worker
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then(reg => console.log('Service Worker registered:', reg.scope))
+        .catch(err => console.log('Service Worker failed:', err));
+    });
+  }
 </script>
 </body>
 </html>
