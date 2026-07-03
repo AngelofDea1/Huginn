@@ -90,11 +90,11 @@
       position: relative;
       width: 820px;
       max-width: 100%;
-      height: 476px;
+      height: 446px; /* Reduced to pull text up closer */
       display: flex;
       align-items: flex-start;
       justify-content: center;
-      margin: 0 auto;
+      margin: 0 auto -20px; /* Pulls text up directly below the phones */
       pointer-events: none;
       flex-shrink: 0;
     }
@@ -194,7 +194,7 @@
       width: 290px;
       height: 595px;
       left: 50%;
-      top: 0;
+      top: 30px; /* Shifted down to line up with the side Samsungs at the bottom */
       transform: translateX(-50%);
       z-index: 3;
       border-radius: 54px;
@@ -370,8 +370,8 @@
     @media (max-width: 768px) {
       .hero { padding-top: 100px; }
       /* Scale proportionally for mobile layout */
-      .stage { height: 320px; }
-      .iphone { width: 196px; height: 402px; border-radius: 36px; padding: 9px; top: 0; transform: translateX(-50%); }
+      .stage { height: 300px; margin-bottom: -10px; }
+      .iphone { width: 196px; height: 402px; border-radius: 36px; padding: 9px; top: 20px; transform: translateX(-50%); }
       .iphone .screen { border-radius: 28px; }
       .iphone .dynamic-island { width: 64px; height: 18px; top: 10px; }
       .samsung-old { width: 168px; height: 350px; border-radius: 18px; padding: 10px 5px; top: 20px; transform: translateX(-120%); }
