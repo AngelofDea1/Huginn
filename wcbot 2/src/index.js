@@ -24,6 +24,17 @@ app.use(express.static(join(__dirname, '..', 'public')));
 app.post('/api/chat', handleChatMessage);
 app.get('/api/live', getLiveMatchesAPI);
 
+// ─── WhatsApp join redirect ────────────────────────────────────────────────────
+// The bot number never appears in any frontend file. Buttons on the site hit
+// this endpoint; the server resolves the number from the environment and issues
+// a 302 to wa.me. Even if someone inspects the page source they see /api/join.
+app.get('/api/join', (_, res) => {
+  const number = (process.env.WA_NUMBER || '').replace(/\D/g, '');
+  if (!number) return res.status(503).send('WhatsApp number not configured.');
+  const text = encodeURIComponent('Hi! I want to add Huginn to my WhatsApp group for World Cup 2026 alerts 🏆');
+  res.redirect(302, `https://wa.me/${number}?text=${text}`);
+});
+
 // ─── Health check ─────────────────────────────────────────────────────────────
 app.get('/health', (_, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
 
