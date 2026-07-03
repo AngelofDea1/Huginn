@@ -373,13 +373,13 @@
     /* ── RESPONSIVE ──────────────────────────────────────────────────── */
     @media (max-width: 768px) {
       .hero { padding-top: 100px; }
-      /* Scale proportionally for mobile layout so they fit inside screen bounds */
-      .stage { height: 260px; margin-bottom: 20px; }
-      .iphone { width: 140px; height: 288px; border-radius: 24px; padding: 6px; top: 0; transform: translateX(-50%); clip-path: inset(0 -6px 20% -6px); }
-      .iphone .screen { border-radius: 20px; }
-      .iphone .dynamic-island { width: 44px; height: 12px; top: 7px; }
-      .samsung-old { width: 120px; height: 250px; border-radius: 12px; padding: 7px 4px; top: 50px; transform: translateX(-110%); clip-path: inset(0 -6px 20% -6px); }
-      .samsung-new { width: 120px; height: 250px; border-radius: 14px; padding: 3px; top: 50px; transform: translateX(10%); clip-path: inset(0 -6px 20% -6px); }
+      /* Scale down to fit 360px width viewports without horizontal scroll */
+      .stage { height: 176px; margin-bottom: 10px; }
+      .iphone { width: 110px; height: 220px; border-radius: 20px; padding: 5px; top: 0; transform: translateX(-50%); clip-path: inset(0 -6px 20% -6px); }
+      .iphone .screen { border-radius: 16px; }
+      .iphone .dynamic-island { width: 36px; height: 10px; top: 5px; }
+      .samsung-old { width: 95px; height: 198px; border-radius: 10px; padding: 6px 3px; top: 18px; transform: translateX(-120%); clip-path: inset(0 -6px 20% -6px); }
+      .samsung-new { width: 95px; height: 198px; border-radius: 12px; padding: 2px; top: 18px; transform: translateX(20%); clip-path: inset(0 -6px 20% -6px); }
       .hero-title { white-space: normal; margin-top: 0; }
       .hero-actions { flex-direction: column; width: 100%; gap: 12px; }
       .hero-actions .btn-primary, .hero-actions .btn-secondary { width: 100%; justify-content: center; }
