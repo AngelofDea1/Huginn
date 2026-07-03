@@ -15,222 +15,375 @@
 <link rel="stylesheet" href="/css/shared.css"/>
 <link rel="stylesheet" href="/css/pill-nav.css"/>
 <style>
-/* ── Commands table ───────────────────────────────────────────────────────── */
-.cmd-badge {
-  font-size: 0.65rem;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 20px;
-  background: var(--card);
-  color: var(--muted);
-  border: 1px solid var(--border);
-  white-space: nowrap;
-}
-.cmd-tag {
-  font-size: 0.65rem;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 20px;
-  background: var(--card);
-  color: var(--muted);
-  border: 1px solid var(--border);
-  white-space: nowrap;
-}
-.cmd-tag.auto { color: var(--green); border-color: rgba(0,230,118,0.25); background: var(--green-glow); }
 
-.commands-table {
-  margin-top: 60px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  overflow: hidden;
-}
-.cmd-row {
-  display: grid;
-  grid-template-columns: 200px 1fr auto;
-  gap: 24px;
-  padding: 18px 28px;
-  align-items: center;
-  border-bottom: 1px solid var(--border);
-  transition: background 0.15s;
-}
-.cmd-row:last-child { border-bottom: none; }
-.cmd-row:hover { background: var(--card); }
-.cmd-row:first-child {
-  background: rgba(0,230,118,0.04);
-  font-size: 0.7rem;
+/* ── Page header ──────────────────────────────────────────────────────────── */
+.cmd-page { padding: 140px 0 100px; }
+
+.page-eyebrow {
+  font-size: 0.72rem;
   font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--green);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.page-eyebrow-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+}
+
+.page-title {
+  font-size: clamp(2rem, 4vw, 3rem);
+  margin-bottom: 16px;
+  line-height: 1;
+}
+.page-desc {
+  color: var(--muted);
+  font-size: 1rem;
+  max-width: 560px;
+  line-height: 1.65;
+  margin-bottom: 0;
+}
+
+/* ── Section headings ─────────────────────────────────────────────────────── */
+.section-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 24px;
+  margin-top: 64px;
+}
+.section-heading h2 {
+  font-family: 'Tourney', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.section-heading .section-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+.section-badge.manual {
+  background: var(--card);
+  border: 1px solid var(--border);
   color: var(--muted);
-  cursor: default;
 }
-.cmd-row:first-child:hover { background: rgba(0,230,118,0.04); }
-.cmd-code {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.82rem;
-  color: var(--green);
+.section-badge.auto {
   background: var(--green-glow);
-  padding: 4px 10px;
-  border-radius: 6px;
-  width: fit-content;
-}
-.cmd-desc { font-size: 0.875rem; color: var(--muted); }
-
-/* ── Section divider label ────────────────────────────────────────────────── */
-.cmd-section-label {
-  padding: 12px 28px 8px;
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  border: 1px solid rgba(0,230,118,0.3);
   color: var(--green);
-  border-bottom: 1px solid var(--border);
-  background: rgba(0,230,118,0.02);
 }
 
-/* ── Quick-try panel ─────────────────────────────────────────────────────── */
-.try-panel {
-  margin-top: 60px;
+/* ── Manual commands grid ─────────────────────────────────────────────────── */
+.cmd-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.cmd-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 36px;
+  border-radius: 14px;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.2s, background 0.2s, transform 0.15s;
+  cursor: default;
+}
+.cmd-card:hover {
+  border-color: rgba(0,230,118,0.25);
+  background: var(--card);
+  transform: translateY(-2px);
+}
+
+.cmd-code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.88rem;
+  color: var(--green);
+  background: var(--green-glow);
+  padding: 5px 12px;
+  border-radius: 8px;
+  width: fit-content;
+}
+
+.cmd-desc {
+  font-size: 0.875rem;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+/* ── Automatic alerts grid ────────────────────────────────────────────────── */
+.auto-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+
+.auto-card {
+  background: var(--surface);
+  border: 1px solid rgba(0,230,118,0.1);
+  border-radius: 14px;
+  padding: 22px 24px;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  transition: border-color 0.2s, background 0.2s, transform 0.15s;
+}
+.auto-card:hover {
+  border-color: rgba(0,230,118,0.3);
+  background: rgba(0,230,118,0.03);
+  transform: translateY(-2px);
+}
+
+.auto-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--green-glow);
+  border-radius: 10px;
+}
+
+.auto-body {}
+.auto-title {
+  font-family: 'Tourney', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-bottom: 5px;
+  color: var(--white);
+}
+.auto-desc {
+  font-size: 0.835rem;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.auto-timing {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--green);
+  background: var(--green-glow);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+/* ── CTA panel ────────────────────────────────────────────────────────────── */
+.cta-panel {
+  margin-top: 72px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 48px 40px;
   display: flex;
   gap: 40px;
   align-items: center;
+  justify-content: space-between;
   flex-wrap: wrap;
+  position: relative;
+  overflow: hidden;
 }
-.try-panel-text h3 {
-  font-family: 'Tourney', sans-serif;
-  font-size: 1.3rem;
-  margin-bottom: 8px;
+.cta-panel::before {
+  content: '';
+  position: absolute;
+  top: -60px; right: -60px;
+  width: 260px; height: 260px;
+  background: radial-gradient(circle, rgba(0,230,118,0.08), transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
 }
-.try-panel-text p { color: var(--muted); font-size: 0.9rem; max-width: 400px; }
-.try-panel-actions { display: flex; gap: 12px; flex-wrap: wrap; flex-shrink: 0; }
 
+.cta-panel-text h3 {
+  font-family: 'Tourney', sans-serif;
+  font-size: 1.5rem;
+  margin-bottom: 10px;
+}
+.cta-panel-text p {
+  color: var(--muted);
+  font-size: 0.9rem;
+  max-width: 420px;
+  line-height: 1.6;
+}
+.cta-panel-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  .cmd-row { grid-template-columns: 1fr; gap: 8px; }
-  .cmd-row:first-child { display: none; }
-  .try-panel { flex-direction: column; gap: 24px; }
+  .cmd-grid { grid-template-columns: 1fr; }
+  .auto-grid { grid-template-columns: 1fr; }
+  .cta-panel { flex-direction: column; gap: 28px; padding: 32px 24px; }
+  .cta-panel-text h3 { font-size: 1.2rem; }
 }
 </style>
 </head>
 <body>
 
-<section class="section" style="padding-top:140px">
+<section class="cmd-page">
   <div class="container">
-    <h1 class="display section-title">Command and alert reference</h1>
 
+    <!-- Page header -->
+    <div class="page-eyebrow">
+      <span class="page-eyebrow-dot"></span>
+      Reference
+    </div>
+    <h1 class="display page-title">Commands &amp; Automatic Alerts</h1>
+    <p class="page-desc">
+      Everything Huginn can do — commands you send manually, and alerts that fire on their own the moment something happens in a match.
+    </p>
 
-    <div class="commands-table">
+    <!-- MANUAL COMMANDS -->
+    <div class="section-heading">
+      <h2>Commands you send</h2>
+      <span class="section-badge manual">Manual</span>
+    </div>
 
-      <!-- Header row -->
-      <div class="cmd-row">
-        <div>Command</div>
-        <div>What it does</div>
-        <div>Type</div>
-      </div>
+    <div class="cmd-grid">
 
-      <!-- Manual commands section -->
-      <div class="cmd-section-label">Manual — you send these</div>
-
-      <div class="cmd-row">
+      <div class="cmd-card">
         <div class="cmd-code">/follow [team]</div>
-        <div class="cmd-desc">Start receiving live alerts for any match featuring that team</div>
-        <div class="cmd-badge">Manual</div>
+        <p class="cmd-desc">Start receiving live alerts for every match featuring that team. Works in any WhatsApp group or direct chat.</p>
       </div>
-      <div class="cmd-row">
+
+      <div class="cmd-card">
         <div class="cmd-code">/unfollow [team]</div>
-        <div class="cmd-desc">Stop alerts for a specific team</div>
-        <div class="cmd-badge">Manual</div>
+        <p class="cmd-desc">Stop receiving alerts for a specific team. Your other followed teams are not affected.</p>
       </div>
-      <div class="cmd-row">
+
+      <div class="cmd-card">
         <div class="cmd-code">/live</div>
-        <div class="cmd-desc">Show all currently active World Cup matches and their live odds</div>
-        <div class="cmd-badge">Manual</div>
+        <p class="cmd-desc">Show all currently active World Cup matches, live scores, and current odds in a clean summary.</p>
       </div>
-      <div class="cmd-row">
-        <div class="cmd-code">/vibe hype</div>
-        <div class="cmd-desc">Switch to high-energy, dramatic commentary mode</div>
-        <div class="cmd-badge">Manual</div>
-      </div>
-      <div class="cmd-row">
-        <div class="cmd-code">/vibe tactical</div>
-        <div class="cmd-desc">Switch to calm, data-driven analytical commentary</div>
-        <div class="cmd-badge">Manual</div>
-      </div>
-      <div class="cmd-row">
-        <div class="cmd-code">/vibe funny</div>
-        <div class="cmd-desc">Switch to light-hearted, irreverent banter mode</div>
-        <div class="cmd-badge">Manual</div>
-      </div>
-      <div class="cmd-row">
-        <div class="cmd-code">/vibe balanced</div>
-        <div class="cmd-desc">Switch to the default friendly and informative style</div>
-        <div class="cmd-badge">Manual</div>
-      </div>
-      <div class="cmd-row">
-        <div class="cmd-code">/status</div>
-        <div class="cmd-desc">See which teams you are currently following and your active vibe</div>
-        <div class="cmd-badge">Manual</div>
-      </div>
-      <div class="cmd-row">
+
+      <div class="cmd-card">
         <div class="cmd-code">/schedule</div>
-        <div class="cmd-desc">View the list of all upcoming matches and kickoff times in the tournament schedule</div>
-        <div class="cmd-badge">Manual</div>
+        <p class="cmd-desc">View the full list of upcoming fixtures and kickoff times for the remainder of the tournament.</p>
       </div>
-      <div class="cmd-row">
+
+      <div class="cmd-card">
+        <div class="cmd-code">/status</div>
+        <p class="cmd-desc">See which teams you are currently following and which commentary vibe is active.</p>
+      </div>
+
+      <div class="cmd-card">
+        <div class="cmd-code">/vibe hype</div>
+        <p class="cmd-desc">Switch to high-energy, dramatic commentary. Every goal feels like a final.</p>
+      </div>
+
+      <div class="cmd-card">
+        <div class="cmd-code">/vibe tactical</div>
+        <p class="cmd-desc">Switch to calm, data-driven analysis. xG, formations, and odds movements explained clearly.</p>
+      </div>
+
+      <div class="cmd-card">
+        <div class="cmd-code">/vibe funny</div>
+        <p class="cmd-desc">Switch to light-hearted banter mode. Football is entertainment after all.</p>
+      </div>
+
+      <div class="cmd-card">
+        <div class="cmd-code">/vibe balanced</div>
+        <p class="cmd-desc">The default. Friendly, informative, and never annoying.</p>
+      </div>
+
+      <div class="cmd-card">
         <div class="cmd-code">/help</div>
-        <div class="cmd-desc">Show all available commands</div>
-        <div class="cmd-badge">Manual</div>
-      </div>
-
-      <!-- Automatic alerts section -->
-      <div class="cmd-section-label">Automatic — sent without any prompt</div>
-
-      <div class="cmd-row">
-        <div style="color:var(--muted);font-size:0.8rem;font-style:italic">Pre-match bulletin</div>
-        <div class="cmd-desc">Sent 30 minutes before kickoff — odds, key storylines, team news, and a match preview</div>
-        <div class="cmd-tag auto">Auto</div>
-      </div>
-      <div class="cmd-row">
-        <div style="color:var(--muted);font-size:0.8rem;font-style:italic">Goal alert</div>
-        <div class="cmd-desc">Fires within 30 seconds of a goal — scorer, minute, score, odds movement, and AI commentary</div>
-        <div class="cmd-tag auto">Auto</div>
-      </div>
-      <div class="cmd-row">
-        <div style="color:var(--muted);font-size:0.8rem;font-style:italic">Red card alert</div>
-        <div class="cmd-desc">Instant notification — player name, minute, and updated odds after the dismissal</div>
-        <div class="cmd-tag auto">Auto</div>
-      </div>
-      <div class="cmd-row">
-        <div style="color:var(--muted);font-size:0.8rem;font-style:italic">Odds shift alert</div>
-        <div class="cmd-desc">Sent when odds move by 15% or more in a short window — something significant changed in the market</div>
-        <div class="cmd-tag auto">Auto</div>
-      </div>
-      <div class="cmd-row">
-        <div style="color:var(--muted);font-size:0.8rem;font-style:italic">Half-time report</div>
-        <div class="cmd-desc">Automatic summary at the half-time whistle — possession, shots, xG, and updated odds</div>
-        <div class="cmd-tag auto">Auto</div>
-      </div>
-      <div class="cmd-row">
-        <div style="color:var(--muted);font-size:0.8rem;font-style:italic">Full-time wrap</div>
-        <div class="cmd-desc">Complete match story at the final whistle — result, key moments, standout stats, and what is next</div>
-        <div class="cmd-tag auto">Auto</div>
+        <p class="cmd-desc">Get the full command list sent straight to your chat, any time.</p>
       </div>
 
     </div>
 
-    <!-- Quick-try panel -->
-    <div class="try-panel">
-      <div class="try-panel-text">
-        <h3>See it respond</h3>
-        <p>Open the Live Demo and type anything from this list. The bot is live and connected right now, no account needed.</p>
+    <!-- AUTOMATIC ALERTS -->
+    <div class="section-heading">
+      <h2>Automatic alerts</h2>
+      <span class="section-badge auto">Sent automatically</span>
+    </div>
+
+    <div class="auto-grid">
+
+      <div class="auto-card">
+        <div class="auto-icon">📋</div>
+        <div class="auto-body">
+          <div class="auto-title">Pre-match Bulletin</div>
+          <p class="auto-desc">Full preview sent before kick-off — opening odds, team news, key storylines, and what to watch.</p>
+          <span class="auto-timing">30 min before kickoff</span>
+        </div>
       </div>
-      <div class="try-panel-actions">
-        <a href="/demo.html" class="btn-primary">Open Live Demo</a>
-        <a href="/features.html" class="btn-secondary">How it works</a>
+
+      <div class="auto-card">
+        <div class="auto-icon">⚽</div>
+        <div class="auto-body">
+          <div class="auto-title">Goal Alert</div>
+          <p class="auto-desc">Scorer, minute, updated score, odds movement, and AI commentary fired instantly.</p>
+          <span class="auto-timing">Within 30 seconds of goal</span>
+        </div>
+      </div>
+
+      <div class="auto-card">
+        <div class="auto-icon">🟥</div>
+        <div class="auto-body">
+          <div class="auto-title">Red Card Alert</div>
+          <p class="auto-desc">Player name, minute of dismissal, and how the odds shifted after the send-off.</p>
+          <span class="auto-timing">Instant</span>
+        </div>
+      </div>
+
+      <div class="auto-card">
+        <div class="auto-icon">📈</div>
+        <div class="auto-body">
+          <div class="auto-title">Odds Shift Alert</div>
+          <p class="auto-desc">Fires when odds move 15% or more in a short window — a signal that something significant just changed.</p>
+          <span class="auto-timing">Real-time market detection</span>
+        </div>
+      </div>
+
+      <div class="auto-card">
+        <div class="auto-icon">📊</div>
+        <div class="auto-body">
+          <div class="auto-title">Half-time Report</div>
+          <p class="auto-desc">Automatic summary at the whistle — possession, shots, xG, key moments, and updated odds.</p>
+          <span class="auto-timing">At half-time whistle</span>
+        </div>
+      </div>
+
+      <div class="auto-card">
+        <div class="auto-icon">🏁</div>
+        <div class="auto-body">
+          <div class="auto-title">Full-time Wrap</div>
+          <p class="auto-desc">Complete match story — result, standout stats, best moments, and what happens next in the tournament.</p>
+          <span class="auto-timing">At final whistle</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- CTA panel -->
+    <div class="cta-panel">
+      <div class="cta-panel-text">
+        <h3>Ready to add it to your group?</h3>
+        <p>Drop Huginn into any WhatsApp group and type <span class="mono" style="color:var(--green)">/follow Brazil</span>. The alerts start immediately.</p>
+      </div>
+      <div class="cta-panel-actions">
+        <a href="https://wa.me/message/XXXXXXXXXXXX" target="_blank" rel="noopener" class="btn-primary">
+          Add to WhatsApp Group
+        </a>
+        <a href="/demo.html" class="btn-secondary">Live Chat in Browser</a>
       </div>
     </div>
 
@@ -246,7 +399,7 @@
       <div class="footer-links">
         <a href="https://txline.txodds.com/documentation/worldcup" target="_blank">TxLINE</a>
         <a href="/features.html">Features</a>
-        <a href="/demo.html">Live Demo</a>
+        <a href="/demo.html">Live Chat</a>
       </div>
     </div>
   </div>
@@ -263,7 +416,6 @@
     hoveredPillTextColor: '#ffffff',
   });
 
-  // Register service worker
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/sw.js')

@@ -323,22 +323,23 @@
   <div class="container">
 
     <div class="demo-header" style="text-align: center; display: flex; flex-direction: column; align-items: center; margin-bottom: 48px;">
-      <h1 class="display demo-title">Try it in your browser</h1>
-      <p class="demo-desc" style="text-align: justify; margin: 0 auto; max-width: 600px;">Open our console window below to send follow commands, check active scores, and see the AI assistant respond instantly.</p>
+      <div class="eyebrow"><span class="eyebrow-dot"></span> Live</div>
+      <h1 class="display demo-title">Live Chat in Browser</h1>
+      <p class="demo-desc" style="text-align: center; margin: 0 auto; max-width: 580px;">This is the real Huginn assistant. Type any command below and get an instant response — exactly what your WhatsApp group sees, live in your browser.</p>
     </div>
 
     <div class="app-container">
 
-      <!-- Scoreboard -->
+      <!-- Live Scores -->
       <div class="scoreboard">
         <div class="scoreboard-header">
-          <h2>Match Feeds</h2>
+          <h2>Live Scores</h2>
           <div class="live-dot"></div>
         </div>
         <div class="match-list" id="match-list">
-          <div class="scoreboard-empty">Loading matches...</div>
+          <div class="scoreboard-empty">Loading...</div>
         </div>
-        <button class="refresh-btn" onclick="loadMatches()">↻ Refresh</button>
+        <button class="refresh-btn" onclick="loadMatches()">↻ Update scores</button>
       </div>
 
       <!-- Chat console -->
@@ -433,7 +434,7 @@
 
     const avatar = document.createElement('div');
     avatar.className = 'msg-avatar';
-    avatar.textContent = role === 'bot' ? 'MP' : 'You';
+    avatar.textContent = role === 'bot' ? 'HG' : 'You';
 
     const bubble = document.createElement('div');
     bubble.className = 'msg-bubble';
@@ -494,7 +495,7 @@
       ];
 
       if (!all.length) {
-        list.innerHTML = '<div class="scoreboard-empty">No active matches at this time</div>';
+        list.innerHTML = '<div class="scoreboard-empty">No matches live right now.<br>Tournament kicks off June 2026.</div>';
         return;
       }
 
