@@ -80,31 +80,40 @@
     }
 
     /* ── THREE PHONE STAGE ───────────────────────────────────────────────────── */
+    /*
+     * Stage height = iPhone visible height after clip-path (595px × 80% = 476px).
+     * Phones are top-aligned so nothing is ever clipped at the top.
+     * The bottom 20% of each phone is hidden by clip-path alone — no overflow:hidden
+     * needed — so the headline sits flush right below the stage with zero gap.
+     */
     .stage {
       position: relative;
       width: 820px;
       max-width: 100%;
-      height: 560px;
+      height: 476px;
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
-      margin: 0 auto 0;
+      margin: 0 auto;
       pointer-events: none;
       flex-shrink: 0;
-      overflow: hidden;
+      /* NO overflow:hidden — clipping is handled by clip-path on each phone */
     }
 
+
+    /* Green glow blob — matches Huginn palette */
     .blob {
       position: absolute;
-      top: 4%;
-      right: 6%;
-      width: 420px;
-      height: 420px;
+      top: 0;
+      left: 50%;
+      transform: translateX(-20%);
+      width: 500px;
+      height: 500px;
       background:
-        radial-gradient(circle at 30% 30%, var(--orange-soft, #ff8c3d), transparent 60%),
-        radial-gradient(circle at 65% 65%, var(--orange, #ff6a00), transparent 55%);
-      filter: blur(50px);
-      opacity: 0.5;
+        radial-gradient(circle at 35% 35%, rgba(0, 230, 118, 0.28), transparent 60%),
+        radial-gradient(circle at 65% 65%, rgba(0, 200, 83, 0.18), transparent 55%);
+      filter: blur(60px);
+      opacity: 1;
       z-index: 0;
       border-radius: 50%;
       pointer-events: none;
@@ -112,18 +121,20 @@
 
     .floor-shadow {
       position: absolute;
-      bottom: 10px;
-      width: 560px;
-      height: 50px;
-      background: radial-gradient(ellipse, rgba(0,0,0,0.6), transparent 70%);
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 40px;
+      background: radial-gradient(ellipse, rgba(0,0,0,0.5), transparent 70%);
       z-index: 0;
       pointer-events: none;
     }
 
     .device {
       position: absolute;
-      z-index: 1;
-      filter: drop-shadow(0 35px 45px rgba(0,0,0,0.55));
+      z-index: 2;
+      filter: drop-shadow(0 28px 40px rgba(0, 0, 0, 0.7));
     }
 
     .screen {
@@ -133,11 +144,17 @@
       overflow: hidden;
     }
 
+    /*
+     * content-layer: drop your <img> or <video> directly inside this div.
+     * It is absolutely positioned and fills the entire screen area.
+     * The placeholder div below it is shown when no image is present —
+     * replace it with: <img src="/screens/your-screenshot.png" alt="">
+     */
     .content-layer {
       position: absolute;
       inset: 0;
       z-index: 1;
-      background: linear-gradient(160deg, #151517, #0a0a0b);
+      background: var(--deep);
     }
     .content-layer img,
     .content-layer video,
@@ -147,26 +164,39 @@
       border: 0;
       display: block;
     }
+    /* Shown when no image has been dropped in yet */
     .content-placeholder {
       width: 100%; height: 100%;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      color: #ff8c3d;
-      font-size: 11px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      text-align: center;
-      padding: 10px;
+      gap: 8px;
+      padding: 20px;
+    }
+    .content-placeholder .bar {
+      height: 8px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      width: 80%;
+    }
+    .content-placeholder .bar.accent {
+      background: rgba(0, 230, 118, 0.18);
+      width: 60%;
+    }
+    .content-placeholder .bar.short {
+      width: 45%;
     }
 
-    /* CENTER: iPhone 16 */
+    /* ── CENTER: iPhone 16 ───────────────────────────────────────────────── */
+    /*  top: 0  →  full top of device is always visible, never clipped.      */
+    /*  clip-path cuts the bottom 20% only, so the phone merges into the bg. */
     .iphone {
       width: 290px;
       height: 595px;
       left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
+      top: 0;
+      transform: translateX(-50%);
       z-index: 3;
       border-radius: 54px;
       background: linear-gradient(155deg, #4a4a4d, #111113 60%);
@@ -198,13 +228,14 @@
       background: #000; border-radius: 20px; z-index: 20;
     }
 
-    /* LEFT: older Samsung */
+    /* ── LEFT: older Samsung (Galaxy S9-era) ────────────────────────────── */
+    /*  Offset 30px down from top to create a natural depth layering effect. */
     .samsung-old {
       width: 250px;
       height: 520px;
       left: 50%;
-      top: 50%;
-      transform: translate(-125%, -46%);
+      top: 30px;
+      transform: translateX(-125%);
       z-index: 1;
       border-radius: 26px;
       background: linear-gradient(155deg, #3a3a3e, #0f0f11 60%);
@@ -236,24 +267,24 @@
       width: 0; height: 0;
       border-top: 5px solid transparent;
       border-bottom: 5px solid transparent;
-      border-right: 7px solid #999;
+      border-right: 7px solid #666;
     }
     .samsung-old .nav-bar .circ {
       width: 11px; height: 11px;
-      border: 1.5px solid #ccc; border-radius: 50%;
+      border: 1.5px solid #888; border-radius: 50%;
     }
     .samsung-old .nav-bar .sq {
       width: 10px; height: 10px;
-      border: 1.5px solid #999; border-radius: 2px;
+      border: 1.5px solid #666; border-radius: 2px;
     }
 
-    /* RIGHT: Samsung S25 Ultra */
+    /* ── RIGHT: Samsung S25 Ultra ────────────────────────────────────────── */
     .samsung-new {
       width: 250px;
       height: 520px;
       left: 50%;
-      top: 50%;
-      transform: translate(25%, -46%);
+      top: 30px;
+      transform: translateX(25%);
       z-index: 1;
       border-radius: 30px;
       background: linear-gradient(155deg, #3a3a3e, #0f0f11 60%);
@@ -288,7 +319,7 @@
       bottom: 6px; left: 50%;
       transform: translateX(-50%);
       width: 90px; height: 4px;
-      background: rgba(255,255,255,0.55);
+      background: rgba(255,255,255,0.4);
       border-radius: 3px; z-index: 20;
     }
 
@@ -336,16 +367,17 @@
       line-height: 1.55;
     }
 
-    /* ── RESPONSIVE ──────────────────────────────────────────────────────────── */
+    /* ── RESPONSIVE ──────────────────────────────────────────────────── */
     @media (max-width: 768px) {
       .hero { padding-top: 100px; }
-      .stage { height: 340px; }
-      .iphone { width: 174px; height: 357px; border-radius: 32px; padding: 8px; }
+      /* Stage height = 174px × 80% = 285px visible iPhone height */
+      .stage { height: 285px; }
+      .iphone { width: 174px; height: 357px; border-radius: 32px; padding: 8px; top: 0; transform: translateX(-50%); }
       .iphone .screen { border-radius: 26px; }
       .iphone .dynamic-island { width: 58px; height: 16px; top: 9px; }
-      .samsung-old { width: 150px; height: 312px; border-radius: 16px; padding: 10px 5px; transform: translate(-125%, -46%); }
-      .samsung-new { width: 150px; height: 312px; border-radius: 18px; padding: 4px; transform: translate(25%, -46%); }
-      .hero-title { white-space: normal; }
+      .samsung-old { width: 150px; height: 312px; border-radius: 16px; padding: 10px 5px; top: 18px; transform: translateX(-125%); }
+      .samsung-new { width: 150px; height: 312px; border-radius: 18px; padding: 4px; top: 18px; transform: translateX(25%); }
+      .hero-title { white-space: normal; margin-top: 0; }
       .hero-actions { flex-direction: column; width: 100%; gap: 12px; }
       .hero-actions .btn-primary, .hero-actions .btn-secondary { width: 100%; justify-content: center; }
       .feature-strip { grid-template-columns: 1fr; }
@@ -363,17 +395,28 @@
     <div class="container">
       <div class="hero-content">
 
-        <!-- Three-phone stage (above the headline, in normal document flow) -->
+        <!-- Three-phone stage: sits above the headline in normal document flow.
+             To add your screenshots later, uncomment the <img> tag inside each
+             .content-layer and set the src path. The placeholder bars disappear
+             automatically once a real image is loaded. -->
         <div class="stage">
           <div class="blob"></div>
           <div class="floor-shadow"></div>
 
-          <!-- LEFT: older Samsung -->
+          <!-- LEFT: older Samsung Galaxy ─────────────────────────────────── -->
           <div class="device samsung-old">
             <div class="screen">
               <div class="content-layer">
-                <div class="content-placeholder">older samsung<br>image here</div>
-                <!-- <img src="screenshot-left.png" alt=""> -->
+                <!-- ADD IMAGE: <img src="/screens/samsung-left.png" alt="Huginn WhatsApp alerts on older Samsung"> -->
+                <div class="content-placeholder">
+                  <div class="bar"></div>
+                  <div class="bar accent"></div>
+                  <div class="bar short"></div>
+                  <div class="bar"></div>
+                  <div class="bar accent"></div>
+                  <div class="bar short"></div>
+                  <div class="bar"></div>
+                </div>
               </div>
               <div class="nav-bar">
                 <div class="tri"></div>
@@ -383,24 +426,42 @@
             </div>
           </div>
 
-          <!-- RIGHT: newest Samsung -->
+          <!-- RIGHT: Samsung S25 Ultra ────────────────────────────────────── -->
           <div class="device samsung-new">
             <div class="screen">
               <div class="content-layer">
-                <div class="content-placeholder">newest samsung<br>image here</div>
-                <!-- <img src="screenshot-right.png" alt=""> -->
+                <!-- ADD IMAGE: <img src="/screens/samsung-right.png" alt="Huginn WhatsApp alerts on Samsung S25 Ultra"> -->
+                <div class="content-placeholder">
+                  <div class="bar accent"></div>
+                  <div class="bar"></div>
+                  <div class="bar short"></div>
+                  <div class="bar accent"></div>
+                  <div class="bar"></div>
+                  <div class="bar short"></div>
+                  <div class="bar"></div>
+                </div>
               </div>
               <div class="punch-hole"></div>
               <div class="gesture-pill"></div>
             </div>
           </div>
 
-          <!-- CENTER: iPhone 16 -->
+          <!-- CENTER: iPhone 16 ───────────────────────────────────────────── -->
           <div class="device iphone">
             <div class="screen">
               <div class="content-layer">
-                <div class="content-placeholder">center iphone<br>image or live iframe here</div>
-                <!-- <img src="screenshot-main.png" alt=""> -->
+                <!-- ADD IMAGE: <img src="/screens/iphone-center.png" alt="Huginn WhatsApp alerts on iPhone 16"> -->
+                <div class="content-placeholder">
+                  <div class="bar"></div>
+                  <div class="bar accent"></div>
+                  <div class="bar short"></div>
+                  <div class="bar accent"></div>
+                  <div class="bar"></div>
+                  <div class="bar accent"></div>
+                  <div class="bar short"></div>
+                  <div class="bar"></div>
+                  <div class="bar accent"></div>
+                </div>
               </div>
               <div class="dynamic-island"></div>
             </div>
