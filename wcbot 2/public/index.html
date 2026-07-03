@@ -53,7 +53,7 @@
 
     .hero-title {
       font-size: clamp(2.2rem, 5vw, 3.8rem);
-      margin-bottom: 24px;
+      margin-bottom: 20px;
       line-height: 0.95;
       letter-spacing: -0.02em;
       white-space: nowrap;
@@ -90,14 +90,13 @@
       position: relative;
       width: 820px;
       max-width: 100%;
-      height: 476px;
+      height: 380px;
       display: flex;
       align-items: flex-start;
       justify-content: center;
-      margin: 0 auto;
+      margin: 0 auto 10px;
       pointer-events: none;
       flex-shrink: 0;
-      /* NO overflow:hidden — clipping is handled by clip-path on each phone */
     }
 
 
@@ -192,15 +191,15 @@
     /*  top: 0  →  full top of device is always visible, never clipped.      */
     /*  clip-path cuts the bottom 20% only, so the phone merges into the bg. */
     .iphone {
-      width: 290px;
-      height: 595px;
+      width: 250px;
+      height: 520px;
       left: 50%;
       top: 0;
       transform: translateX(-50%);
       z-index: 3;
-      border-radius: 54px;
+      border-radius: 46px;
       background: linear-gradient(155deg, #4a4a4d, #111113 60%);
-      padding: 13px;
+      padding: 11px;
       box-shadow: 0 0 0 2px rgba(255,255,255,0.08) inset;
       clip-path: inset(0 -6px 20% -6px);
     }
@@ -234,7 +233,7 @@
       width: 250px;
       height: 520px;
       left: 50%;
-      top: 30px;
+      top: 0;
       transform: translateX(-125%);
       z-index: 1;
       border-radius: 26px;
@@ -283,7 +282,7 @@
       width: 250px;
       height: 520px;
       left: 50%;
-      top: 30px;
+      top: 0;
       transform: translateX(25%);
       z-index: 1;
       border-radius: 30px;
@@ -370,13 +369,12 @@
     /* ── RESPONSIVE ──────────────────────────────────────────────────── */
     @media (max-width: 768px) {
       .hero { padding-top: 100px; }
-      /* Stage height = 174px × 80% = 285px visible iPhone height */
-      .stage { height: 285px; }
-      .iphone { width: 174px; height: 357px; border-radius: 32px; padding: 8px; top: 0; transform: translateX(-50%); }
-      .iphone .screen { border-radius: 26px; }
-      .iphone .dynamic-island { width: 58px; height: 16px; top: 9px; }
-      .samsung-old { width: 150px; height: 312px; border-radius: 16px; padding: 10px 5px; top: 18px; transform: translateX(-125%); }
-      .samsung-new { width: 150px; height: 312px; border-radius: 18px; padding: 4px; top: 18px; transform: translateX(25%); }
+      .stage { height: 260px; margin-bottom: 20px; }
+      .iphone { width: 160px; height: 330px; border-radius: 30px; padding: 7px; top: 0; transform: translateX(-50%); }
+      .iphone .screen { border-radius: 24px; }
+      .iphone .dynamic-island { width: 50px; height: 14px; top: 8px; }
+      .samsung-old { width: 160px; height: 330px; border-radius: 16px; padding: 10px 5px; top: 0; transform: translateX(-120%); }
+      .samsung-new { width: 160px; height: 330px; border-radius: 18px; padding: 4px; top: 0; transform: translateX(20%); }
       .hero-title { white-space: normal; margin-top: 0; }
       .hero-actions { flex-direction: column; width: 100%; gap: 12px; }
       .hero-actions .btn-primary, .hero-actions .btn-secondary { width: 100%; justify-content: center; }
@@ -473,11 +471,11 @@
           Live updates in your group chat
         </h1>
         <p class="hero-desc">
-          Goals, red cards, and odds shifts pushed to your WhatsApp group the moment they happen. No app. No feed. Just the chat.
+          Goals, red cards, and odds shifts pushed to your WhatsApp. Chat directly with Huginn or invite it to any group.
         </p>
         <div class="hero-actions">
-          <a href="/api/join" class="btn-primary" style="padding: 16px 36px; font-size: 1rem;">
-            Add to WhatsApp Group
+          <a href="/api/join" target="_blank" rel="noopener" class="btn-primary" style="padding: 16px 36px; font-size: 1rem;">
+            Chat on WhatsApp
           </a>
           <a href="/demo.html" class="btn-secondary" style="padding: 16px 36px; font-size: 1rem;">Live Chat in Browser</a>
         </div>
@@ -509,11 +507,11 @@
   <section class="cta-section">
     <div class="cta-glow"></div>
     <div class="container" style="text-align:center">
-      <h2 class="display cta-title">Your group already has the chat.<br>Now give it the <span style="color:var(--green)">best seat in the stadium.</span></h2>
-      <p class="cta-desc">Add Huginn to any WhatsApp group in seconds. No app. No account. Just type <span class="mono" style="color:var(--green)">/follow [team]</span> and the alerts start.</p>
+      <h2 class="display cta-title">Get live updates in your chats</h2>
+      <p class="cta-desc">Chat directly with Huginn or invite it to any WhatsApp group. Simply send a message to get started.</p>
       <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-top:8px">
-        <a href="/api/join" class="btn-primary" style="display:inline-flex;font-size:1rem;padding:16px 36px">
-          Add to WhatsApp Group
+        <a href="/api/join" target="_blank" rel="noopener" class="btn-primary" style="display:inline-flex;font-size:1rem;padding:16px 36px">
+          Chat on WhatsApp
         </a>
         <a href="/demo.html" class="btn-secondary" style="display:inline-flex;font-size:1rem;padding:16px 36px">
           Live Chat in Browser

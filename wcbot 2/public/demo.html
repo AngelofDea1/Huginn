@@ -30,19 +30,6 @@
   text-transform: uppercase;
   color: var(--green);
   margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.demo-header .eyebrow-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: var(--green);
-  animation: dot-pulse 1.5s infinite;
-}
-@keyframes dot-pulse {
-  0%,100% { box-shadow: 0 0 6px var(--green); }
-  50%      { box-shadow: 0 0 16px var(--green); }
 }
 .demo-title {
   font-size: clamp(1.8rem, 3vw, 2.6rem);
@@ -72,7 +59,6 @@
 }
 .scoreboard-header {
   padding: 16px 20px;
-  background: linear-gradient(135deg, rgba(0,230,118,0.08), transparent);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
@@ -82,12 +68,6 @@
   font-family: 'Tourney', sans-serif;
   font-size: 0.9rem;
   font-weight: 700;
-}
-.live-dot {
-  width: 8px; height: 8px;
-  background: var(--green);
-  border-radius: 50%;
-  animation: dot-pulse 1.5s infinite;
 }
 .match-list {
   padding: 10px;
@@ -170,16 +150,6 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  background: linear-gradient(135deg, rgba(0,230,118,0.05), transparent);
-  flex-shrink: 0;
-}
-.chat-avatar {
-  width: 42px; height: 42px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--green), #00bcd4);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.72rem; font-weight: 700; color: #000;
-  box-shadow: 0 0 14px rgba(0,230,118,0.25);
   flex-shrink: 0;
 }
 .chat-info h3 { font-family: 'Tourney', sans-serif; font-size: 0.95rem; font-weight: 700; }
@@ -233,7 +203,7 @@
   flex-shrink: 0;
   align-self: flex-end;
 }
-.msg.bot  .msg-avatar { background: linear-gradient(135deg, var(--green), #00bcd4); color: #000; }
+.msg.bot  .msg-avatar { background: var(--card); border: 1px solid var(--border); color: var(--muted); }
 .msg.user .msg-avatar { background: rgba(255,255,255,0.08); border: 1px solid var(--border); color: var(--muted); }
 
 .typing-indicator { display: none; gap: 10px; align-items: flex-end; padding: 0 20px 4px; }
@@ -323,9 +293,8 @@
   <div class="container">
 
     <div class="demo-header" style="text-align: center; display: flex; flex-direction: column; align-items: center; margin-bottom: 48px;">
-      <div class="eyebrow"><span class="eyebrow-dot"></span> Live</div>
       <h1 class="display demo-title">Live Chat in Browser</h1>
-      <p class="demo-desc" style="text-align: center; margin: 0 auto; max-width: 580px;">This is the real Huginn assistant. Type any command below and get an instant response — exactly what your WhatsApp group sees, live in your browser.</p>
+      <p class="demo-desc" style="text-align: center; margin: 0 auto; max-width: 580px;">Type any command below to test the Huginn assistant live in your browser.</p>
     </div>
 
     <div class="app-container">
@@ -334,7 +303,6 @@
       <div class="scoreboard">
         <div class="scoreboard-header">
           <h2>Live Scores</h2>
-          <div class="live-dot"></div>
         </div>
         <div class="match-list" id="match-list">
           <div class="scoreboard-empty">Loading...</div>
@@ -355,21 +323,13 @@
         <div class="chat-messages" id="chat-messages"></div>
 
         <div class="typing-indicator" id="typing">
-          <div class="msg-avatar" style="background:linear-gradient(135deg,var(--green),#00bcd4);color:#000;">HG</div>
+          <div class="msg-avatar" style="background:var(--card);border:1px solid var(--border);color:var(--muted);">HG</div>
           <div class="typing-dots">
             <span></span><span></span><span></span>
           </div>
         </div>
 
-        <div class="quick-cmds">
-          <button class="quick-btn" onclick="sendQuick('/live')">Live matches</button>
-          <button class="quick-btn" onclick="sendQuick('/follow Brazil')">Follow Brazil</button>
-          <button class="quick-btn" onclick="sendQuick('/follow Argentina')">Follow Argentina</button>
-          <button class="quick-btn" onclick="sendQuick('/vibe hype')">Vibe: Hype</button>
-          <button class="quick-btn" onclick="sendQuick('/vibe tactical')">Vibe: Tactical</button>
-          <button class="quick-btn" onclick="sendQuick('/status')">My Status</button>
-          <button class="quick-btn" onclick="sendQuick('/help')">Help</button>
-        </div>
+
 
         <div class="chat-input-area">
           <input type="text" id="chat-input" placeholder="Type a command (e.g. /live, /follow Brazil, /vibe hype)..." autocomplete="off"/>
@@ -495,7 +455,7 @@
       ];
 
       if (!all.length) {
-        list.innerHTML = '<div class="scoreboard-empty">No matches live right now.<br>Tournament kicks off June 2026.</div>';
+        list.innerHTML = '<div class="scoreboard-empty">No active matches at this time.</div>';
         return;
       }
 
