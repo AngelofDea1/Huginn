@@ -1,9 +1,0 @@
-2026/07/02-14:37:35.871 bdf9be Reusing MANIFEST /Users/1030G2/Documents/Hackathon/wcbot 2/.wwebjs_auth/session/Default/Local Storage/leveldb/MANIFEST-000001
-2026/07/02-14:37:35.875 bdf9be Recovering log #3
-2026/07/02-14:37:35.876 bdf9be Reusing old log /Users/1030G2/Documents/Hackathon/wcbot 2/.wwebjs_auth/session/Default/Local Storage/leveldb/000003.log 
-2026/07/02-15:58:44.247 bdf9c1 Level-0 table #5: started
-2026/07/02-15:58:44.255 bdf9c1 Level-0 table #5: 18229 bytes OK
-2026/07/02-15:58:44.258 bdf9c1 Delete type=0 #3
-2026/07/02-18:42:56.859 bdf9c1 Level-0 table #7: started
-2026/07/02-18:42:56.882 bdf9c1 Level-0 table #7: 11614 bytes OK
-2026/07/02-18:42:56.886 bdf9c1 Delete type=0 #4

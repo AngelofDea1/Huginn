@@ -3,17 +3,34 @@ const { Client, LocalAuth } = pkg;
 import qrcode from 'qrcode-terminal';
 import { log } from '../utils/logger.js';
 import { routeCommand } from '../handlers/webhook.js';
+import fs from 'fs';
+import path from 'path';
 
-// Setup WhatsApp Web client
-// Point to the local Google Chrome installation on macOS to avoid heavy downloads
+// ── Chrome executable ───────────────────────────────────────────────────────
+// Render (Docker/Linux): google-chrome-stable is at /usr/bin/google-chrome-stable
+// Local macOS: fall back to the Applications path
+const CHROME_PATH =
+  process.env.PUPPETEER_EXECUTABLE_PATH ||
+  (process.platform === 'darwin'
+    ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+    : '/usr/bin/google-chrome-stable');
+
+// ── WhatsApp client ─────────────────────────────────────────────────────────
 export const client = new Client({
   authStrategy: new LocalAuth(),
   puppeteer: {
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    executablePath: CHROME_PATH,
+    headless: true,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
-      '--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--disable-software-rasterizer',
+      '--no-first-run',
+      '--no-zygote',
+      '--single-process',
+      '--disable-extensions',
     ]
   }
 });
@@ -25,7 +42,7 @@ client.on('qr', (qr) => {
 });
 
 client.on('ready', () => {
-  log.info(' WhatsApp Client is ready and connected!');
+  log.info('WhatsApp Client is ready and connected!');
 });
 
 // Listen for incoming messages and route them to our command router
@@ -33,16 +50,28 @@ client.on('message', async (msg) => {
   try {
     const text = msg.body?.trim();
     if (!text) return;
-
-    log.info(` Incoming message from ${msg.from}: ${text}`);
+    log.info(`Incoming message from ${msg.from}: ${text}`);
     await routeCommand(msg.from, text);
   } catch (err) {
     log.error('Error handling message:', err.message);
   }
 });
 
-// Initialize client
+// ── Initialize client ───────────────────────────────────────────────────────
 export function initializeWhatsApp() {
+  // Delete any stale Chrome SingletonLock that blocks startup after a crash
+  // or when the same profile is reused across machines / redeploys
+  try {
+    const lockPath = path.join(process.cwd(), '.wwebjs_auth', 'session', 'SingletonLock');
+    if (fs.existsSync(lockPath)) {
+      fs.rmSync(lockPath);
+      log.info('Removed stale Chrome SingletonLock');
+    }
+  } catch (e) {
+    // Non-fatal — log and continue
+    log.warn('Could not remove SingletonLock:', e.message);
+  }
+
   log.info('Initializing WhatsApp Web client...');
   client.initialize().catch(err => {
     log.error('Failed to initialize WhatsApp Client:', err.message);

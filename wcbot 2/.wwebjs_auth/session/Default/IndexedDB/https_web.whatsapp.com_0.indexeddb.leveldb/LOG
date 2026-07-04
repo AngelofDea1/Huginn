@@ -1,7 +1,0 @@
-2026/07/02-19:14:35.464 53b5 Reusing MANIFEST /Users/1030G2/Documents/Huginn/wcbot 2/.wwebjs_auth/session/Default/IndexedDB/https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
-2026/07/02-19:14:35.465 53b5 Recovering log #21
-2026/07/02-19:14:35.465 53b5 Reusing old log /Users/1030G2/Documents/Huginn/wcbot 2/.wwebjs_auth/session/Default/IndexedDB/https_web.whatsapp.com_0.indexeddb.leveldb/000021.log 
-2026/07/02-19:14:35.466 53b5 Delete type=2 #20
-2026/07/02-19:14:35.473 53c3 Manual compaction at level-0 from '\x00\x0f\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x10\x00\x00\x00' @ 0 : 0; will stop at (end)
-2026/07/02-19:14:35.473 53b5 Manual compaction at level-1 from '\x00\x0f\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x10\x00\x00\x00' @ 0 : 0; will stop at (end)
-2026/07/02-19:14:35.494 53c3 Manual compaction at level-0 from '\x00\x10\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x11\x00\x00\x00' @ 0 : 0; will stop at (end)
