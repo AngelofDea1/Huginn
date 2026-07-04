@@ -370,6 +370,250 @@
       line-height: 1.55;
     }
 
+    /* ── HOW IT REACHES YOU ──────────────────────────────────────────────── */
+    .how-section {
+      padding: 100px 0;
+      position: relative;
+      z-index: 1;
+    }
+    .how-inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+    }
+    .how-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      color: var(--green);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    .how-title {
+      font-size: clamp(1.8rem, 3vw, 2.6rem);
+      margin-bottom: 16px;
+      line-height: 1.05;
+    }
+    .how-desc {
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.7;
+      max-width: 440px;
+      margin-bottom: 48px;
+    }
+    .setup-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .setup-step {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      padding: 20px 0;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+    .setup-step:last-child { border-bottom: none; }
+    .step-index {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--green);
+      background: var(--green-glow);
+      border: 1px solid rgba(0,230,118,0.25);
+      border-radius: 8px;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+    .step-body h3 {
+      font-family: 'Tourney', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 4px;
+    }
+    .step-body p {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .step-body .step-code {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--green);
+      font-size: 0.82rem;
+      background: var(--green-glow);
+      padding: 2px 8px;
+      border-radius: 5px;
+    }
+
+    /* ── Phone notification demo ───────────────────────────────────────────── */
+    .phone-demo {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+    .demo-phone {
+      width: 260px;
+      height: 530px;
+      border-radius: 46px;
+      background: linear-gradient(155deg, #4a4a4d, #111113 60%);
+      padding: 12px;
+      box-shadow:
+        0 0 0 2px rgba(255,255,255,0.08) inset,
+        0 40px 80px rgba(0,0,0,0.8),
+        0 0 60px rgba(0,230,118,0.08);
+      position: relative;
+      flex-shrink: 0;
+    }
+    .demo-phone-screen {
+      width: 100%;
+      height: 100%;
+      border-radius: 36px;
+      background: #0a0a0a;
+      overflow: hidden;
+      position: relative;
+    }
+    .demo-phone-island {
+      position: absolute;
+      top: 13px; left: 50%;
+      transform: translateX(-50%);
+      width: 88px; height: 24px;
+      background: #000;
+      border-radius: 18px;
+      z-index: 30;
+    }
+    .demo-phone-btn-r {
+      position: absolute;
+      right: -3px; top: 140px;
+      width: 3px; height: 64px;
+      background: #2a2a2c;
+      border-radius: 2px;
+    }
+    .demo-phone-btn-l {
+      position: absolute;
+      left: -3px; top: 110px;
+      width: 3px; height: 18px;
+      background: #2a2a2c;
+      border-radius: 2px;
+      box-shadow: 0 36px 0 #2a2a2c, 0 72px 0 #2a2a2c;
+    }
+    /* lock screen wallpaper */
+    .demo-lockscreen {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 30% 50%, rgba(0,230,118,0.12), transparent 60%),
+        radial-gradient(ellipse at 80% 20%, rgba(0,180,90,0.08), transparent 50%),
+        #080810;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 60px;
+      gap: 4px;
+      z-index: 1;
+    }
+    .demo-lock-time {
+      font-family: 'Tourney', sans-serif;
+      font-size: 3.2rem;
+      font-weight: 800;
+      color: rgba(255,255,255,0.9);
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+    .demo-lock-date {
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 16px;
+    }
+
+    /* notification banners */
+    .demo-notifs {
+      position: absolute;
+      top: 56px;
+      left: 10px;
+      right: 10px;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .notif-banner {
+      background: rgba(22,22,30,0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 11px 13px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      transform: translateY(-110%);
+      opacity: 0;
+      transition: transform 0.4s cubic-bezier(0.34,1.3,0.64,1), opacity 0.3s ease;
+      will-change: transform, opacity;
+    }
+    .notif-banner.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    .notif-app-icon {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      background: var(--wa);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 0.9rem;
+      font-weight: 900;
+      color: #fff;
+      font-family: 'Tourney', sans-serif;
+    }
+    .notif-content {
+      flex: 1;
+      min-width: 0;
+    }
+    .notif-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2px;
+    }
+    .notif-app-name {
+      font-size: 0.62rem;
+      color: rgba(255,255,255,0.45);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .notif-time {
+      font-size: 0.6rem;
+      color: rgba(255,255,255,0.3);
+    }
+    .notif-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: rgba(255,255,255,0.92);
+      margin-bottom: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .notif-body {
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.5);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
     /* ── RESPONSIVE ──────────────────────────────────────────────────── */
     @media (max-width: 768px) {
       .hero { padding-top: 100px; }
@@ -385,6 +629,9 @@
       .hero-actions .btn-primary, .hero-actions .btn-secondary { width: 100%; justify-content: center; }
       .feature-strip { grid-template-columns: 1fr; }
       .footer-inner { flex-direction: column; text-align: center; gap: 16px; }
+      .how-inner { grid-template-columns: 1fr; gap: 48px; }
+      .phone-demo { order: -1; }
+      .demo-phone { width: 220px; height: 450px; }
     }
   </style>
 </head>
@@ -509,6 +756,97 @@
     </div>
   </section>
 
+  <!-- HOW IT REACHES YOU -->
+  <section class="how-section">
+    <div class="container">
+      <div class="how-inner">
+
+        <!-- Left: steps -->
+        <div>
+          <div class="how-label">Setup</div>
+          <h2 class="display how-title">Three steps. Then forget about it.</h2>
+          <p class="how-desc">No app to install. No account to create. Huginn lives inside WhatsApp — the app already on every phone in your group.</p>
+
+          <div class="setup-steps">
+            <div class="setup-step">
+              <div class="step-index">01</div>
+              <div class="step-body">
+                <h3>Save the number</h3>
+                <p>Save Huginn's WhatsApp number as a contact on your phone. That's the only thing you do outside WhatsApp.</p>
+              </div>
+            </div>
+            <div class="setup-step">
+              <div class="step-index">02</div>
+              <div class="step-body">
+                <h3>Add it to your group</h3>
+                <p>Open any WhatsApp group you're already in. Tap Add Participant, search Huginn, done. It joins silently.</p>
+              </div>
+            </div>
+            <div class="setup-step">
+              <div class="step-index">03</div>
+              <div class="step-body">
+                <h3>Send one command</h3>
+                <p>Type <span class="step-code">/follow Brazil</span> in the group. From that moment, every goal, red card, and odds shift fires automatically — straight into the chat.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: phone mockup with animated notification banners -->
+        <div class="phone-demo">
+          <div class="demo-phone" id="demoPhone">
+            <div class="demo-phone-btn-r"></div>
+            <div class="demo-phone-btn-l"></div>
+            <div class="demo-phone-island"></div>
+            <div class="demo-phone-screen">
+              <div class="demo-lockscreen">
+                <div class="demo-lock-time" id="lockTime">22:14</div>
+                <div class="demo-lock-date">Thursday, July 3</div>
+              </div>
+              <!-- Notification banners -->
+              <div class="demo-notifs">
+                <div class="notif-banner" id="notif-0">
+                  <div class="notif-app-icon">H</div>
+                  <div class="notif-content">
+                    <div class="notif-header">
+                      <span class="notif-app-name">Huginn · Group Chat</span>
+                      <span class="notif-time">now</span>
+                    </div>
+                    <div class="notif-title">Brazil 1 — 0 Argentina</div>
+                    <div class="notif-body">Vinicius Jr. 34' — clinical finish from the left</div>
+                  </div>
+                </div>
+                <div class="notif-banner" id="notif-1">
+                  <div class="notif-app-icon">H</div>
+                  <div class="notif-content">
+                    <div class="notif-header">
+                      <span class="notif-app-name">Huginn · Group Chat</span>
+                      <span class="notif-time">now</span>
+                    </div>
+                    <div class="notif-title">Red card — Argentina</div>
+                    <div class="notif-body">Otamendi off. They're down to ten. 67'</div>
+                  </div>
+                </div>
+                <div class="notif-banner" id="notif-2">
+                  <div class="notif-app-icon">H</div>
+                  <div class="notif-content">
+                    <div class="notif-header">
+                      <span class="notif-app-name">Huginn · Group Chat</span>
+                      <span class="notif-time">now</span>
+                    </div>
+                    <div class="notif-title">Half time: Brazil 2 — 0 Spain</div>
+                    <div class="notif-body">Odds shifted 40% against Spain since KO</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
   <!-- CTA -->
   <section class="cta-section">
     <div class="cta-glow"></div>
@@ -561,6 +899,56 @@
           .catch(err => console.log('Service Worker registration failed:', err));
       });
     }
+
+    // ── Notification banner animation ────────────────────────────────────────
+    (function () {
+      const NOTIFS = 3;
+      const SHOW_MS = 3200;   // how long each banner is visible
+      const PAUSE_MS = 1600;  // gap between banners
+      let current = 0;
+      let timer = null;
+
+      function showNotif(idx) {
+        const el = document.getElementById('notif-' + idx);
+        if (!el) return;
+        el.classList.add('show');
+        timer = setTimeout(() => {
+          el.classList.remove('show');
+          setTimeout(() => {
+            current = (current + 1) % NOTIFS;
+            showNotif(current);
+          }, PAUSE_MS);
+        }, SHOW_MS);
+      }
+
+      // Start when phone demo scrolls into view
+      const phone = document.getElementById('demoPhone');
+      if (phone && 'IntersectionObserver' in window) {
+        const obs = new IntersectionObserver((entries) => {
+          entries.forEach(e => {
+            if (e.isIntersecting) {
+              obs.unobserve(phone);
+              setTimeout(() => showNotif(0), 800);
+            }
+          });
+        }, { threshold: 0.4 });
+        obs.observe(phone);
+      } else if (phone) {
+        setTimeout(() => showNotif(0), 800);
+      }
+
+      // Live lock-screen clock
+      function tick() {
+        const el = document.getElementById('lockTime');
+        if (!el) return;
+        const now = new Date();
+        el.textContent =
+          String(now.getHours()).padStart(2, '0') + ':' +
+          String(now.getMinutes()).padStart(2, '0');
+      }
+      tick();
+      setInterval(tick, 30000);
+    })();
   </script>
 </body>
 
