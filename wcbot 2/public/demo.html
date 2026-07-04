@@ -45,7 +45,12 @@
   align-items: start;
 }
 @media (max-width: 800px) {
-  .app-container { grid-template-columns: 1fr; }
+  .app-container { grid-template-columns: 1fr; gap: 16px; }
+  /* Scoreboard must NOT be sticky on mobile — it overlays the chat when stacked */
+  .scoreboard { position: relative; top: auto; max-height: 280px; }
+  .match-list { max-height: 180px; }
+  /* Chat fills remaining vertical space on mobile */
+  .chat-wrapper { height: min(560px, 80vh); }
 }
 
 /* ── Scoreboard ──────────────────────────────────────────────────────────── */
