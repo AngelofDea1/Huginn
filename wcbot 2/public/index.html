@@ -616,22 +616,59 @@
 
     /* ── RESPONSIVE ──────────────────────────────────────────────────── */
     @media (max-width: 768px) {
-      .hero { padding-top: 100px; }
-      /* Scale down to fit 360px width viewports without horizontal scroll */
-      .stage { height: 176px; margin-bottom: 10px; }
-      .iphone { width: 110px; height: 220px; border-radius: 20px; padding: 5px; top: 0; transform: translateX(-50%); clip-path: inset(0 -6px 20% -6px); }
-      .iphone .screen { border-radius: 16px; }
-      .iphone .dynamic-island { width: 36px; height: 10px; top: 5px; }
-      .samsung-old { width: 95px; height: 198px; border-radius: 10px; padding: 6px 3px; top: 18px; transform: translateX(-120%); clip-path: inset(0 -6px 20% -6px); }
-      .samsung-new { width: 95px; height: 198px; border-radius: 12px; padding: 2px; top: 18px; transform: translateX(20%); clip-path: inset(0 -6px 20% -6px); }
-      .hero-title { white-space: normal; margin-top: 0; }
-      .hero-actions { flex-direction: column; width: 100%; gap: 12px; }
-      .hero-actions .btn-primary, .hero-actions .btn-secondary { width: 100%; justify-content: center; }
-      .feature-strip { grid-template-columns: 1fr; }
-      .footer-inner { flex-direction: column; text-align: center; gap: 16px; }
-      .how-inner { grid-template-columns: 1fr; gap: 48px; }
+      /* Hero */
+      .hero { padding-top: 90px; }
+      .hero-content { padding: 0 0 48px; }
+      .hero-title { font-size: clamp(1.6rem, 6vw, 2.4rem); white-space: normal; margin-top: 0; }
+      .hero-desc { font-size: 0.92rem; margin-bottom: 28px; }
+      .hero-actions { flex-direction: column; width: 100%; gap: 10px; }
+      .hero-actions .btn-primary,
+      .hero-actions .btn-secondary { width: 100%; justify-content: center; padding: 14px 20px !important; font-size: 0.9rem !important; }
+
+      /* Phone stage */
+      .stage { height: 160px; margin-bottom: 8px; }
+      .iphone { width: 100px; height: 200px; border-radius: 18px; padding: 4px; top: 0; transform: translateX(-50%); clip-path: inset(0 -4px 20% -4px); }
+      .iphone .screen { border-radius: 14px; }
+      .iphone .dynamic-island { width: 32px; height: 9px; top: 4px; }
+      .samsung-old { width: 84px; height: 176px; border-radius: 9px; padding: 5px 3px; top: 16px; transform: translateX(-122%); clip-path: inset(0 -4px 20% -4px); }
+      .samsung-new { width: 84px; height: 176px; border-radius: 10px; padding: 2px; top: 16px; transform: translateX(22%); clip-path: inset(0 -4px 20% -4px); }
+
+      /* Feature strip */
+      .feature-strip { grid-template-columns: 1fr; margin-top: 32px; }
+      .feature-strip-item { padding: 24px 20px; }
+
+      /* How section */
+      .how-section { padding: 60px 0; }
+      .how-inner { grid-template-columns: 1fr; gap: 40px; }
+      .how-title { font-size: clamp(1.4rem, 5vw, 2rem); }
+      .how-desc { font-size: 0.88rem; max-width: 100%; margin-bottom: 32px; }
+
+      /* Phone demo — constrain to viewport */
       .phone-demo { order: -1; }
-      .demo-phone { width: 220px; height: 450px; }
+      .demo-phone { width: min(200px, 55vw); height: min(410px, 112vw); border-radius: 36px; padding: 9px; }
+      .demo-phone-screen { border-radius: 28px; }
+      .demo-phone-island { width: 70px; height: 20px; top: 10px; }
+      .demo-lock-time { font-size: 2.4rem; }
+      .demo-lockscreen { padding-top: 44px; }
+      .demo-notifs { top: 44px; left: 8px; right: 8px; }
+      .notif-banner { padding: 9px 10px; border-radius: 12px; }
+      .notif-app-icon { width: 26px; height: 26px; font-size: 0.75rem; }
+      .notif-title { font-size: 0.72rem; }
+      .notif-body { font-size: 0.66rem; }
+
+      /* Footer */
+      .footer-inner { flex-direction: column; text-align: center; gap: 16px; }
+      .footer-links { justify-content: center; flex-wrap: wrap; gap: 14px; }
+    }
+
+    /* Extra tight for very small screens (≤ 400px) */
+    @media (max-width: 400px) {
+      .stage { height: 140px; }
+      .iphone { width: 86px; height: 172px; }
+      .samsung-old { width: 72px; height: 152px; top: 14px; transform: translateX(-126%); }
+      .samsung-new { width: 72px; height: 152px; top: 14px; transform: translateX(26%); }
+      .demo-phone { width: min(180px, 52vw); height: min(368px, 104vw); }
+      .hero-title { font-size: 1.5rem; }
     }
   </style>
 </head>
