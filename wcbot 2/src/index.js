@@ -6,7 +6,7 @@ import { dirname, join } from 'path';
 import { initializeWhatsApp, activeQr } from './services/whatsapp.js';
 import { pollMatches } from './services/matchPoller.js';
 import { schedulePreMatchBulletins } from './services/scheduler.js';
-import { log } from './utils/logger.js';
+import { log, logBuffer } from './utils/logger.js';
 import { handleChatMessage, getLiveMatchesAPI } from './handlers/chat.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -94,6 +94,11 @@ app.get('/api/join', (_, res) => {
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 app.get('/health', (_, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
+
+// ─── Debug logs endpoint ──────────────────────────────────────────────────────
+app.get('/api/logs', (_, res) => {
+  res.type('text/plain').send(logBuffer.join('\n'));
+});
 
 // ─── Cron: Poll TxLINE every 30 seconds ───────────────────────────────────────
 // Detects goals, red cards, HT, FT, big odds shifts
