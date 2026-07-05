@@ -127,6 +127,50 @@ Keep it punchy - what might this signal?
 }
 
 /**
+ * Answer general football or tactical questions
+ */
+export async function answerFootballQuestion(question, matchContext = '', vibe = 'hype') {
+  const prompt = `
+User Question: "${question}"
+
+Current Live/Upcoming Matches Context:
+${matchContext || 'No live matches currently tracked.'}
+
+Answer the user's question with full football authority, integrating the current match context if relevant.
+Keep it punchy, engaging, and in character.
+`.trim();
+
+  const systemPrompt = (VIBES[vibe] || VIBES.hype) + 
+    `\nAdditionally, you are a deep football expert. You know all about past World Cups, current stars, stats, tactics, rules, and consensus betting odds. Answer any query directly, keeping it short and conversational (2-4 sentences).`;
+
+  try {
+    const { data } = await axios.post(
+      'https://api.groq.com/openai/v1/chat/completions',
+      {
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt },
+        ],
+        max_tokens: 350,
+        temperature: 0.7,
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${GROQ_API_KEY}`,
+        },
+      }
+    );
+
+    return data.choices?.[0]?.message?.content?.trim() || '⚽ Deep football oracle is loading new tactics...';
+  } catch (err) {
+    console.error('Groq Oracle Error:', err.response?.data || err.message);
+    return '⚽ Sorry, I hit a tactical foul. Try asking again!';
+  }
+}
+
+/**
  * Core Groq API call using Axios (no extra SDK dependencies needed)
  */
 async function callGroq(userPrompt, vibe = 'hype') {

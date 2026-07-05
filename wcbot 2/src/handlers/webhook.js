@@ -75,10 +75,28 @@ export async function routeCommand(from, text) {
   if (lower === '/live') {
     return handleLive(from);
   }
-  // Catch-all: unknown command
-  return sendMessage(from,
-    `❓ Unknown command: *${text}*\n\nType */help* to see all available commands.`
-  );
+
+  // Catch-all: Fallback to AI Football Oracle with live matches context
+  try {
+    const { answerFootballQuestion } = await import('../services/ai.js');
+    const { getLiveMatches, getUpcomingMatches } = await import('../services/txline.js');
+    const group = getGroup(from);
+    const vibe = group?.vibe || 'hype';
+
+    const [live, upcoming] = await Promise.all([getLiveMatches(), getUpcomingMatches(12)]);
+    let matchContext = '';
+    if (live.length) {
+      matchContext += 'Live Matches:\n' + live.map(m => `• ${m.home_team?.name} vs ${m.away_team?.name}`).join('\n') + '\n';
+    }
+    if (upcoming.length) {
+      matchContext += 'Upcoming Matches:\n' + upcoming.map(m => `• ${m.home_team?.name} vs ${m.away_team?.name} (kickoff: ${new Date(m.kickoff_time).toLocaleTimeString()})`).join('\n') + '\n';
+    }
+
+    const aiResponse = await answerFootballQuestion(text, matchContext, vibe);
+    return sendMessage(from, aiResponse);
+  } catch (err) {
+    return sendMessage(from, `⚽ Hit a minor tactical issue. Type */help* to see commands!`);
+  }
 }
 
 //  /follow <team name> 

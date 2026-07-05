@@ -86,8 +86,26 @@ async function routeWebCommand(sessionId, text) {
     return handleSchedule();
   }
 
-  // Fallback: fuzzy "what's happening" type questions
-  return handleLive();
+  // Fallback: Fallback to AI Football Oracle with live matches context
+  try {
+    const { answerFootballQuestion } = await import('../services/ai.js');
+    const { getLiveMatches, getUpcomingMatches } = await import('../services/txline.js');
+    const group = getGroup(sessionId);
+    const vibe = group?.vibe || 'hype';
+
+    const [live, upcoming] = await Promise.all([getLiveMatches(), getUpcomingMatches(12)]);
+    let matchContext = '';
+    if (live.length) {
+      matchContext += 'Live Matches:\n' + live.map(m => `• ${m.home_team?.name} vs ${m.away_team?.name}`).join('\n') + '\n';
+    }
+    if (upcoming.length) {
+      matchContext += 'Upcoming Matches:\n' + upcoming.map(m => `• ${m.home_team?.name} vs ${m.away_team?.name} (kickoff: ${new Date(m.kickoff_time).toLocaleTimeString()})`).join('\n') + '\n';
+    }
+
+    return await answerFootballQuestion(text, matchContext, vibe);
+  } catch (err) {
+    return `⚽ Hit a minor tactical issue. Type /help to see commands!`;
+  }
 }
 
 // ─── Handlers ───
