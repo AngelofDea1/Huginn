@@ -31,7 +31,13 @@ export const client = new Client({
       '--no-zygote',
       '--single-process',
       '--disable-extensions',
-      '--js-flags="--max-old-space-size=256"'
+      '--js-flags="--max-old-space-size=192"',
+      '--disable-default-apps',
+      '--disable-features=site-per-process',
+      '--disable-translate',
+      '--disable-web-security',
+      '--blink-settings=imagesEnabled=false',
+      '--mute-audio'
     ]
   }
 });
