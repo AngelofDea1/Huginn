@@ -31,6 +31,7 @@ export const client = new Client({
       '--no-zygote',
       '--single-process',
       '--disable-extensions',
+      '--js-flags="--max-old-space-size=256"'
     ]
   }
 });
