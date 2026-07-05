@@ -238,7 +238,32 @@ export async function getMatchOdds(matchId) {
 export async function searchMatch(query) {
   try {
     const all = await getAllFixtures();
-    const q = query.toLowerCase();
+    const q = query.toLowerCase().trim();
+    
+    // Split by common match separators: " vs ", " v ", " - "
+    const separators = [/\s+vs\s+/, /\s+v\s+/, /\s*-\s*/];
+    let splitQuery = null;
+    
+    for (const sep of separators) {
+      if (sep.test(q)) {
+        splitQuery = q.split(sep).map(part => part.trim());
+        break;
+      }
+    }
+
+    if (splitQuery && splitQuery.length === 2) {
+      const [partA, partB] = splitQuery;
+      return all.filter(m => {
+        const home = m.home_team?.name?.toLowerCase() || '';
+        const away = m.away_team?.name?.toLowerCase() || '';
+        return (
+          (home.includes(partA) && away.includes(partB)) ||
+          (home.includes(partB) && away.includes(partA))
+        );
+      });
+    }
+
+    // Default fallback: match either home or away team
     return all.filter(m =>
       m.home_team?.name?.toLowerCase().includes(q) ||
       m.away_team?.name?.toLowerCase().includes(q)
