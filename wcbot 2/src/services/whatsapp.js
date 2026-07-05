@@ -56,9 +56,30 @@ client.on('ready', () => {
   log.info('WhatsApp Client is ready and connected!');
 });
 
+// Auto-reconnect on disconnect (memory restart, network drop, etc.)
+client.on('disconnected', (reason) => {
+  log.warn('WhatsApp Client disconnected:', reason);
+  log.info('Attempting to reinitialize in 5 seconds...');
+  activeQr = null;
+  setTimeout(() => {
+    log.info('Reinitializing WhatsApp client after disconnect...');
+    client.initialize().catch(err => {
+      log.error('Reinitialization failed:', err.message);
+    });
+  }, 5000);
+});
+
+// Log auth failures so we know when a rescan is needed
+client.on('auth_failure', (msg) => {
+  log.error('WhatsApp authentication failed:', msg);
+  log.warn('A new QR code scan is required. Visit /qr on the web app.');
+});
+
 // Listen for incoming messages and route them to our command router
 client.on('message', async (msg) => {
   try {
+    // Ignore messages from the bot itself
+    if (msg.fromMe) return;
     const text = msg.body?.trim();
     if (!text) return;
     log.info(`Incoming message from ${msg.from}: ${text}`);
