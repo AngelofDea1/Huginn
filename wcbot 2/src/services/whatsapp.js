@@ -1,136 +1,124 @@
-import pkg from 'whatsapp-web.js';
-const { Client, LocalAuth } = pkg;
+import makeWASocket, {
+  DisconnectReason,
+  useMultiFileAuthState,
+  fetchLatestBaileysVersion,
+  makeCacheableSignalKeyStore
+} from '@whiskeysockets/baileys';
+import { Boom } from '@hapi/boom';
 import qrcode from 'qrcode-terminal';
+import pino from 'pino';
 import { log } from '../utils/logger.js';
 import { routeCommand } from '../handlers/webhook.js';
-import fs from 'fs';
-import path from 'path';
 
-// ── Chrome executable ───────────────────────────────────────────────────────
-// Render (Docker/Linux): google-chrome-stable is at /usr/bin/google-chrome-stable
-// Local macOS: fall back to the Applications path
-const CHROME_PATH =
-  process.env.PUPPETEER_EXECUTABLE_PATH ||
-  (process.platform === 'darwin'
-    ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-    : '/usr/bin/google-chrome-stable');
+// ── State ────────────────────────────────────────────────────────────────────
+export let activeQr = null;   // set while waiting for scan, null when connected
+let sock = null;              // active Baileys socket
 
-// ── WhatsApp client ─────────────────────────────────────────────────────────
-export const client = new Client({
-  authStrategy: new LocalAuth(),
-  puppeteer: {
-    executablePath: CHROME_PATH,
-    headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--disable-software-rasterizer',
-      '--no-first-run',
-      '--no-zygote',
-      '--single-process',
-      '--disable-extensions',
-      '--js-flags="--max-old-space-size=192"',
-      '--disable-default-apps',
-      '--disable-features=site-per-process',
-      '--disable-translate',
-      '--disable-web-security',
-      '--blink-settings=imagesEnabled=false',
-      '--mute-audio'
-    ]
-  }
-});
+// ── Internal: create & wire up socket ───────────────────────────────────────
+async function connectToWhatsApp() {
+  const { state, saveCreds } = await useMultiFileAuthState('.baileys_auth');
+  const { version } = await fetchLatestBaileysVersion();
 
-export let activeQr = null;
+  sock = makeWASocket({
+    version,
+    auth: {
+      creds: state.creds,
+      keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' }))
+    },
+    printQRInTerminal: false,         // we handle QR ourselves
+    logger: pino({ level: 'silent' }) // suppress Baileys internal logs
+  });
 
-// Generate and display QR code in terminal
-client.on('qr', (qr) => {
-  activeQr = qr;
-  log.info('--- SCAN THIS QR CODE WITH WHATSAPP ON YOUR PHONE ---');
-  qrcode.generate(qr, { small: true });
-});
+  // Persist credentials whenever they update
+  sock.ev.on('creds.update', saveCreds);
 
-client.on('ready', () => {
-  activeQr = null;
-  log.info('WhatsApp Client is ready and connected!');
-});
+  // Handle connection lifecycle
+  sock.ev.on('connection.update', (update) => {
+    const { connection, lastDisconnect, qr } = update;
 
-// Auto-reconnect on disconnect (memory restart, network drop, etc.)
-client.on('disconnected', (reason) => {
-  log.warn('WhatsApp Client disconnected:', reason);
-  log.info('Attempting to reinitialize in 5 seconds...');
-  activeQr = null;
-  setTimeout(() => {
-    log.info('Reinitializing WhatsApp client after disconnect...');
-    client.initialize().catch(err => {
-      log.error('Reinitialization failed:', err.message);
-    });
-  }, 5000);
-});
-
-// Log auth failures so we know when a rescan is needed
-client.on('auth_failure', (msg) => {
-  log.error('WhatsApp authentication failed:', msg);
-  log.warn('A new QR code scan is required. Visit /qr on the web app.');
-});
-
-// Listen for incoming messages and route them to our command router
-client.on('message', async (msg) => {
-  try {
-    // Ignore messages from the bot itself
-    if (msg.fromMe) return;
-    const text = msg.body?.trim();
-    if (!text) return;
-    log.info(`Incoming message from ${msg.from}: ${text}`);
-    await routeCommand(msg.from, text);
-  } catch (err) {
-    log.error('Error handling message:', err.message);
-  }
-});
-
-// ── Initialize client ───────────────────────────────────────────────────────
-export function initializeWhatsApp() {
-  // Delete any stale Chrome SingletonLock that blocks startup after a crash
-  // or when the same profile is reused across machines / redeploys
-  try {
-    const lockPath = path.join(process.cwd(), '.wwebjs_auth', 'session', 'SingletonLock');
-    if (fs.existsSync(lockPath)) {
-      fs.rmSync(lockPath);
-      log.info('Removed stale Chrome SingletonLock');
+    if (qr) {
+      activeQr = qr;
+      log.info('--- SCAN THIS QR CODE WITH WHATSAPP ON YOUR PHONE ---');
+      qrcode.generate(qr, { small: true });
     }
-  } catch (e) {
-    // Non-fatal — log and continue
-    log.warn('Could not remove SingletonLock:', e.message);
-  }
 
-  log.info('Initializing WhatsApp Web client...');
-  client.initialize().catch(err => {
+    if (connection === 'close') {
+      activeQr = null;
+      const statusCode = (lastDisconnect?.error instanceof Boom)
+        ? lastDisconnect.error.output?.statusCode
+        : null;
+      const loggedOut = statusCode === DisconnectReason.loggedOut;
+
+      if (loggedOut) {
+        log.warn('WhatsApp logged out. Visit /qr to scan a new QR code.');
+      } else {
+        log.warn(`WhatsApp disconnected (code ${statusCode}). Reconnecting in 5s...`);
+        setTimeout(connectToWhatsApp, 5000);
+      }
+    }
+
+    if (connection === 'open') {
+      activeQr = null;
+      log.info('WhatsApp Client is ready and connected!');
+    }
+  });
+
+  // Handle incoming messages
+  sock.ev.on('messages.upsert', async ({ messages }) => {
+    for (const msg of messages) {
+      try {
+        // Skip messages sent by the bot itself, or system/status messages
+        if (msg.key.fromMe) continue;
+        if (msg.key.remoteJid === 'status@broadcast') continue;
+
+        const text = (
+          msg.message?.conversation ||
+          msg.message?.extendedTextMessage?.text ||
+          ''
+        ).trim();
+
+        if (!text) continue;
+
+        const from = msg.key.remoteJid;
+        log.info(`Incoming message from ${from}: ${text}`);
+        await routeCommand(from, text);
+      } catch (err) {
+        log.error('Error handling message:', err.message);
+      }
+    }
+  });
+}
+
+// ── Public: called once at startup ──────────────────────────────────────────
+export function initializeWhatsApp() {
+  log.info('Initializing WhatsApp (Baileys)...');
+  connectToWhatsApp().catch(err => {
     log.error('Failed to initialize WhatsApp Client:', err.message);
   });
 }
 
 /**
- * Send a plain text message to a WhatsApp JID or phone number
- * @param {string} to - WhatsApp ID (e.g. "2348012345678" or JID like "2348012345678@c.us" / group JID)
- * @param {string} text
+ * Send a plain-text message to a JID or bare phone number.
+ * Individual chats: PHONENUMBER@s.whatsapp.net
+ * Groups:          GROUPID@g.us
  */
 export async function sendMessage(to, text) {
+  if (!sock) throw new Error('WhatsApp socket not initialised yet');
   try {
-    let JID = to;
-    if (!JID.includes('@')) {
-      JID = `${to}@c.us`;
+    let jid = to;
+    if (!jid.includes('@')) {
+      jid = `${to}@s.whatsapp.net`;
     }
-    await client.sendMessage(JID, text);
-    log.info(` Sent to ${JID}: ${text.slice(0, 60)}...`);
+    await sock.sendMessage(jid, { text });
+    log.info(`✉ Sent to ${jid}: ${text.slice(0, 60)}...`);
   } catch (err) {
-    log.error(` Failed to send to ${to}:`, err.message);
+    log.error(`✗ Failed to send to ${to}:`, err.message);
     throw err;
   }
 }
 
 /**
- * Broadcast a message to multiple recipients
+ * Broadcast a message to multiple recipients.
  */
 export async function broadcast(recipients, text) {
   const results = await Promise.allSettled(
@@ -142,7 +130,7 @@ export async function broadcast(recipients, text) {
 }
 
 /**
- * Send to all groups following a specific match
+ * Send to all groups following a specific match.
  */
 export async function notifyMatchGroups(groups, text) {
   return broadcast(groups.map(g => g.id), text);
