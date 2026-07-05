@@ -628,10 +628,13 @@
       /* Phone stage */
       .stage { height: 160px; margin-bottom: 8px; width: 100%; max-width: 280px; }
       .iphone { width: 90px; height: 180px; border-radius: 16px; padding: 4px; top: 0; transform: translateX(-50%); clip-path: inset(0 -4px 20% -4px); }
+      .iphone::before, .iphone::after { display: none; }
       .iphone .screen { border-radius: 12px; }
       .iphone .dynamic-island { width: 28px; height: 8px; top: 3px; }
       .samsung-old { width: 76px; height: 156px; border-radius: 8px; padding: 4px 2px; top: 14px; transform: translateX(-120%); clip-path: inset(0 -4px 20% -4px); }
+      .samsung-old::before, .samsung-old::after { display: none; }
       .samsung-new { width: 76px; height: 156px; border-radius: 9px; padding: 2px; top: 14px; transform: translateX(20%); clip-path: inset(0 -4px 20% -4px); }
+      .samsung-new::before, .samsung-new::after { display: none; }
 
       /* Feature strip */
       .feature-strip { grid-template-columns: 1fr; margin-top: 32px; }
