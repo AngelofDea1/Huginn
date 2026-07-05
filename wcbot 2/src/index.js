@@ -3,7 +3,7 @@ import express from 'express';
 import cron from 'node-cron';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { initializeWhatsApp } from './services/whatsapp.js';
+import { initializeWhatsApp, activeQr } from './services/whatsapp.js';
 import { pollMatches } from './services/matchPoller.js';
 import { schedulePreMatchBulletins } from './services/scheduler.js';
 import { log } from './utils/logger.js';
@@ -23,6 +23,63 @@ app.use(express.static(join(__dirname, '..', 'public')));
 // ─── Web Chat API ─────────────────────────────────────────────────────────────
 app.post('/api/chat', handleChatMessage);
 app.get('/api/live', getLiveMatchesAPI);
+
+// ─── WhatsApp QR Scan Page ─────────────────────────────────────────────────────
+// Exposes the active QR code as a clean visual image. Visit /qr on your browser.
+app.get('/qr', (_, res) => {
+  if (!activeQr) {
+    return res.send(`
+      <html>
+        <head>
+          <title>Huginn WhatsApp Status</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>
+            body { background: #080810; color: #f0f0f8; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
+            .card { background: #131320; border: 1px solid rgba(255,255,255,0.07); padding: 32px; border-radius: 16px; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+            h1 { color: #00e676; margin-top: 0; font-size: 1.5rem; }
+            p { color: #7070a0; font-size: 0.95rem; line-height: 1.5; }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <h1>Ready & Connected</h1>
+            <p>Huginn is connected to WhatsApp and active. No QR code scan is requested right now.</p>
+          </div>
+        </body>
+      </html>
+    `);
+  }
+
+  const encodedQr = encodeURIComponent(activeQr);
+  const qrUrl = `https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=${encodedQr}&choe=UTF-8`;
+
+  res.send(`
+    <html>
+      <head>
+        <title>Scan Huginn QR Code</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+          body { background: #080810; color: #f0f0f8; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
+          .card { background: #131320; border: 1px solid rgba(255,255,255,0.07); padding: 32px; border-radius: 16px; max-width: 400px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+          h1 { margin-top: 0; font-size: 1.5rem; }
+          .qr-container { background: white; padding: 16px; border-radius: 12px; margin: 20px 0; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+          p { color: #7070a0; font-size: 0.88rem; line-height: 1.5; margin-bottom: 0; }
+          .accent { color: #00e676; font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <h1>Link WhatsApp Account</h1>
+          <p>Scan this QR code with the <span class="accent">Linked Devices</span> scanner inside your WhatsApp mobile app to connect the bot.</p>
+          <div class="qr-container">
+            <img src="${qrUrl}" alt="WhatsApp Web QR Code" width="300" height="300" style="display: block;" />
+          </div>
+          <p>This code will refresh automatically in the logs if it expires.</p>
+        </div>
+      </body>
+    </html>
+  `);
+});
 
 // ─── WhatsApp join redirect ────────────────────────────────────────────────────
 // The bot number never appears in any frontend file. Buttons on the site hit

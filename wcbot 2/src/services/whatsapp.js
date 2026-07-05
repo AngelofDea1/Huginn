@@ -35,13 +35,17 @@ export const client = new Client({
   }
 });
 
+export let activeQr = null;
+
 // Generate and display QR code in terminal
 client.on('qr', (qr) => {
+  activeQr = qr;
   log.info('--- SCAN THIS QR CODE WITH WHATSAPP ON YOUR PHONE ---');
   qrcode.generate(qr, { small: true });
 });
 
 client.on('ready', () => {
+  activeQr = null;
   log.info('WhatsApp Client is ready and connected!');
 });
 
