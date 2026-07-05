@@ -38,13 +38,26 @@ app.get('/qr', (_, res) => {
             .card { background: #131320; border: 1px solid rgba(255,255,255,0.07); padding: 32px; border-radius: 16px; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
             h1 { color: #00e676; margin-top: 0; font-size: 1.5rem; }
             p { color: #7070a0; font-size: 0.95rem; line-height: 1.5; }
+            .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#00e676; margin-right:8px; animation: pulse 1.5s ease-in-out infinite; }
+            @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
           </style>
         </head>
         <body>
           <div class="card">
-            <h1>Ready & Connected</h1>
-            <p>Huginn is connected to WhatsApp and active. No QR code scan is requested right now.</p>
+            <h1><span class="dot"></span>Ready &amp; Connected</h1>
+            <p>Huginn is connected to WhatsApp and active.</p>
+            <p style="margin-top:12px;">Checking for status changes automatically...</p>
           </div>
+          <script>
+            // Auto-poll every 5s — if a QR appears, reload the page to show it
+            setInterval(async () => {
+              try {
+                const r = await fetch('/api/qr-status');
+                const d = await r.json();
+                if (d.needsScan) window.location.reload();
+              } catch(e) {}
+            }, 5000);
+          </script>
         </body>
       </html>
     `);
@@ -56,39 +69,52 @@ app.get('/qr', (_, res) => {
         <title>Scan Huginn QR Code</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
-          body { background: #080810; color: #f0f0f8; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
-          .card { background: #131320; border: 1px solid rgba(255,255,255,0.07); padding: 32px; border-radius: 16px; max-width: 400px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+          body { background: #080810; color: #f0f0f8; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; text-align: center; padding: 20px; box-sizing: border-box; }
+          .card { background: #131320; border: 1px solid rgba(255,255,255,0.07); padding: 32px; border-radius: 16px; max-width: 400px; width:100%; display: flex; flex-direction: column; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
           h1 { margin-top: 0; font-size: 1.5rem; }
-          .qr-container { background: white; padding: 16px; border-radius: 12px; margin: 20px 0; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+          .qr-container { background: white; padding: 20px; border-radius: 12px; margin: 20px 0; display: inline-block; }
           p { color: #7070a0; font-size: 0.88rem; line-height: 1.5; margin-bottom: 0; }
           .accent { color: #00e676; font-weight: bold; }
-          #qrcode img { display: block; margin: 0 auto; }
+          .countdown { color: #00e676; font-size: 0.8rem; margin-top: 10px; }
+          #qrcode canvas, #qrcode img { display: block !important; }
         </style>
-        <!-- Load client-side QR Code library -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
       </head>
       <body>
         <div class="card">
           <h1>Link WhatsApp Account</h1>
-          <p>Scan this QR code with the <span class="accent">Linked Devices</span> scanner inside your WhatsApp mobile app to connect the bot.</p>
+          <p>Open WhatsApp on your phone, tap <span class="accent">Linked Devices</span>, then <span class="accent">Link a Device</span>, and scan this code.</p>
           <div class="qr-container">
             <div id="qrcode"></div>
           </div>
-          <p>This code will refresh automatically in the logs if it expires.</p>
+          <p class="countdown" id="timer">Page refreshes in 18s to keep code fresh</p>
         </div>
         <script>
-          new QRCode(document.getElementById("qrcode"), {
-            text: "${activeQr}",
-            width: 256,
-            height: 256,
-            colorDark : "#000000",
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.H
+          new QRCode(document.getElementById('qrcode'), {
+            text: ${JSON.stringify(activeQr)},
+            width: 280,
+            height: 280,
+            colorDark: '#000000',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.H
           });
+          // Countdown and auto-refresh every 18s so the code never expires
+          let secs = 18;
+          const t = document.getElementById('timer');
+          setInterval(() => {
+            secs--;
+            if (secs <= 0) { window.location.reload(); return; }
+            t.textContent = 'Page refreshes in ' + secs + 's to keep code fresh';
+          }, 1000);
         </script>
       </body>
     </html>
   `);
+});
+
+// ─── QR status for polling ────────────────────────────────────────────────────
+app.get('/api/qr-status', (_, res) => {
+  res.json({ needsScan: !!activeQr });
 });
 
 // ─── WhatsApp join redirect ────────────────────────────────────────────────────
