@@ -63,7 +63,7 @@ export async function routeCommand(from, text) {
   if (lower.startsWith('/vibe')) {
     return handleVibe(from, text);
   }
-  if (lower === '/help' || lower === 'hi' || lower === 'hello') {
+  if (lower === '/help' || lower === '/start' || lower === 'hi' || lower === 'hello') {
     return handleHelp(from);
   }
   if (lower === '/status') {
@@ -72,6 +72,13 @@ export async function routeCommand(from, text) {
   if (lower === '/schedule' || lower === '/fixtures') {
     return handleSchedule(from);
   }
+  if (lower === '/live') {
+    return handleLive(from);
+  }
+  // Catch-all: unknown command
+  return sendMessage(from,
+    `❓ Unknown command: *${text}*\n\nType */help* to see all available commands.`
+  );
 }
 
 //  /follow <team name> 
@@ -182,6 +189,31 @@ async function handleStatus(from) {
     `Vibe: ${group.vibe}\n\n` +
     `Type /vibe to change your commentary style.`
   );
+}
+
+//  /live — show any matches happening right now
+async function handleLive(from) {
+  try {
+    const { getAllFixtures } = await import('../services/txline.js');
+    const fixtures = await getAllFixtures();
+    const live = fixtures.filter(m => m.status === 'live' || m.status === 'in_play' || m.status === 'HT');
+
+    if (!live.length) {
+      return sendMessage(from,
+        `⚽ *No matches live right now.*\n\nType */schedule* to see upcoming fixtures or */follow <team>* to get alerts when they kick off.`
+      );
+    }
+
+    let reply = `🔴 *LIVE NOW:*\n\n`;
+    for (const m of live) {
+      reply += `• *${m.home_team?.name} ${m.home_score ?? 0} - ${m.away_score ?? 0} ${m.away_team?.name}*\n`;
+      reply += `  ${m.minute ? m.minute + "'" : 'Live'}\n\n`;
+    }
+    reply += `Type */follow <team>* to get live goal & card alerts!`;
+    return sendMessage(from, reply);
+  } catch (err) {
+    return sendMessage(from, `⚽ Could not fetch live matches right now. Try again in a moment.`);
+  }
 }
 
 //  /schedule

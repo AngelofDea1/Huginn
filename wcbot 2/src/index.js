@@ -63,6 +63,7 @@ app.get('/qr', (_, res) => {
     `);
   }
 
+  // Add /api/qr-data endpoint inline usage — the page polls this
   res.send(`
     <html>
       <head>
@@ -75,7 +76,7 @@ app.get('/qr', (_, res) => {
           .qr-container { background: white; padding: 20px; border-radius: 12px; margin: 20px 0; display: inline-block; }
           p { color: #7070a0; font-size: 0.88rem; line-height: 1.5; margin-bottom: 0; }
           .accent { color: #00e676; font-weight: bold; }
-          .countdown { color: #00e676; font-size: 0.8rem; margin-top: 10px; }
+          .status { color: #00e676; font-size: 0.85rem; margin-top: 10px; min-height: 20px; }
           #qrcode canvas, #qrcode img { display: block !important; }
         </style>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -83,29 +84,59 @@ app.get('/qr', (_, res) => {
       <body>
         <div class="card">
           <h1>Link WhatsApp Account</h1>
-          <p>Open WhatsApp on your phone, tap <span class="accent">Linked Devices</span>, then <span class="accent">Link a Device</span>, and scan this code.</p>
+          <p>Open WhatsApp → tap <span class="accent">Linked Devices</span> → <span class="accent">Link a Device</span> → scan below.</p>
           <div class="qr-container">
             <div id="qrcode"></div>
           </div>
-          <p class="countdown" id="timer">Page refreshes in 18s to keep code fresh</p>
+          <p class="status" id="status">Waiting for scan...</p>
+          <p style="margin-top:12px;font-size:0.8rem;">Keep this page open. The QR updates automatically — <strong style="color:#fff">do not close this tab during scan.</strong></p>
         </div>
         <script>
-          new QRCode(document.getElementById('qrcode'), {
-            text: ${JSON.stringify(activeQr)},
-            width: 280,
-            height: 280,
-            colorDark: '#000000',
-            colorLight: '#ffffff',
-            correctLevel: QRCode.CorrectLevel.H
-          });
-          // Countdown and auto-refresh every 18s so the code never expires
-          let secs = 18;
-          const t = document.getElementById('timer');
-          setInterval(() => {
-            secs--;
-            if (secs <= 0) { window.location.reload(); return; }
-            t.textContent = 'Page refreshes in ' + secs + 's to keep code fresh';
-          }, 1000);
+          let qrObj = null;
+          let lastQrText = ${JSON.stringify(activeQr)};
+          let scanning = false;
+
+          function renderQR(text) {
+            const el = document.getElementById('qrcode');
+            el.innerHTML = '';
+            qrObj = new QRCode(el, {
+              text: text,
+              width: 280,
+              height: 280,
+              colorDark: '#000000',
+              colorLight: '#ffffff',
+              correctLevel: QRCode.CorrectLevel.H
+            });
+          }
+
+          renderQR(lastQrText);
+
+          // Poll every 5s — update QR in-place (no page reload = no interrupted auth)
+          setInterval(async () => {
+            try {
+              const r = await fetch('/api/qr-status');
+              const d = await r.json();
+
+              if (!d.needsScan) {
+                // QR gone = bot connected!
+                document.getElementById('status').textContent = '✅ Connected! Huginn is online.';
+                document.getElementById('status').style.color = '#00e676';
+                setTimeout(() => window.location.reload(), 2000);
+                return;
+              }
+
+              // Fetch fresh QR text and update canvas in-place
+              const qrRes = await fetch('/api/qr-data');
+              const qrData = await qrRes.json();
+              if (qrData.qr && qrData.qr !== lastQrText) {
+                lastQrText = qrData.qr;
+                if (!scanning) {
+                  renderQR(lastQrText);
+                  document.getElementById('status').textContent = 'QR updated — scan now!';
+                }
+              }
+            } catch(e) {}
+          }, 5000);
         </script>
       </body>
     </html>
@@ -115,6 +146,11 @@ app.get('/qr', (_, res) => {
 // ─── QR status for polling ────────────────────────────────────────────────────
 app.get('/api/qr-status', (_, res) => {
   res.json({ needsScan: !!activeQr });
+});
+
+// Returns raw QR string for in-place canvas updates
+app.get('/api/qr-data', (_, res) => {
+  res.json({ qr: activeQr || null });
 });
 
 // ─── WhatsApp join redirect ────────────────────────────────────────────────────
