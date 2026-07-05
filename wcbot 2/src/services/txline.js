@@ -65,13 +65,27 @@ function phaseToStatus(phase) {
 }
 
 function normaliseScores(scoreUpdates, fixture) {
-  // scoreUpdates is an array of update objects with Stats map
-  // Stats keys: 1=P1 Goals, 2=P2 Goals, 5=P1 Red, 6=P2 Red (from Soccer Feed docs)
-  const latest = scoreUpdates?.[scoreUpdates.length - 1];
+  let updates = [];
+  if (typeof scoreUpdates === 'string') {
+    // Parse SSE lines
+    const matches = scoreUpdates.match(/data:\s*({.+?})/g);
+    if (matches) {
+      for (const m of matches) {
+        try {
+          const jsonStr = m.replace(/^data:\s*/, '').trim();
+          updates.push(JSON.parse(jsonStr));
+        } catch (e) {}
+      }
+    }
+  } else if (Array.isArray(scoreUpdates)) {
+    updates = scoreUpdates;
+  }
+
+  const latest = updates?.[updates.length - 1];
   if (!latest) return null;
 
   const stats   = latest.Stats || {};
-  const events  = buildEvents(scoreUpdates);
+  const events  = buildEvents(updates);
   const phase   = latest.GamePhase;
 
   return {
@@ -85,7 +99,6 @@ function normaliseScores(scoreUpdates, fixture) {
 }
 
 function buildEvents(updates) {
-  // Build a synthetic events list from score progression for goal/card detection
   const events = [];
   let prevStats = {};
   for (const u of updates) {
@@ -114,22 +127,32 @@ function buildEvents(updates) {
 
 function normaliseOdds(oddsData) {
   if (!oddsData?.length) return null;
-  // Find 1x2 market entries (MarketLine is typically "1x2" or "Full Time Result")
+  // Find 1x2 market entries
   const entries = oddsData.filter(o =>
-    (o.MarketName || '').toLowerCase().includes('1x2') ||
-    (o.MarketName || '').toLowerCase().includes('full time')
+    (o.SuperOddsType || '').toLowerCase().includes('1x2')
   );
   if (!entries.length) return null;
 
-  const home = entries.find(o => o.Selection === '1' || o.Selection === 'Home');
-  const draw = entries.find(o => o.Selection === 'X' || o.Selection === 'Draw');
-  const away = entries.find(o => o.Selection === '2' || o.Selection === 'Away');
+  // Grab the latest entry
+  const latest = entries[entries.length - 1];
+  if (!latest || !latest.Prices || !latest.PriceNames) return null;
+
+  let home_win = null, draw = null, away_win = null;
+  latest.PriceNames.forEach((name, idx) => {
+    const rawPrice = latest.Prices[idx];
+    if (rawPrice != null) {
+      const price = rawPrice / 1000; // E.g., 2467 -> 2.467
+      if (name === 'part1') home_win = price;
+      else if (name === 'draw') draw = price;
+      else if (name === 'part2') away_win = price;
+    }
+  });
 
   return {
-    home_win: home?.StablePrice ?? home?.Price ?? null,
-    draw:     draw?.StablePrice ?? draw?.Price ?? null,
-    away_win: away?.StablePrice ?? away?.Price ?? null,
-    _raw: entries,
+    home_win,
+    draw,
+    away_win,
+    _raw: latest,
   };
 }
 
