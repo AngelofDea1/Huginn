@@ -50,9 +50,6 @@ app.get('/qr', (_, res) => {
     `);
   }
 
-  const encodedQr = encodeURIComponent(activeQr);
-  const qrUrl = `https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=${encodedQr}&choe=UTF-8`;
-
   res.send(`
     <html>
       <head>
@@ -65,17 +62,30 @@ app.get('/qr', (_, res) => {
           .qr-container { background: white; padding: 16px; border-radius: 12px; margin: 20px 0; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
           p { color: #7070a0; font-size: 0.88rem; line-height: 1.5; margin-bottom: 0; }
           .accent { color: #00e676; font-weight: bold; }
+          #qrcode img { display: block; margin: 0 auto; }
         </style>
+        <!-- Load client-side QR Code library -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
       </head>
       <body>
         <div class="card">
           <h1>Link WhatsApp Account</h1>
           <p>Scan this QR code with the <span class="accent">Linked Devices</span> scanner inside your WhatsApp mobile app to connect the bot.</p>
           <div class="qr-container">
-            <img src="${qrUrl}" alt="WhatsApp Web QR Code" width="300" height="300" style="display: block;" />
+            <div id="qrcode"></div>
           </div>
           <p>This code will refresh automatically in the logs if it expires.</p>
         </div>
+        <script>
+          new QRCode(document.getElementById("qrcode"), {
+            text: "${activeQr}",
+            width: 256,
+            height: 256,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+          });
+        </script>
       </body>
     </html>
   `);
