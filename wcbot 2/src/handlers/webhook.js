@@ -75,6 +75,10 @@ export async function routeCommand(from, text) {
   if (lower === '/live') {
     return handleLive(from);
   }
+  if (lower.startsWith('/sweepstake')) {
+    const { handleSweepstakeCommand } = await import('./sweepstake.js');
+    return handleSweepstakeCommand(from, text);
+  }
 
   // Catch-all: Fallback to AI Football Oracle with live matches context
   try {

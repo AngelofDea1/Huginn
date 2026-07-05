@@ -98,19 +98,28 @@ async function processMatch(match, groups) {
     updateMatchState(matchId, { sentHT: true });
   }
 
-  //  Full-time 
-  if (detail?.status === 'FT' && !state.sentFT) {
-    log.event(`Full-time: ${homeTeam} ${currentHome}-${currentAway} ${awayTeam}`);
-    const msg = await generateFullTimeReport({
-      homeTeam, awayTeam,
-      homeScore: currentHome,
-      awayScore: currentAway,
-      events,
-      vibe: groups[0]?.vibe,
-    });
-    await notifyMatchGroups(groups, msg);
-    updateMatchState(matchId, { sentFT: true });
-  }
+    //  Full-time 
+    if (detail?.status === 'FT' && !state.sentFT) {
+      log.event(`Full-time: ${homeTeam} ${currentHome}-${currentAway} ${awayTeam}`);
+      const msg = await generateFullTimeReport({
+        homeTeam, awayTeam,
+        homeScore: currentHome,
+        awayScore: currentAway,
+        events,
+        vibe: groups[0]?.vibe,
+      });
+      await notifyMatchGroups(groups, msg);
+
+      // Distribute sweepstake points
+      try {
+        const { processMatchEndPoints } = await import('../handlers/sweepstake.js');
+        await processMatchEndPoints(homeTeam, awayTeam, currentHome, currentAway);
+      } catch (e) {
+        log.error('Sweepstake points calculation failed:', e.message);
+      }
+
+      updateMatchState(matchId, { sentFT: true });
+    }
 
   //  Odds shift alert 
   if (odds && state.odds) {
