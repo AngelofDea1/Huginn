@@ -16,10 +16,24 @@ const __dirname  = dirname(__filename);
 const app = express();
 app.use(express.json());
 
-// ─── Serve frontend ───────────────────────────────────────────────────────────
-// Serve the public/ folder at the root URL so opening http://localhost:3000
-// shows the web interface
-app.use(express.static(join(__dirname, '..', 'public')));
+// ─── Serve Next.js frontend ──────────────────────────────────────────────────
+// The huginn-website (Next.js static export) lives in public/huginn/
+// Next.js trailingSlash=true generates /features/index.html, /demo/index.html etc.
+// so express.static handles SPA routes automatically without a catch-all.
+const frontendDir = join(__dirname, '..', 'public', 'huginn');
+app.use(express.static(frontendDir));
+
+// SPA fallback: for any route not matched by an API or static file,
+// serve the Next.js index.html (handles direct URL navigation)
+const serveNextPage = (page) => (_, res) =>
+  res.sendFile(join(frontendDir, page, 'index.html'));
+
+app.get('/features', serveNextPage('features'));
+app.get('/commands', serveNextPage('commands'));
+app.get('/demo', serveNextPage('demo'));
+// Root fallback
+app.get('/', (_, res) => res.sendFile(join(frontendDir, 'index.html')));
+
 
 // ─── Web Chat API ─────────────────────────────────────────────────────────────
 app.post('/api/chat', handleChatMessage);

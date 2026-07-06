@@ -7,7 +7,10 @@ COPY package*.json ./
 RUN npm ci --only=production
 
 # Copy application source code
-COPY . .
+COPY src/ ./src/
+
+# Copy the public folder (includes the pre-built Next.js site in public/huginn/)
+COPY public/ ./public/
 
 ENV PORT=8080
 ENV NODE_ENV=production
