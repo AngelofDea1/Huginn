@@ -10,10 +10,12 @@ export function FooterSection() {
 
           {/* Brand */}
           <div>
-            <Link href="/" className="flex items-center gap-2 mb-3">
-              <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
-                <span className="text-primary font-bold text-sm">H</span>
-              </div>
+          <Link href="/" className="flex items-center gap-2 mb-3">
+              <img
+                src="/logo.jpeg"
+                alt="Huginn logo"
+                className="w-8 h-8 rounded-full object-cover border border-white/10"
+              />
               <span className="font-semibold tracking-tight">Huginn</span>
             </Link>
             <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
