@@ -1,912 +1,995 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MatchPulse — Your World Cup in WhatsApp</title>
-<meta name="description" content="Live World Cup alerts in your WhatsApp group. Goals, red cards, odds shifts, AI commentary. No app. No signup. Just football."/>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"/>
-<style>
-/* ── Tokens ──────────────────────────────────────────────────────────────── */
-:root {
-  --black:   #080810;
-  --deep:    #0d0d1a;
-  --surface: #131320;
-  --card:    #1a1a2e;
-  --border:  rgba(255,255,255,0.07);
-  --green:   #00e676;
-  --green-d: #00c853;
-  --green-glow: rgba(0,230,118,0.15);
-  --white:   #f0f0f8;
-  --muted:   #7070a0;
-  --wa:      #25D366;
-}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Huginn — Your World Cup in WhatsApp</title>
+  <meta name="description"
+    content="Live World Cup alerts in your WhatsApp group. Goals, red cards, odds shifts, AI commentary. No app. No signup. Just football." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Tourney:wght@600;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap"
+    rel="stylesheet" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Huginn" />
+  <link rel="apple-touch-icon" href="/img/icon-192.png" />
+  <link rel="stylesheet" href="/css/shared.css" />
+  <link rel="stylesheet" href="/css/pill-nav.css" />
+  <style>
+    /* ── HERO ─────────────────────────────────────────────────────────────────── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding-top: 140px;
+      position: relative;
+      overflow: hidden;
+    }
 
-/* ── Reset ───────────────────────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
-body {
-  background: var(--black);
-  color: var(--white);
-  font-family: 'Inter', sans-serif;
-  font-size: 16px;
-  line-height: 1.6;
-  overflow-x: hidden;
-}
+    .hero-glow {
+      position: absolute;
+      width: 700px;
+      height: 700px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0, 230, 118, 0.06) 0%, transparent 70%);
+      top: 30%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
 
-/* ── Typography ──────────────────────────────────────────────────────────── */
-.display {
-  font-family: 'Syne', sans-serif;
-  font-weight: 800;
-  line-height: 1.05;
-  letter-spacing: -0.03em;
-}
-.mono { font-family: 'JetBrains Mono', monospace; }
+    .hero-content {
+      max-width: 800px;
+      margin: 0 auto;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 0 100px;
+    }
 
-/* ── Noise texture overlay ───────────────────────────────────────────────── */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 0;
-}
+    .hero-title {
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      margin-bottom: 20px;
+      line-height: 0.95;
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+    }
 
-/* ── Layout ──────────────────────────────────────────────────────────────── */
-.container { max-width: 1100px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+    .hero-title .accent {
+      color: var(--green);
+    }
 
-/* ── NAV ─────────────────────────────────────────────────────────────────── */
-nav {
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  z-index: 100;
-  padding: 0 24px;
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: rgba(8,8,16,0.8);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--border);
-}
-.nav-logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-family: 'Syne', sans-serif;
-  font-weight: 800;
-  font-size: 1.15rem;
-  letter-spacing: -0.02em;
-}
-.logo-dot {
-  width: 10px; height: 10px;
-  border-radius: 50%;
-  background: var(--green);
-  box-shadow: 0 0 10px var(--green);
-  animation: pulse 2s infinite;
-}
-@keyframes pulse {
-  0%, 100% { box-shadow: 0 0 8px var(--green); }
-  50% { box-shadow: 0 0 20px var(--green), 0 0 40px rgba(0,230,118,0.3); }
-}
-.nav-links { display: flex; gap: 32px; align-items: center; }
-.nav-links a {
-  color: var(--muted);
-  text-decoration: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: color 0.2s;
-}
-.nav-links a:hover { color: var(--white); }
-.nav-cta {
-  background: var(--wa);
-  color: #000 !important;
-  padding: 8px 18px;
-  border-radius: 8px;
-  font-weight: 600 !important;
-  font-size: 0.8rem !important;
-  transition: opacity 0.2s !important;
-}
-.nav-cta:hover { opacity: 0.85; }
+    .hero-desc {
+      font-size: 1.15rem;
+      color: var(--muted);
+      line-height: 1.6;
+      max-width: 600px;
+      margin-bottom: 40px;
+    }
 
-/* ── HERO ─────────────────────────────────────────────────────────────────── */
-.hero {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  padding-top: 64px;
-  position: relative;
-  overflow: hidden;
-}
-.hero-glow {
-  position: absolute;
-  width: 600px; height: 600px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(0,230,118,0.08) 0%, transparent 70%);
-  top: 50%; left: 50%;
-  transform: translate(-50%, -55%);
-  pointer-events: none;
-}
-.hero-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 64px;
-  align-items: center;
-  padding: 80px 0;
-}
-.hero-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--green);
-  margin-bottom: 24px;
-  padding: 6px 14px;
-  border: 1px solid rgba(0,230,118,0.25);
-  border-radius: 100px;
-  width: fit-content;
-}
-.hero-eyebrow-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: var(--green);
-  animation: pulse 1.5s infinite;
-}
-.hero-title {
-  font-size: clamp(2.8rem, 5vw, 4.2rem);
-  margin-bottom: 24px;
-}
-.hero-title .accent { color: var(--green); }
-.hero-desc {
-  font-size: 1.1rem;
-  color: var(--muted);
-  line-height: 1.7;
-  max-width: 480px;
-  margin-bottom: 40px;
-}
-.hero-actions { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
-.btn-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--wa);
-  color: #000;
-  font-weight: 700;
-  font-size: 0.95rem;
-  padding: 14px 28px;
-  border-radius: 10px;
-  text-decoration: none;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-.btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(37,211,102,0.3);
-}
-.btn-secondary {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--white);
-  font-weight: 600;
-  font-size: 0.9rem;
-  padding: 14px 24px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  text-decoration: none;
-  transition: border-color 0.2s, background 0.2s;
-}
-.btn-secondary:hover { border-color: rgba(255,255,255,0.2); background: var(--surface); }
-.hero-stats {
-  display: flex;
-  gap: 32px;
-  margin-top: 48px;
-  padding-top: 32px;
-  border-top: 1px solid var(--border);
-}
-.hero-stat-num {
-  font-family: 'Syne', sans-serif;
-  font-size: 1.6rem;
-  font-weight: 800;
-  color: var(--white);
-}
-.hero-stat-label { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+    .hero-actions {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 0;
+    }
 
-/* ── PHONE MOCKUP ─────────────────────────────────────────────────────────── */
-.phone-wrap {
-  display: flex;
-  justify-content: center;
-  position: relative;
-}
-.phone {
-  width: 280px;
-  background: #1a1a1a;
-  border-radius: 36px;
-  border: 2px solid rgba(255,255,255,0.1);
-  overflow: hidden;
-  box-shadow: 0 40px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
-  position: relative;
-}
-.phone-notch {
-  height: 28px;
-  background: #111;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.phone-notch-bar {
-  width: 80px; height: 5px;
-  border-radius: 3px;
-  background: #333;
-}
-.phone-screen {
-  background: #0d1117;
-  min-height: 480px;
-  padding: 0;
-}
-.wa-header {
-  background: #1f2c34;
-  padding: 10px 14px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.wa-avatar {
-  width: 36px; height: 36px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #00e676, #00bcd4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-}
-.wa-name { font-size: 0.8rem; font-weight: 600; color: #e9edef; }
-.wa-status { font-size: 0.65rem; color: #8696a0; }
-.wa-body { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-.wa-msg {
-  background: #1f2c34;
-  border-radius: 8px 8px 8px 2px;
-  padding: 8px 10px;
-  max-width: 90%;
-  font-size: 0.72rem;
-  line-height: 1.5;
-  color: #e9edef;
-  animation: msgIn 0.4s ease both;
-}
-.wa-msg.user {
-  background: #005c4b;
-  border-radius: 8px 8px 2px 8px;
-  align-self: flex-end;
-  color: #e9edef;
-}
-.wa-msg .wa-time { font-size: 0.6rem; color: #8696a0; text-align: right; margin-top: 4px; }
-.wa-msg .goal-line { color: var(--green); font-weight: 700; }
-@keyframes msgIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-.wa-msg:nth-child(1) { animation-delay: 0.3s; }
-.wa-msg:nth-child(2) { animation-delay: 0.8s; }
-.wa-msg:nth-child(3) { animation-delay: 1.3s; }
-.wa-msg:nth-child(4) { animation-delay: 1.8s; }
-.wa-msg:nth-child(5) { animation-delay: 2.3s; }
+    /* ── THREE PHONE STAGE ───────────────────────────────────────────────────── */
+    /*
+     * Stage height = iPhone visible height after clip-path (595px × 80% = 476px).
+     * Phones are top-aligned so nothing is ever clipped at the top.
+     * The bottom 20% of each phone is hidden by clip-path alone — no overflow:hidden
+     * needed — so the headline sits flush right below the stage with zero gap.
+     */
+    .stage {
+      position: relative;
+      width: 820px;
+      max-width: 100%;
+      height: 520px; /* iPhone visible height (650px * 80%) = 520px */
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      margin: 0 auto 20px;
+      pointer-events: none;
+      flex-shrink: 0;
+      z-index: 2;
+    }
 
-/* ── HOW IT WORKS ────────────────────────────────────────────────────────── */
-.section { padding: 100px 0; position: relative; z-index: 1; }
-.section-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--green);
-  margin-bottom: 16px;
-}
-.section-title {
-  font-size: clamp(2rem, 3.5vw, 2.8rem);
-  margin-bottom: 16px;
-}
-.section-desc { color: var(--muted); font-size: 1rem; max-width: 520px; line-height: 1.7; }
 
-.steps {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2px;
-  margin-top: 60px;
-  background: var(--border);
-  border-radius: 16px;
-  overflow: hidden;
-}
-.step {
-  background: var(--surface);
-  padding: 40px 32px;
-  position: relative;
-}
-.step-num {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.72rem;
-  font-weight: 500;
-  color: var(--green);
-  margin-bottom: 20px;
-  letter-spacing: 0.05em;
-}
-.step-icon { font-size: 2rem; margin-bottom: 16px; display: block; }
-.step-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.1rem; margin-bottom: 10px; }
-.step-desc { font-size: 0.875rem; color: var(--muted); line-height: 1.65; }
+    /* Green glow blob — matches Huginn palette */
+    .blob {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-20%);
+      width: 500px;
+      height: 500px;
+      background:
+        radial-gradient(circle at 35% 35%, rgba(0, 230, 118, 0.28), transparent 60%),
+        radial-gradient(circle at 65% 65%, rgba(0, 200, 83, 0.18), transparent 55%);
+      filter: blur(60px);
+      opacity: 1;
+      z-index: 0;
+      border-radius: 50%;
+      pointer-events: none;
+    }
 
-/* ── ALERTS SHOWCASE ─────────────────────────────────────────────────────── */
-.alerts-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-  margin-top: 60px;
-}
-.alert-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 24px;
-  position: relative;
-  overflow: hidden;
-  transition: border-color 0.2s, transform 0.2s;
-}
-.alert-card:hover { border-color: rgba(0,230,118,0.3); transform: translateY(-2px); }
-.alert-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, var(--green), transparent);
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-.alert-card:hover::before { opacity: 1; }
-.alert-type {
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--green);
-  margin-bottom: 14px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.alert-type-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
-.alert-bubble {
-  background: var(--card);
-  border-radius: 10px;
-  padding: 14px 16px;
-  font-size: 0.83rem;
-  line-height: 1.6;
-  color: #c8c8e0;
-  border: 1px solid var(--border);
-}
-.alert-bubble strong { color: var(--white); }
-.alert-trigger {
-  font-size: 0.72rem;
-  color: var(--muted);
-  margin-top: 12px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
+    .floor-shadow {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 40px;
+      background: radial-gradient(ellipse, rgba(0,0,0,0.5), transparent 70%);
+      z-index: 0;
+      pointer-events: none;
+    }
 
-/* ── VIBES ───────────────────────────────────────────────────────────────── */
-.vibes-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-top: 60px;
-}
-.vibe-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 28px 20px;
-  text-align: center;
-  transition: all 0.2s;
-  cursor: default;
-}
-.vibe-card:hover { border-color: rgba(0,230,118,0.3); background: var(--card); }
-.vibe-emoji { font-size: 2.2rem; display: block; margin-bottom: 14px; }
-.vibe-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; margin-bottom: 8px; }
-.vibe-cmd {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
-  color: var(--green);
-  background: var(--green-glow);
-  padding: 4px 10px;
-  border-radius: 6px;
-  display: inline-block;
-  margin-bottom: 12px;
-}
-.vibe-desc { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+    .device {
+      position: absolute;
+      z-index: 2;
+      filter: drop-shadow(0 28px 40px rgba(0, 0, 0, 0.7));
+    }
 
-/* ── TECH STACK ──────────────────────────────────────────────────────────── */
-.tech-section { background: var(--deep); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
-.tech-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 2px;
-  background: var(--border);
-  border-radius: 16px;
-  overflow: hidden;
-  margin-top: 60px;
-}
-.tech-card {
-  background: var(--surface);
-  padding: 32px 24px;
-  text-align: center;
-}
-.tech-logo { font-size: 2rem; margin-bottom: 12px; display: block; }
-.tech-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.9rem; margin-bottom: 6px; }
-.tech-role { font-size: 0.75rem; color: var(--muted); }
+    .screen {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
 
-/* ── COMMANDS ─────────────────────────────────────────────────────────────── */
-.commands-table {
-  margin-top: 60px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  overflow: hidden;
-}
-.cmd-row {
-  display: grid;
-  grid-template-columns: 200px 1fr auto;
-  gap: 24px;
-  padding: 18px 28px;
-  align-items: center;
-  border-bottom: 1px solid var(--border);
-  transition: background 0.15s;
-}
-.cmd-row:last-child { border-bottom: none; }
-.cmd-row:hover { background: var(--card); }
-.cmd-row:first-child {
-  background: rgba(0,230,118,0.04);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.cmd-code {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.82rem;
-  color: var(--green);
-  background: var(--green-glow);
-  padding: 4px 10px;
-  border-radius: 6px;
-  width: fit-content;
-}
-.cmd-desc { font-size: 0.875rem; color: var(--muted); }
-.cmd-tag {
-  font-size: 0.65rem;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 20px;
-  background: var(--card);
-  color: var(--muted);
-  border: 1px solid var(--border);
-  white-space: nowrap;
-}
-.cmd-tag.auto { color: var(--green); border-color: rgba(0,230,118,0.25); background: var(--green-glow); }
+    /*
+     * content-layer: drop your <img> or <video> directly inside this div.
+     * It is absolutely positioned and fills the entire screen area.
+     * The placeholder div below it is shown when no image is present —
+     * replace it with: <img src="/screens/your-screenshot.png" alt="">
+     */
+    .content-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background: var(--deep);
+    }
+    .content-layer img,
+    .content-layer video,
+    .content-layer iframe {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      border: 0;
+      display: block;
+    }
+    /* Shown when no image has been dropped in yet */
+    .content-placeholder {
+      width: 100%; height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 20px;
+    }
+    .content-placeholder .bar {
+      height: 8px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      width: 80%;
+    }
+    .content-placeholder .bar.accent {
+      background: rgba(0, 230, 118, 0.18);
+      width: 60%;
+    }
+    .content-placeholder .bar.short {
+      width: 45%;
+    }
 
-/* ── CTA ─────────────────────────────────────────────────────────────────── */
-.cta-section {
-  text-align: center;
-  padding: 120px 0;
-  position: relative;
-  z-index: 1;
-}
-.cta-glow {
-  position: absolute;
-  width: 500px; height: 300px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(0,230,118,0.06) 0%, transparent 70%);
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-}
-.cta-title { font-size: clamp(2.4rem, 4vw, 3.5rem); margin-bottom: 20px; }
-.cta-desc { color: var(--muted); font-size: 1.05rem; max-width: 480px; margin: 0 auto 40px; }
-.cta-note { font-size: 0.8rem; color: var(--muted); margin-top: 20px; }
+    /* ── CENTER: iPhone 16 ───────────────────────────────────────────────── */
+    /*  top: 0  →  full top of device is always visible, never clipped.      */
+    /*  clip-path cuts the bottom 20% only, so the phone merges into the bg. */
+    .iphone {
+      width: 320px;
+      height: 650px;
+      left: 50%;
+      top: 0;
+      transform: translateX(-50%);
+      z-index: 3;
+      border-radius: 54px;
+      background: linear-gradient(155deg, #4a4a4d, #111113 60%);
+      padding: 13px;
+      box-shadow: 0 0 0 2px rgba(255,255,255,0.08) inset;
+      /* Crops the bottom 20% (130px), leaving exactly 520px visible height */
+      clip-path: inset(0 -6px 20% -6px);
+    }
+    .iphone::before {
+      content: "";
+      position: absolute;
+      right: -3px; top: 160px;
+      width: 3px; height: 70px;
+      background: #2a2a2c; border-radius: 2px;
+    }
+    .iphone::after {
+      content: "";
+      position: absolute;
+      left: -3px; top: 130px;
+      width: 3px; height: 20px;
+      background: #2a2a2c; border-radius: 2px;
+      box-shadow: 0 40px 0 #2a2a2c, 0 80px 0 #2a2a2c;
+    }
+    .iphone .screen { border-radius: 42px; background: #000; }
+    .iphone .dynamic-island {
+      position: absolute;
+      top: 15px; left: 50%;
+      transform: translateX(-50%);
+      width: 96px; height: 26px;
+      background: #000; border-radius: 20px; z-index: 20;
+    }
 
-/* ── FOOTER ──────────────────────────────────────────────────────────────── */
-footer {
-  border-top: 1px solid var(--border);
-  padding: 40px 0;
-  position: relative;
-  z-index: 1;
-}
-.footer-inner {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 24px;
-  flex-wrap: wrap;
-}
-.footer-note { font-size: 0.8rem; color: var(--muted); }
-.footer-links { display: flex; gap: 24px; }
-.footer-links a { font-size: 0.8rem; color: var(--muted); text-decoration: none; transition: color 0.2s; }
-.footer-links a:hover { color: var(--white); }
-.powered-by {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.75rem;
-  color: var(--muted);
-}
-.powered-by img { height: 18px; opacity: 0.6; }
+    /* ── LEFT: older Samsung (Galaxy S9-era) ────────────────────────────── */
+    /*  Offset 30px down from top to create a natural depth layering effect. */
+    .samsung-old {
+      width: 250px;
+      height: 520px;
+      left: 50%;
+      top: 104px; /* Placed 104px down so its baseline sits at exactly 520px */
+      transform: translateX(-116%);
+      z-index: 1;
+      border-radius: 26px;
+      background: linear-gradient(155deg, #3a3a3e, #0f0f11 60%);
+      padding: 16px 8px;
+      /* Cropped bottom 20% so it is cut horizontally at the baseline */
+      clip-path: inset(0 -6px 20% -6px);
+    }
+    .samsung-old::before {
+      content: "";
+      position: absolute;
+      right: -3px; top: 140px;
+      width: 3px; height: 55px;
+      background: #2a2a2c; border-radius: 2px;
+    }
+    .samsung-old::after {
+      content: "";
+      position: absolute;
+      left: -3px; top: 120px;
+      width: 3px; height: 45px;
+      background: #2a2a2c; border-radius: 2px;
+    }
+    .samsung-old .screen { border-radius: 8px; background: #000; }
+    .samsung-old .nav-bar {
+      position: absolute;
+      bottom: 0; left: 0; right: 0; z-index: 20;
+      height: 28px; background: #0a0a0a;
+      display: flex; align-items: center; justify-content: space-around;
+    }
+    .samsung-old .nav-bar .tri {
+      width: 0; height: 0;
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+      border-right: 7px solid #666;
+    }
+    .samsung-old .nav-bar .circ {
+      width: 11px; height: 11px;
+      border: 1.5px solid #888; border-radius: 50%;
+    }
+    .samsung-old .nav-bar .sq {
+      width: 10px; height: 10px;
+      border: 1.5px solid #666; border-radius: 2px;
+    }
 
-/* ── LIVE TICKER ─────────────────────────────────────────────────────────── */
-.ticker {
-  background: var(--green);
-  color: #000;
-  padding: 10px 0;
-  overflow: hidden;
-  position: relative;
-}
-.ticker-inner {
-  display: flex;
-  gap: 64px;
-  animation: ticker 20s linear infinite;
-  width: max-content;
-}
-.ticker-item {
-  font-size: 0.78rem;
-  font-weight: 700;
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-@keyframes ticker {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
+    /* ── RIGHT: Samsung S25 Ultra ────────────────────────────────────────── */
+    .samsung-new {
+      width: 250px;
+      height: 520px;
+      left: 50%;
+      top: 104px; /* Placed 104px down to sit baseline flush at 520px */
+      transform: translateX(16%);
+      z-index: 1;
+      border-radius: 30px;
+      background: linear-gradient(155deg, #3a3a3e, #0f0f11 60%);
+      padding: 6px;
+      /* Cropped bottom 20% to cut horizontally */
+      clip-path: inset(0 -6px 20% -6px);
+    }
+    .samsung-new::before {
+      content: "";
+      position: absolute;
+      right: -3px; top: 140px;
+      width: 3px; height: 55px;
+      background: #2a2a2c; border-radius: 2px;
+    }
+    .samsung-new::after {
+      content: "";
+      position: absolute;
+      left: -3px; top: 120px;
+      width: 3px; height: 45px;
+      background: #2a2a2c; border-radius: 2px;
+    }
+    .samsung-new .screen { border-radius: 25px; background: #000; }
+    .samsung-new .punch-hole {
+      position: absolute;
+      top: 12px; left: 50%;
+      transform: translateX(-50%);
+      width: 10px; height: 10px;
+      background: #000; border: 1px solid #1c1c1c;
+      border-radius: 50%; z-index: 20;
+    }
+    .samsung-new .gesture-pill {
+      position: absolute;
+      bottom: 6px; left: 50%;
+      transform: translateX(-50%);
+      width: 90px; height: 4px;
+      background: rgba(255,255,255,0.4);
+      border-radius: 3px; z-index: 20;
+    }
 
-/* ── RESPONSIVE ──────────────────────────────────────────────────────────── */
-@media (max-width: 768px) {
-  .hero-grid { grid-template-columns: 1fr; gap: 48px; }
-  .phone-wrap { order: -1; }
-  .phone { width: 240px; }
-  .steps { grid-template-columns: 1fr; }
-  .alerts-grid { grid-template-columns: 1fr; }
-  .vibes-grid { grid-template-columns: repeat(2, 1fr); }
-  .tech-grid { grid-template-columns: repeat(2, 1fr); }
-  .cmd-row { grid-template-columns: 1fr; gap: 8px; }
-  .cmd-row:first-child { display: none; }
-  .nav-links { display: none; }
-}
-</style>
+    /* ── BOTTOM FEATURE STRIP ────────────────────────────────────────────────── */
+    .feature-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      width: 100%;
+      background: var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      margin-top: 60px;
+    }
+
+    .feature-strip-item {
+      background: var(--surface);
+      padding: 36px 28px;
+      text-align: center;
+      transition: background 0.2s;
+    }
+
+    .feature-strip-item:hover {
+      background: var(--card);
+    }
+
+    .fsi-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      color: var(--green);
+      margin-bottom: 12px;
+      letter-spacing: 0.08em;
+    }
+
+    .fsi-title {
+      font-family: 'Tourney', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: 8px;
+    }
+
+    .fsi-desc {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    /* ── HOW IT REACHES YOU ──────────────────────────────────────────────── */
+    .how-section {
+      padding: 100px 0;
+      position: relative;
+      z-index: 1;
+    }
+    .how-inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+    }
+    .how-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      color: var(--green);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    .how-title {
+      font-size: clamp(1.8rem, 3vw, 2.6rem);
+      margin-bottom: 16px;
+      line-height: 1.05;
+    }
+    .how-desc {
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.7;
+      max-width: 440px;
+      margin-bottom: 48px;
+    }
+    .setup-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .setup-step {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      padding: 20px 0;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+    .setup-step:last-child { border-bottom: none; }
+    .step-index {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--green);
+      background: var(--green-glow);
+      border: 1px solid rgba(0,230,118,0.25);
+      border-radius: 8px;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+    .step-body h3 {
+      font-family: 'Tourney', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 4px;
+    }
+    .step-body p {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .step-body .step-code {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--green);
+      font-size: 0.82rem;
+      background: var(--green-glow);
+      padding: 2px 8px;
+      border-radius: 5px;
+    }
+
+    /* ── Phone notification demo ───────────────────────────────────────────── */
+    .phone-demo {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+    .demo-phone {
+      width: 260px;
+      height: 530px;
+      border-radius: 46px;
+      background: linear-gradient(155deg, #4a4a4d, #111113 60%);
+      padding: 12px;
+      box-shadow:
+        0 0 0 2px rgba(255,255,255,0.08) inset,
+        0 40px 80px rgba(0,0,0,0.8),
+        0 0 60px rgba(0,230,118,0.08);
+      position: relative;
+      flex-shrink: 0;
+    }
+    .demo-phone-screen {
+      width: 100%;
+      height: 100%;
+      border-radius: 36px;
+      background: #0a0a0a;
+      overflow: hidden;
+      position: relative;
+    }
+    .demo-phone-island {
+      position: absolute;
+      top: 13px; left: 50%;
+      transform: translateX(-50%);
+      width: 88px; height: 24px;
+      background: #000;
+      border-radius: 18px;
+      z-index: 30;
+    }
+    .demo-phone-btn-r {
+      position: absolute;
+      right: -3px; top: 140px;
+      width: 3px; height: 64px;
+      background: #2a2a2c;
+      border-radius: 2px;
+    }
+    .demo-phone-btn-l {
+      position: absolute;
+      left: -3px; top: 110px;
+      width: 3px; height: 18px;
+      background: #2a2a2c;
+      border-radius: 2px;
+      box-shadow: 0 36px 0 #2a2a2c, 0 72px 0 #2a2a2c;
+    }
+    /* lock screen wallpaper */
+    .demo-lockscreen {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 30% 50%, rgba(0,230,118,0.12), transparent 60%),
+        radial-gradient(ellipse at 80% 20%, rgba(0,180,90,0.08), transparent 50%),
+        #080810;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 60px;
+      gap: 4px;
+      z-index: 1;
+    }
+    .demo-lock-time {
+      font-family: 'Tourney', sans-serif;
+      font-size: 3.2rem;
+      font-weight: 800;
+      color: rgba(255,255,255,0.9);
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+    .demo-lock-date {
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 16px;
+    }
+
+    /* notification banners */
+    .demo-notifs {
+      position: absolute;
+      top: 56px;
+      left: 10px;
+      right: 10px;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .notif-banner {
+      background: rgba(22,22,30,0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 11px 13px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      transform: translateY(-110%);
+      opacity: 0;
+      transition: transform 0.4s cubic-bezier(0.34,1.3,0.64,1), opacity 0.3s ease;
+      will-change: transform, opacity;
+    }
+    .notif-banner.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    .notif-app-icon {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      background: var(--wa);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 0.9rem;
+      font-weight: 900;
+      color: #fff;
+      font-family: 'Tourney', sans-serif;
+    }
+    .notif-content {
+      flex: 1;
+      min-width: 0;
+    }
+    .notif-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2px;
+    }
+    .notif-app-name {
+      font-size: 0.62rem;
+      color: rgba(255,255,255,0.45);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .notif-time {
+      font-size: 0.6rem;
+      color: rgba(255,255,255,0.3);
+    }
+    .notif-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: rgba(255,255,255,0.92);
+      margin-bottom: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .notif-body {
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.5);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ── RESPONSIVE ──────────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      /* Hero */
+      .hero { padding-top: 90px; }
+      .hero-content { padding: 0 0 48px; }
+      .hero-title { font-size: clamp(1.5rem, 5.5vw, 2.2rem); white-space: normal !important; margin-top: 0; line-height: 1.1; }
+      .hero-desc { font-size: 0.92rem; margin-bottom: 28px; }
+      .hero-actions { flex-direction: column; width: 100%; gap: 10px; }
+      .hero-actions .btn-primary,
+      .hero-actions .btn-secondary { width: 100%; justify-content: center; padding: 14px 20px !important; font-size: 0.9rem !important; }
+
+      /* Phone stage */
+      .stage { height: 160px; margin-bottom: 8px; width: 100%; max-width: 280px; }
+      .iphone { width: 90px; height: 180px; border-radius: 16px; padding: 4px; top: 0; transform: translateX(-50%); clip-path: inset(0 -4px 20% -4px); }
+      .iphone::before, .iphone::after { display: none; }
+      .iphone .screen { border-radius: 12px; }
+      .iphone .dynamic-island { width: 28px; height: 8px; top: 3px; }
+      .samsung-old { width: 76px; height: 156px; border-radius: 8px; padding: 4px 2px; top: 14px; transform: translateX(-120%); clip-path: inset(0 -4px 20% -4px); }
+      .samsung-old::before, .samsung-old::after { display: none; }
+      .samsung-new { width: 76px; height: 156px; border-radius: 9px; padding: 2px; top: 14px; transform: translateX(20%); clip-path: inset(0 -4px 20% -4px); }
+      .samsung-new::before, .samsung-new::after { display: none; }
+
+      /* Feature strip */
+      .feature-strip { grid-template-columns: 1fr; margin-top: 32px; }
+      .feature-strip-item { padding: 24px 20px; }
+
+      /* How section */
+      .how-section { padding: 60px 0; }
+      .how-inner { grid-template-columns: 1fr; gap: 40px; }
+      .how-title { font-size: clamp(1.4rem, 5vw, 2rem); }
+      .how-desc { font-size: 0.88rem; max-width: 100%; margin-bottom: 32px; }
+
+      /* Phone demo — constrain to viewport */
+      .phone-demo { order: -1; }
+      .demo-phone { width: min(200px, 55vw); height: min(410px, 112vw); border-radius: 36px; padding: 9px; }
+      .demo-phone-screen { border-radius: 28px; }
+      .demo-phone-island { width: 70px; height: 20px; top: 10px; }
+      .demo-lock-time { font-size: 2.4rem; }
+      .demo-lockscreen { padding-top: 44px; }
+      .demo-notifs { top: 44px; left: 8px; right: 8px; }
+      .notif-banner { padding: 9px 10px; border-radius: 12px; }
+      .notif-app-icon { width: 26px; height: 26px; font-size: 0.75rem; }
+      .notif-title { font-size: 0.72rem; }
+      .notif-body { font-size: 0.66rem; }
+
+      /* Footer */
+      .footer-inner { flex-direction: column; text-align: center; gap: 16px; }
+      .footer-links { justify-content: center; flex-wrap: wrap; gap: 14px; }
+    }
+
+    /* Extra tight for very small screens (≤ 400px) */
+    @media (max-width: 400px) {
+      .stage { height: 140px; }
+      .iphone { width: 86px; height: 172px; }
+      .samsung-old { width: 72px; height: 152px; top: 14px; transform: translateX(-126%); }
+      .samsung-new { width: 72px; height: 152px; top: 14px; transform: translateX(26%); }
+      .demo-phone { width: min(180px, 52vw); height: min(368px, 104vw); }
+      .hero-title { font-size: 1.5rem; }
+    }
+  </style>
 </head>
+
 <body>
 
-<!-- NAV -->
-<nav>
-  <div class="nav-logo">
-    <div class="logo-dot"></div>
-    MatchPulse
-  </div>
-  <div class="nav-links">
-    <a href="#how">How it works</a>
-    <a href="#alerts">Alerts</a>
-    <a href="#commands">Commands</a>
-    <a href="https://github.com" target="_blank">GitHub ↗</a>
-    <a href="/api/join" target="_blank" class="nav-cta">Get Started →</a>
-  </div>
-</nav>
+  <!-- PillNav injected by JS -->
 
-<!-- LIVE TICKER -->
-<div style="margin-top:64px">
-  <div class="ticker">
-    <div class="ticker-inner">
-      <span class="ticker-item">⚽ GOAL — Vinicius Jr. 34' · Brazil 1–0 France · Odds: 1.45</span>
-      <span class="ticker-item">🟥 RED CARD — 67' · Argentina vs Germany</span>
-      <span class="ticker-item">📈 ODDS SHIFT — Nigeria drifts from 2.10 → 3.40</span>
-      <span class="ticker-item">⏱ HALF TIME — Spain 2–1 England</span>
-      <span class="ticker-item">🏁 FULL TIME — Morocco 1–0 Portugal</span>
-      <span class="ticker-item">⚽ GOAL — Vinicius Jr. 34' · Brazil 1–0 France · Odds: 1.45</span>
-      <span class="ticker-item">🟥 RED CARD — 67' · Argentina vs Germany</span>
-      <span class="ticker-item">📈 ODDS SHIFT — Nigeria drifts from 2.10 → 3.40</span>
-      <span class="ticker-item">⏱ HALF TIME — Spain 2–1 England</span>
-      <span class="ticker-item">🏁 FULL TIME — Morocco 1–0 Portugal</span>
-    </div>
-  </div>
-</div>
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-glow"></div>
+    <div class="container">
+      <div class="hero-content">
 
-<!-- HERO -->
-<section class="hero">
-  <div class="hero-glow"></div>
-  <div class="container">
-    <div class="hero-grid">
-      <div>
-        <div class="hero-eyebrow">
-          <span class="hero-eyebrow-dot"></span>
-          Live · World Cup 2026
-        </div>
-        <h1 class="display hero-title">
-          Your World Cup.<br/>
-          <span class="accent">Inside WhatsApp.</span>
-        </h1>
-        <p class="hero-desc">
-          MatchPulse turns any WhatsApp group into a live football studio. 
-          Goals, red cards, odds shifts, and AI commentary — delivered the moment it happens. 
-          No app to install. No account to create.
-        </p>
-        <div class="hero-actions">
-          <a href="/api/join" target="_blank" class="btn-primary">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-            Add to WhatsApp
-          </a>
-          <a href="https://github.com" target="_blank" class="btn-secondary">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-            View Source
-          </a>
-        </div>
-        <div class="hero-stats">
-          <div>
-            <div class="hero-stat-num">104</div>
-            <div class="hero-stat-label">Matches covered</div>
-          </div>
-          <div>
-            <div class="hero-stat-num">&lt;30s</div>
-            <div class="hero-stat-label">Alert latency</div>
-          </div>
-          <div>
-            <div class="hero-stat-num">4</div>
-            <div class="hero-stat-label">Commentary vibes</div>
-          </div>
-        </div>
-      </div>
+        <!-- Three-phone stage: sits above the headline in normal document flow.
+             To add your screenshots later, uncomment the <img> tag inside each
+             .content-layer and set the src path. The placeholder bars disappear
+             automatically once a real image is loaded. -->
+        <div class="stage">
+          <div class="blob"></div>
+          <div class="floor-shadow"></div>
 
-      <!-- Phone mockup -->
-      <div class="phone-wrap">
-        <div class="phone">
-          <div class="phone-notch"><div class="phone-notch-bar"></div></div>
-          <div class="phone-screen">
-            <div class="wa-header">
-              <div class="wa-avatar">⚽</div>
-              <div>
-                <div class="wa-name">MatchPulse Bot</div>
-                <div class="wa-status">online</div>
+          <!-- LEFT: older Samsung Galaxy ─────────────────────────────────── -->
+          <div class="device samsung-old">
+            <div class="screen">
+              <div class="content-layer">
+                <!-- ADD IMAGE: <img src="/screens/samsung-left.png" alt="Huginn WhatsApp alerts on older Samsung"> -->
+                <div class="content-placeholder">
+                  <div class="bar"></div>
+                  <div class="bar accent"></div>
+                  <div class="bar short"></div>
+                  <div class="bar"></div>
+                  <div class="bar accent"></div>
+                  <div class="bar short"></div>
+                  <div class="bar"></div>
+                </div>
+              </div>
+              <div class="nav-bar">
+                <div class="tri"></div>
+                <div class="circ"></div>
+                <div class="sq"></div>
               </div>
             </div>
-            <div class="wa-body">
-              <div class="wa-msg user">/follow Nigeria<div class="wa-time">19:02</div></div>
-              <div class="wa-msg">✅ Following!<br/><br/>⚽ <strong>Nigeria vs Argentina</strong><br/>🕐 Kickoff: 20:00<br/>Odds: 3.20 / 3.40 / 2.10<br/><br/>I'll handle the rest 🔥<div class="wa-time">19:02</div></div>
-              <div class="wa-msg">🔔 <strong>MATCH STARTING</strong><br/>Nigeria vs Argentina<br/>Kickoff confirmed. Current odds: 3.20 / 3.40 / 2.10 (H/D/A)<br/><br/>Let's gooo 🇳🇬<div class="wa-time">20:00</div></div>
-              <div class="wa-msg"><span class="goal-line">⚽ GOAAAAAAL! 38'</span><br/><strong>Osimhen</strong> buries it for Nigeria! 1–0!<br/><br/>Kai! The odds just flipped — Nigeria now 1.85 favourites! Argentina management is panicking fr 😭🔥<div class="wa-time">20:38</div></div>
-              <div class="wa-msg">📊 <strong>HALF TIME · 1–0</strong><br/>Nigeria leading Argentina at the break. xG says it's close but Osimhen is unplayable today. Odds: Nigeria 1.72, Draw 3.60, Argentina 4.80.<br/><br/>Second half incoming 👀<div class="wa-time">20:47</div></div>
+          </div>
+
+          <!-- RIGHT: Samsung S25 Ultra ────────────────────────────────────── -->
+          <div class="device samsung-new">
+            <div class="screen">
+              <div class="content-layer">
+                <!-- ADD IMAGE: <img src="/screens/samsung-right.png" alt="Huginn WhatsApp alerts on Samsung S25 Ultra"> -->
+                <div class="content-placeholder">
+                  <div class="bar accent"></div>
+                  <div class="bar"></div>
+                  <div class="bar short"></div>
+                  <div class="bar accent"></div>
+                  <div class="bar"></div>
+                  <div class="bar short"></div>
+                  <div class="bar"></div>
+                </div>
+              </div>
+              <div class="punch-hole"></div>
+              <div class="gesture-pill"></div>
             </div>
           </div>
+
+          <!-- CENTER: iPhone 16 ───────────────────────────────────────────── -->
+          <div class="device iphone">
+            <div class="screen">
+              <div class="content-layer">
+                <!-- ADD IMAGE: <img src="/screens/iphone-center.png" alt="Huginn WhatsApp alerts on iPhone 16"> -->
+                <div class="content-placeholder">
+                  <div class="bar"></div>
+                  <div class="bar accent"></div>
+                  <div class="bar short"></div>
+                  <div class="bar accent"></div>
+                  <div class="bar"></div>
+                  <div class="bar accent"></div>
+                  <div class="bar short"></div>
+                  <div class="bar"></div>
+                  <div class="bar accent"></div>
+                </div>
+              </div>
+              <div class="dynamic-island"></div>
+            </div>
+          </div>
+
+        </div><!-- /stage -->
+
+        <h1 class="display hero-title">
+          Live updates in your group chat
+        </h1>
+        <p class="hero-desc">
+          Goals, red cards, and odds shifts pushed to your WhatsApp. Chat directly with Huginn or invite it to any group.
+        </p>
+        <div class="hero-actions">
+          <a href="/api/join" target="_blank" rel="noopener noreferrer" class="btn-primary" style="padding: 16px 36px; font-size: 1rem;">
+            Chat on WhatsApp
+          </a>
+          <a href="/demo.html" class="btn-secondary" style="padding: 16px 36px; font-size: 1rem;">Live Chat in Browser</a>
+        </div>
+
+      </div>
+
+      <!-- Bottom feature strip -->
+      <div class="feature-strip">
+        <div class="feature-strip-item">
+          <div class="fsi-num">01</div>
+          <div class="fsi-title">Drop it in any group</div>
+          <p class="fsi-desc">Works in any existing WhatsApp group. No new chat, no extra setup. Add the bot number as a contact and invite it.</p>
+        </div>
+        <div class="feature-strip-item">
+          <div class="fsi-num">02</div>
+          <div class="fsi-title">One command to start</div>
+          <p class="fsi-desc">Type <span class="mono" style="color:var(--green);font-size:0.85em">/follow Brazil</span> and the bot tracks that team for the rest of the tournament. Follow multiple teams simultaneously.</p>
+        </div>
+        <div class="feature-strip-item">
+          <div class="fsi-num">03</div>
+          <div class="fsi-title">Everything else is automatic</div>
+          <p class="fsi-desc">Pre-match previews, live goal alerts, red card notifications, odds movements, half-time stats, and full-time wraps. All unprompted.</p>
         </div>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- HOW IT WORKS -->
-<section class="section" id="how">
-  <div class="container">
-    <div class="section-label">How it works</div>
-    <h2 class="display section-title">Three steps.<br/>Then just watch.</h2>
-    <p class="section-desc">No app store. No account. No configuration. Add the bot once and it runs for every match you follow, automatically.</p>
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">01 — ADD</div>
-        <span class="step-icon">💬</span>
-        <div class="step-title">Add to your group</div>
-        <p class="step-desc">Add MatchPulse to any WhatsApp group the same way you'd add a contact. Works in existing groups with your friends and family.</p>
-      </div>
-      <div class="step">
-        <div class="step-num">02 — FOLLOW</div>
-        <span class="step-icon">🎯</span>
-        <div class="step-title">Type /follow</div>
-        <p class="step-desc">Send <span class="mono" style="color:var(--green);font-size:0.85em">/follow Nigeria</span> and the bot locks onto that match. You can follow multiple matches at once.</p>
-      </div>
-      <div class="step">
-        <div class="step-num">03 — WATCH</div>
-        <span class="step-icon">⚡</span>
-        <div class="step-title">Get every moment</div>
-        <p class="step-desc">Pre-match bulletin, goals, red cards, half-time report, odds shifts, and a full-time wrap — all delivered automatically, in real time.</p>
+  <!-- HOW IT REACHES YOU -->
+  <section class="how-section">
+    <div class="container">
+      <div class="how-inner">
+
+        <!-- Left: steps -->
+        <div>
+          <div class="how-label">Setup</div>
+          <h2 class="display how-title">Three steps. Then forget about it.</h2>
+          <p class="how-desc">No app to install. No account to create. Huginn lives inside WhatsApp — the app already on every phone in your group.</p>
+
+          <div class="setup-steps">
+            <div class="setup-step">
+              <div class="step-index">01</div>
+              <div class="step-body">
+                <h3>Save the number</h3>
+                <p>Save Huginn's WhatsApp number as a contact on your phone. That's the only thing you do outside WhatsApp.</p>
+              </div>
+            </div>
+            <div class="setup-step">
+              <div class="step-index">02</div>
+              <div class="step-body">
+                <h3>Add it to your group</h3>
+                <p>Open any WhatsApp group you're already in. Tap Add Participant, search Huginn, done. It joins silently.</p>
+              </div>
+            </div>
+            <div class="setup-step">
+              <div class="step-index">03</div>
+              <div class="step-body">
+                <h3>Send one command</h3>
+                <p>Type <span class="step-code">/follow Brazil</span> in the group. From that moment, every goal, red card, and odds shift fires automatically — straight into the chat.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: phone mockup with animated notification banners -->
+        <div class="phone-demo">
+          <div class="demo-phone" id="demoPhone">
+            <div class="demo-phone-btn-r"></div>
+            <div class="demo-phone-btn-l"></div>
+            <div class="demo-phone-island"></div>
+            <div class="demo-phone-screen">
+              <div class="demo-lockscreen">
+                <div class="demo-lock-time" id="lockTime">22:14</div>
+                <div class="demo-lock-date">Thursday, July 3</div>
+              </div>
+              <!-- Notification banners -->
+              <div class="demo-notifs">
+                <div class="notif-banner" id="notif-0">
+                  <div class="notif-app-icon">H</div>
+                  <div class="notif-content">
+                    <div class="notif-header">
+                      <span class="notif-app-name">Huginn · Group Chat</span>
+                      <span class="notif-time">now</span>
+                    </div>
+                    <div class="notif-title">Brazil 1 — 0 Argentina</div>
+                    <div class="notif-body">Vinicius Jr. 34' — clinical finish from the left</div>
+                  </div>
+                </div>
+                <div class="notif-banner" id="notif-1">
+                  <div class="notif-app-icon">H</div>
+                  <div class="notif-content">
+                    <div class="notif-header">
+                      <span class="notif-app-name">Huginn · Group Chat</span>
+                      <span class="notif-time">now</span>
+                    </div>
+                    <div class="notif-title">Red card — Argentina</div>
+                    <div class="notif-body">Otamendi off. They're down to ten. 67'</div>
+                  </div>
+                </div>
+                <div class="notif-banner" id="notif-2">
+                  <div class="notif-app-icon">H</div>
+                  <div class="notif-content">
+                    <div class="notif-header">
+                      <span class="notif-app-name">Huginn · Group Chat</span>
+                      <span class="notif-time">now</span>
+                    </div>
+                    <div class="notif-title">Half time: Brazil 2 — 0 Spain</div>
+                    <div class="notif-body">Odds shifted 40% against Spain since KO</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- ALERTS -->
-<section class="section" id="alerts" style="padding-top:0">
-  <div class="container">
-    <div class="section-label">What you receive</div>
-    <h2 class="display section-title">Every moment.<br/>Nothing missed.</h2>
-    <div class="alerts-grid">
-      <div class="alert-card">
-        <div class="alert-type"><div class="alert-type-dot"></div>Goal Alert</div>
-        <div class="alert-bubble">⚽ <strong>GOAAAAAAL! 67'</strong><br/>Vinicius Jr slots it home for Brazil! 2–1!<br/><br/>Omo this man is built different 😤 Brazil odds just crashed from 2.10 to 1.45 — the market knows what time it is 🇧🇷🔥</div>
-        <div class="alert-trigger">⚡ Fires within 30 seconds of TxLINE event</div>
-      </div>
-      <div class="alert-card">
-        <div class="alert-type"><div class="alert-type-dot"></div>Red Card Alert</div>
-        <div class="alert-bubble">🟥 <strong>RED CARD · 54'</strong><br/>Müller off for Germany. Straight red.<br/><br/>Germany in serious trouble now — down to 10 men and the odds just went from 1.80 to 3.20. That's a career-defining mistake abeg 💀</div>
-        <div class="alert-trigger">⚡ Instant — includes odds impact analysis</div>
-      </div>
-      <div class="alert-card">
-        <div class="alert-type"><div class="alert-type-dot"></div>Half-Time Report</div>
-        <div class="alert-bubble">📊 <strong>HALF TIME · Spain 1–0 England</strong><br/><br/>Spain completely dominated that half — 68% possession, 7 shots to 2. The goal was coming. Odds: Spain 1.55 / Draw 4.20 / England 6.50.<br/><br/>England need a tactical change or this is done second half.</div>
-        <div class="alert-trigger">🕐 Auto-sent at half-time whistle</div>
-      </div>
-      <div class="alert-card">
-        <div class="alert-type"><div class="alert-type-dot"></div>Odds Shift Alert</div>
-        <div class="alert-bubble">📈 <strong>MARKET MOVE · 31'</strong><br/>Nigeria odds drifted from 2.10 → 3.40 in the last 2 minutes — a 62% shift.<br/><br/>Something changed. Late team news? Sharp money? The market knows something we don't 👀</div>
-        <div class="alert-trigger">📊 Triggers on 15%+ odds movement</div>
+  <!-- CTA -->
+  <section class="cta-section">
+    <div class="cta-glow"></div>
+    <div class="container" style="text-align:center">
+      <h2 class="display cta-title">Get live updates in your chats</h2>
+      <p class="cta-desc">Chat directly with Huginn or invite it to any WhatsApp group. Simply send a message to get started.</p>
+      <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-top:8px">
+        <a href="/api/join" target="_blank" rel="noopener noreferrer" class="btn-primary" style="display:inline-flex;font-size:1rem;padding:16px 36px">
+          Chat on WhatsApp
+        </a>
+        <a href="/demo.html" class="btn-secondary" style="display:inline-flex;font-size:1rem;padding:16px 36px">
+          Live Chat in Browser
+        </a>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- VIBES -->
-<section class="section" style="padding-top:0">
-  <div class="container">
-    <div class="section-label">Commentary styles</div>
-    <h2 class="display section-title">Your group.<br/>Your vibe.</h2>
-    <p class="section-desc">Choose how MatchPulse talks to your group. Switch any time mid-tournament.</p>
-    <div class="vibes-grid">
-      <div class="vibe-card">
-        <span class="vibe-emoji">🔥</span>
-        <div class="vibe-name">Hype FC</div>
-        <div class="vibe-cmd">/vibe hype</div>
-        <p class="vibe-desc">Over-the-top African pundit energy. Caps, slang, drama. Perfect for the family group chat.</p>
-      </div>
-      <div class="vibe-card">
-        <span class="vibe-emoji">📊</span>
-        <div class="vibe-name">The Analyst</div>
-        <div class="vibe-cmd">/vibe tactical</div>
-        <p class="vibe-desc">Calm. Data-driven. References xG, formations, and market movement. For the serious fans.</p>
-      </div>
-      <div class="vibe-card">
-        <span class="vibe-emoji">😂</span>
-        <div class="vibe-name">Banter FC</div>
-        <div class="vibe-cmd">/vibe funny</div>
-        <p class="vibe-desc">Roasts, jokes, memes in text. Never takes anything seriously. Absolute chaos in the best way.</p>
-      </div>
-      <div class="vibe-card">
-        <span class="vibe-emoji">⚽</span>
-        <div class="vibe-name">Match Day</div>
-        <div class="vibe-cmd">/vibe balanced</div>
-        <p class="vibe-desc">Friendly and informative. Works for casual fans and hardcore supporters alike. The safe default.</p>
+  <!-- FOOTER -->
+  <footer>
+    <div class="container">
+      <div class="footer-inner">
+        <a href="/" class="footer-logo">Huginn</a>
+        <p class="footer-note">World Cup 2026 · Built on TxLINE</p>
+        <div class="footer-links">
+          <a href="https://txline.txodds.com/documentation/worldcup" target="_blank">TxLINE</a>
+          <a href="/features.html">Features</a>
+          <a href="/commands.html">Commands</a>
+          <a href="/demo.html">Live Chat</a>
+        </div>
       </div>
     </div>
-  </div>
-</section>
+  </footer>
 
-<!-- TECH STACK -->
-<section class="section tech-section">
-  <div class="container">
-    <div class="section-label">Built on</div>
-    <h2 class="display section-title">Real-time data.<br/>Real infrastructure.</h2>
-    <div class="tech-grid">
-      <div class="tech-card">
-        <span class="tech-logo">📡</span>
-        <div class="tech-name">TxLINE</div>
-        <div class="tech-role">Live odds & match data for all 104 World Cup games</div>
-      </div>
-      <div class="tech-card">
-        <span class="tech-logo">🤖</span>
-        <div class="tech-name">Llama 3.3 70B</div>
-        <div class="tech-role">AI commentary generation via Groq — sub-second inference</div>
-      </div>
-      <div class="tech-card">
-        <span class="tech-logo">💬</span>
-        <div class="tech-name">WhatsApp</div>
-        <div class="tech-role">Delivery via whatsapp-web.js — no app install needed</div>
-      </div>
-      <div class="tech-card">
-        <span class="tech-logo">⚡</span>
-        <div class="tech-name">Node.js</div>
-        <div class="tech-role">30-second polling loop, Express webhook, cron scheduling</div>
-      </div>
-    </div>
-  </div>
-</section>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="/js/pill-nav.js"></script>
+  <script>
+    initPillNav({
+      activeHref: '/',
+      baseColor: '#0d0d1a',
+      pillColor: 'rgba(255,255,255,0.06)',
+      pillTextColor: '#f0f0f8',
+      hoveredPillTextColor: '#ffffff',
+    });
 
-<!-- COMMANDS -->
-<section class="section" id="commands">
-  <div class="container">
-    <div class="section-label">Commands</div>
-    <h2 class="display section-title">Simple to use.<br/>Powerful underneath.</h2>
-    <div class="commands-table">
-      <div class="cmd-row">
-        <div>Command</div>
-        <div>What it does</div>
-        <div>Type</div>
-      </div>
-      <div class="cmd-row">
-        <div class="cmd-code">/follow [team]</div>
-        <div class="cmd-desc">Start receiving live alerts for any match featuring that team</div>
-        <div class="cmd-tag">Manual</div>
-      </div>
-      <div class="cmd-row">
-        <div class="cmd-code">/unfollow [team]</div>
-        <div class="cmd-desc">Stop alerts for a specific match</div>
-        <div class="cmd-tag">Manual</div>
-      </div>
-      <div class="cmd-row">
-        <div class="cmd-code">/vibe [mode]</div>
-        <div class="cmd-desc">Switch commentary style: hype / tactical / funny / balanced</div>
-        <div class="cmd-tag">Manual</div>
-      </div>
-      <div class="cmd-row">
-        <div class="cmd-code">/status</div>
-        <div class="cmd-desc">See which matches you're currently following and your active vibe</div>
-        <div class="cmd-tag">Manual</div>
-      </div>
-      <div class="cmd-row">
-        <div class="cmd-code">/help</div>
-        <div class="cmd-desc">Show all available commands</div>
-        <div class="cmd-tag">Manual</div>
-      </div>
-      <div class="cmd-row">
-        <div style="color:var(--muted);font-size:0.8rem;font-style:italic">Pre-match bulletin</div>
-        <div class="cmd-desc">Sent 30 minutes before kickoff with odds, storylines, and match preview</div>
-        <div class="cmd-tag auto">Auto</div>
-      </div>
-      <div class="cmd-row">
-        <div style="color:var(--muted);font-size:0.8rem;font-style:italic">Goal / card alerts</div>
-        <div class="cmd-desc">Fires within 30 seconds of TxLINE detecting the event, with AI commentary</div>
-        <div class="cmd-tag auto">Auto</div>
-      </div>
-      <div class="cmd-row">
-        <div style="color:var(--muted);font-size:0.8rem;font-style:italic">Half-time report</div>
-        <div class="cmd-desc">Automatic match summary at the half-time whistle</div>
-        <div class="cmd-tag auto">Auto</div>
-      </div>
-      <div class="cmd-row">
-        <div style="color:var(--muted);font-size:0.8rem;font-style:italic">Full-time wrap</div>
-        <div class="cmd-desc">Complete match story at full time — hero, narrative, what's next</div>
-        <div class="cmd-tag auto">Auto</div>
-      </div>
-    </div>
-  </div>
-</section>
+    // Register service worker for PWA support
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('Service Worker registered successfully:', reg.scope))
+          .catch(err => console.log('Service Worker registration failed:', err));
+      });
+    }
 
-<!-- CTA -->
-<section class="cta-section" id="cta">
-  <div class="cta-glow"></div>
-  <div class="container" style="text-align:center">
-    <div class="section-label" style="justify-content:center;display:flex">Ready to use</div>
-    <h2 class="display cta-title">Never miss<br/><span style="color:var(--green)">a moment</span> again.</h2>
-    <p class="cta-desc">Add MatchPulse to your group chat before the next match. Takes 10 seconds.</p>
-    <a href="/api/join" target="_blank" class="btn-primary" style="display:inline-flex;font-size:1rem;padding:16px 36px">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-      Add to WhatsApp Free
-    </a>
-    <p class="cta-note">Open source · Built on TxLINE · World Cup 2026</p>
-  </div>
-</section>
+    // ── Notification banner animation ────────────────────────────────────────
+    (function () {
+      const NOTIFS = 3;
+      const SHOW_MS = 3200;   // how long each banner is visible
+      const PAUSE_MS = 1600;  // gap between banners
+      let current = 0;
+      let timer = null;
 
-<!-- FOOTER -->
-<footer>
-  <div class="container">
-    <div class="footer-inner">
-      <div class="nav-logo">
-        <div class="logo-dot" style="animation:none;box-shadow:none;background:var(--muted)"></div>
-        <span style="color:var(--muted)">MatchPulse</span>
-      </div>
-      <p class="footer-note">Built for TxODDS World Cup Hackathon · Superteam Earn 2026</p>
-      <div class="footer-links">
-        <a href="https://github.com" target="_blank">GitHub</a>
-        <a href="https://txline.txodds.com/documentation/worldcup" target="_blank">TxLINE Docs</a>
-        <a href="#commands">Commands</a>
-      </div>
-    </div>
-  </div>
-</footer>
+      function showNotif(idx) {
+        const el = document.getElementById('notif-' + idx);
+        if (!el) return;
+        el.classList.add('show');
+        timer = setTimeout(() => {
+          el.classList.remove('show');
+          setTimeout(() => {
+            current = (current + 1) % NOTIFS;
+            showNotif(current);
+          }, PAUSE_MS);
+        }, SHOW_MS);
+      }
 
+      // Start when phone demo scrolls into view
+      const phone = document.getElementById('demoPhone');
+      if (phone && 'IntersectionObserver' in window) {
+        const obs = new IntersectionObserver((entries) => {
+          entries.forEach(e => {
+            if (e.isIntersecting) {
+              obs.unobserve(phone);
+              setTimeout(() => showNotif(0), 800);
+            }
+          });
+        }, { threshold: 0.4 });
+        obs.observe(phone);
+      } else if (phone) {
+        setTimeout(() => showNotif(0), 800);
+      }
+
+      // Live lock-screen clock
+      function tick() {
+        const el = document.getElementById('lockTime');
+        if (!el) return;
+        const now = new Date();
+        el.textContent =
+          String(now.getHours()).padStart(2, '0') + ':' +
+          String(now.getMinutes()).padStart(2, '0');
+      }
+      tick();
+      setInterval(tick, 30000);
+    })();
+  </script>
 
 <!-- FLOATING BELL BUTTON FOR WEB PUSH ALERTS -->
 <button id="pwa-bell" class="pwa-bell-btn" title="Enable Web Alerts">
@@ -921,8 +1004,8 @@ footer {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: var(--green);
-  color: var(--black);
+  background: #00e676;
+  color: #080810;
   border: none;
   cursor: pointer;
   box-shadow: 0 4px 20px rgba(0,230,118,0.4);
@@ -942,7 +1025,7 @@ const bellBtn = document.getElementById('pwa-bell');
 async function initPush() {
   if (!('serviceWorker' in navigator && 'PushManager' in window)) { bellBtn.style.display='none'; return; }
   try {
-    const reg = await navigator.serviceWorker.register('/sw.js');
+    const reg = await navigator.serviceWorker.ready;
     const sub = await reg.pushManager.getSubscription();
     if (sub) { bellBtn.classList.add('subscribed'); bellBtn.title = 'Disable Web Alerts'; }
   } catch(e) { console.error('SW error:', e); }
@@ -984,6 +1067,6 @@ function urlBase64ToUint8Array(b) {
 
 initPush();
 </script>
-
 </body>
+
 </html>
