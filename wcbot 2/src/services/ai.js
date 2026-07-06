@@ -2,146 +2,138 @@ import axios from 'axios';
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
-//  Personality system prompts 
+// ── Personality system prompts ────────────────────────────────────────────────
+// All vibes share the same formatting rules:
+// - write in lowercase like a person texting in a group chat
+// - no ALL CAPS shouting
+// - use short paragraphs with line breaks, not one big block
+// - 2-4 sentences max unless the question genuinely needs more
+// - emojis are fine but don't overdo it
 
-const VIBES = {
-  hype: `You are HYPE FC - an absolutely electric, over-the-top African football commentator.
-You shout in caps when things get crazy. You use Nigerian/African slang naturally (e.g. "e don happen!", "kai!", "chai!", "abeg", "omo").
-You love drama, you love goals, you celebrate every big moment like it's the World Cup final.
-Keep messages SHORT - 2-4 sentences max. Use emojis freely. Never be boring.`,
+export const VIBES = {
+  hype: `you are Huginn — a massive football fan with full african pundit energy.
+you speak like someone texting their group chat: excited, expressive, real.
+use nigerian/african slang naturally (e.g. "e don happen!", "kai!", "chai!", "abeg", "omo") but don't overdo it.
+you celebrate big moments but you write like a person, not a robot announcement.
+never shout in all caps. use line breaks between thoughts. keep it 2-4 sentences.`,
 
-  tactical: `You are The Analyst - a calm, intelligent football pundit who explains what's happening tactically.
-You reference formations, pressing, transitions, xG, and market movement.
-You're like a cross between Pep Guardiola and a quantitative trader.
-Keep messages SHORT - 2-4 sentences. Use numbers and stats when available. Stay composed even when it's chaotic.`,
+  tactical: `you are Huginn in analyst mode — calm, intelligent, tactical.
+you reference formations, pressing, xG, and market shifts when relevant.
+you write like a well-informed friend explaining the match to you, not a press conference.
+lowercase. short paragraphs. 2-4 sentences. no jargon overload.`,
 
-  funny: `You are Banter FC - a football fan who's seen it all and treats every match like comedy gold.
-You roast teams, make jokes, create memes in text form, and never take anything too seriously.
-Nigerian humour, internet culture, and football knowledge mixed together.
-Keep messages SHORT - 2-4 sentences. Roast whoever deserves it. Use emojis but don't overdo it.`,
+  funny: `you are Huginn in banter mode — a football fan who finds the comedy in everything.
+you roast teams, make jokes, keep it light.
+nigerian internet humour. dry wit. never mean-spirited.
+lowercase. short. funny. 2-4 sentences max.`,
 
-  balanced: `You are Match Day - a friendly, informative football companion.
-You give the key facts plus a bit of colour. Accessible to casual fans and hardcore supporters alike.
-Not too hype, not too dry. Just great match coverage in a group chat.
-Keep messages SHORT - 2-4 sentences. Clear, warm, engaging.`,
+  balanced: `you are Huginn — a friendly, clear match companion.
+you give the key facts plus a bit of warmth. casual fans and hardcore supporters both get it.
+write like a real person in a group chat. lowercase. short paragraphs. no stiffness.`,
 };
 
-/**
- * Generate a goal alert message
- */
+// ── Goal alert ────────────────────────────────────────────────────────────────
 export async function generateGoalAlert({ scorer, team, minute, homeTeam, awayTeam, homeScore, awayScore, odds, vibe = 'hype' }) {
   const prompt = `
-Match: ${homeTeam} vs ${awayTeam}
-Event: GOAL scored by ${scorer || 'unknown'} for ${team} in minute ${minute}
-Score now: ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
-Current odds: ${odds || 'not available'}
+match: ${homeTeam} vs ${awayTeam}
+goal: scored by ${scorer || 'unknown'} for ${team} in minute ${minute}
+score now: ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
+current odds: ${odds || 'not available'}
 
-React to this goal for a WhatsApp group chat. Be immediate, reactive, punchy.
+react to this goal for a WhatsApp group chat. be immediate and real. no all-caps. use line breaks between thoughts.
 `.trim();
 
   return callGroq(prompt, vibe);
 }
 
-/**
- * Generate a red card alert
- */
+// ── Red card alert ────────────────────────────────────────────────────────────
 export async function generateRedCardAlert({ player, team, minute, homeTeam, awayTeam, homeScore, awayScore, odds, vibe = 'hype' }) {
   const prompt = `
-Match: ${homeTeam} vs ${awayTeam}
-Event: RED CARD for ${player || 'a player'} from ${team} in minute ${minute}
-Score: ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
-Odds after red card: ${odds || 'not available'}
+match: ${homeTeam} vs ${awayTeam}
+red card: ${player || 'a player'} from ${team} in minute ${minute}
+score: ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
+odds after: ${odds || 'not available'}
 
-React to this red card for a WhatsApp group chat. What does it mean for the match?
+react to this red card for a WhatsApp group chat. explain what it changes. no all-caps. use line breaks between thoughts.
 `.trim();
 
   return callGroq(prompt, vibe);
 }
 
-/**
- * Generate a half-time report
- */
+// ── Half-time report ──────────────────────────────────────────────────────────
 export async function generateHalfTimeReport({ homeTeam, awayTeam, homeScore, awayScore, events, odds, vibe = 'hype' }) {
-  const eventSummary = events?.slice(-5).map(e => `${e.minute}' ${e.type}: ${e.description}`).join('\n') || 'No major events logged';
+  const eventSummary = events?.slice(-5).map(e => `${e.minute}' ${e.type}: ${e.description}`).join('\n') || 'no major events logged';
 
   const prompt = `
-Match: ${homeTeam} vs ${awayTeam}
-Half-time score: ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
-Key events first half:
+match: ${homeTeam} vs ${awayTeam}
+half-time score: ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
+first half events:
 ${eventSummary}
-Current odds: ${odds || 'not available'}
+current odds: ${odds || 'not available'}
 
-Write a half-time WhatsApp summary. Cover what happened, what to expect in the second half.
+write a half-time WhatsApp summary. what happened, what to watch second half.
+no all-caps. use short paragraphs separated by line breaks. keep it human.
 `.trim();
 
   return callGroq(prompt, vibe);
 }
 
-/**
- * Generate a full-time report
- */
+// ── Full-time report ──────────────────────────────────────────────────────────
 export async function generateFullTimeReport({ homeTeam, awayTeam, homeScore, awayScore, events, vibe = 'hype' }) {
   const prompt = `
-Match: ${homeTeam} vs ${awayTeam}
-FULL TIME: ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
+match: ${homeTeam} vs ${awayTeam}
+full time: ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
 
-Write a full-time WhatsApp wrap-up. Who was the hero? What was the story of the match? What's next for these teams?
+write a full-time WhatsApp wrap-up. who was the hero? what was the story?
+no all-caps. use short paragraphs separated by line breaks. keep it real.
 `.trim();
 
   return callGroq(prompt, vibe);
 }
 
-/**
- * Generate a pre-match bulletin (sent 30 mins before kickoff)
- */
+// ── Pre-match bulletin ────────────────────────────────────────────────────────
 export async function generatePreMatchBulletin({ homeTeam, awayTeam, kickoffTime, odds, stage, vibe = 'hype' }) {
   const prompt = `
-Upcoming match: ${homeTeam} vs ${awayTeam}
-Stage: ${stage || 'World Cup 2026'}
-Kickoff: ${kickoffTime}
-Opening odds: ${odds || 'not available'}
+upcoming match: ${homeTeam} vs ${awayTeam}
+stage: ${stage || 'World Cup 2026'}
+kickoff: ${kickoffTime}
+opening odds: ${odds || 'not available'}
 
-Write a pre-match WhatsApp hype message. Build excitement, give the key storyline, and tell people what to watch for.
+write a pre-match hype message for a WhatsApp group. build excitement, give the key storyline.
+no all-caps. use short paragraphs separated by line breaks. sound like a real fan, not a news bulletin.
 `.trim();
 
   return callGroq(prompt, vibe);
 }
 
-/**
- * Generate an odds shift alert
- */
+// ── Odds shift alert ──────────────────────────────────────────────────────────
 export async function generateOddsShiftAlert({ homeTeam, awayTeam, field, from, to, magnitude, direction, minute, vibe = 'hype' }) {
   const teamMap = { home_win: homeTeam, away_win: awayTeam, draw: 'a draw' };
   const outcome = teamMap[field] || field;
 
   const prompt = `
-Match: ${homeTeam} vs ${awayTeam}
-SIGNIFICANT ODDS SHIFT at minute ${minute || '?'}:
-${outcome} odds moved from ${from} to ${to} (${magnitude}% shift, ${direction})
+match: ${homeTeam} vs ${awayTeam}
+odds shift at minute ${minute || '?'}: ${outcome} moved from ${from} to ${to} (${magnitude}% shift, ${direction})
 
-This suggests the market believes something has changed. React to this odds movement in the context of a live match.
-Keep it punchy - what might this signal?
+react to this odds movement. what might the market be seeing? keep it punchy.
+no all-caps. short paragraphs with line breaks.
 `.trim();
 
   return callGroq(prompt, vibe);
 }
 
-/**
- * Answer general football or tactical questions
- */
+// ── General football Q&A ──────────────────────────────────────────────────────
 export async function answerFootballQuestion(question, matchContext = '', vibe = 'hype') {
   const prompt = `
-User Question: "${question}"
+user: "${question}"
 
-Current Live/Upcoming Matches Context:
-${matchContext || 'No live matches currently tracked.'}
-
-Answer the user's question with full football authority, integrating the current match context if relevant.
-Keep it punchy, engaging, and in character.
+${matchContext ? `current match context:\n${matchContext}\n` : ''}
+answer directly and conversationally. if it's about a current match, use that context.
+no all-caps. use line breaks between thoughts if needed. 2-4 sentences max unless the question genuinely needs more.
 `.trim();
 
-  const systemPrompt = (VIBES[vibe] || VIBES.hype) + 
-    `\nAdditionally, you are a deep football expert. You know all about past World Cups, current stars, stats, tactics, rules, and consensus betting odds. Answer any query directly, keeping it short and conversational (2-4 sentences).`;
+  const systemPrompt = (VIBES[vibe] || VIBES.hype) +
+    `\n\nyou also have deep football knowledge: past world cups, current stars, stats, tactics, rules, and betting odds. answer any question directly. sound like a person, not a system.`;
 
   try {
     const { data } = await axios.post(
@@ -152,8 +144,8 @@ Keep it punchy, engaging, and in character.
           { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt },
         ],
-        max_tokens: 350,
-        temperature: 0.7,
+        max_tokens: 300,
+        temperature: 0.75,
       },
       {
         headers: {
@@ -163,16 +155,14 @@ Keep it punchy, engaging, and in character.
       }
     );
 
-    return data.choices?.[0]?.message?.content?.trim() || '⚽ Deep football oracle is loading new tactics...';
+    return data.choices?.[0]?.message?.content?.trim() || `hmm, let me think about that one. try again`;
   } catch (err) {
     console.error('Groq Oracle Error:', err.response?.data || err.message);
-    return '⚽ Sorry, I hit a tactical foul. Try asking again!';
+    return `something went wrong. try asking again`;
   }
 }
 
-/**
- * Core Groq API call using Axios (no extra SDK dependencies needed)
- */
+// ── Core Groq call ────────────────────────────────────────────────────────────
 async function callGroq(userPrompt, vibe = 'hype') {
   const systemPrompt = VIBES[vibe] || VIBES.hype;
 
@@ -185,8 +175,8 @@ async function callGroq(userPrompt, vibe = 'hype') {
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        max_tokens: 200,
-        temperature: 0.7,
+        max_tokens: 220,
+        temperature: 0.75,
       },
       {
         headers: {
@@ -196,11 +186,9 @@ async function callGroq(userPrompt, vibe = 'hype') {
       }
     );
 
-    return data.choices?.[0]?.message?.content?.trim() || ' Something just happened!';
+    return data.choices?.[0]?.message?.content?.trim() || `something just happened`;
   } catch (err) {
     console.error('Groq API Error:', err.response?.data || err.message);
-    return ' Something just happened!';
+    return `something just happened`;
   }
 }
-
-export { VIBES };
