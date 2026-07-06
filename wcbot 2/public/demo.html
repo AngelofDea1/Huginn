@@ -322,7 +322,7 @@
       <!-- Chat console -->
         <div class="chat-wrapper">
         <div class="chat-header">
-          <div class="chat-avatar">HG</div>
+          <div class="chat-avatar" style="background-image: url('/img/logo.jpeg'); background-size: cover; background-position: center; font-size: 0; width: 40px; height: 40px; border-radius: 50%;">HG</div>
           <div class="chat-info">
             <h3>Huginn Assistant</h3>
             <p>Live match intelligence · World Cup 2026</p>
@@ -332,7 +332,7 @@
         <div class="chat-messages" id="chat-messages"></div>
 
         <div class="typing-indicator" id="typing">
-          <div class="msg-avatar" style="background:var(--card);border:1px solid var(--border);color:var(--muted);">HG</div>
+          <div class="msg-avatar" style="background-image: url('/img/logo.jpeg'); background-size: cover; background-position: center; border: 1px solid var(--border); font-size: 0; width: 36px; height: 36px; border-radius: 50%;">HG</div>
           <div class="typing-dots">
             <span></span><span></span><span></span>
           </div>
@@ -403,7 +403,14 @@
 
     const avatar = document.createElement('div');
     avatar.className = 'msg-avatar';
-    avatar.textContent = role === 'bot' ? 'HG' : 'You';
+    if (role === 'bot') {
+      avatar.style.backgroundImage = "url('/img/logo.jpeg')";
+      avatar.style.backgroundSize = "cover";
+      avatar.style.backgroundPosition = "center";
+      avatar.style.fontSize = "0";
+    } else {
+      avatar.textContent = 'You';
+    }
 
     const bubble = document.createElement('div');
     bubble.className = 'msg-bubble';

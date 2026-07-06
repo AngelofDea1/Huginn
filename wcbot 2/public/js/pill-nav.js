@@ -47,7 +47,11 @@ function initPillNav(options = {}) {
   logoLink.href = '/';
   logoLink.className = 'pill-logo';
   logoLink.setAttribute('aria-label', 'Huginn Home');
+  logoLink.style.display = 'inline-flex';
+  logoLink.style.alignItems = 'center';
+  logoLink.style.gap = '8px';
   logoLink.innerHTML = `
+    <img src="/img/logo.jpeg" alt="Huginn Logo" style="height: 32px; width: 32px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.15);"/>
     <span class="pill-logo-text">Huginn</span>
   `;
   nav.appendChild(logoLink);
