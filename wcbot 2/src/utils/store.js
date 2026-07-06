@@ -11,6 +11,17 @@
 
 const groups = new Map();
 const matchState = new Map();
+const contacted = new Set(); // Track JIDs that have been welcomed
+
+//  First-contact helpers 
+
+export function isFirstContact(jid) {
+  return !contacted.has(jid);
+}
+
+export function markContacted(jid) {
+  contacted.add(jid);
+}
 
 //  Group helpers 
 

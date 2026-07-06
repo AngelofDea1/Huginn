@@ -2,7 +2,7 @@ import { searchMatch, getFixtureSchedule } from '../services/txline.js';
 import { sendMessage } from '../services/whatsapp.js';
 import {
   registerGroup, getGroup, setGroupVibe,
-  followMatch, unfollowMatch, initMatchState
+  followMatch, unfollowMatch, initMatchState, isFirstContact, markContacted
 } from '../utils/store.js';
 import { log } from '../utils/logger.js';
 import { VIBES } from '../services/ai.js';
@@ -41,8 +41,17 @@ export async function handleWebhook(req, res) {
 //  Command router
 export async function routeCommand(from, text) {
   const lower = text.toLowerCase().trim();
+  const isNew = isFirstContact(from);
 
   registerGroup(from);
+
+  // On first ever message from this contact, send the welcome automatically
+  if (isNew) {
+    markContacted(from);
+    await sendWelcome(from);
+    // If they also typed a command, still handle it after welcome
+    if (lower === 'hi' || lower === 'hello' || lower === '/start' || lower === '/help') return;
+  }
 
   if (lower.startsWith('/follow'))                              return handleFollow(from, text);
   if (lower.startsWith('/unfollow'))                            return handleUnfollow(from, text);
@@ -79,8 +88,40 @@ export async function routeCommand(from, text) {
     return sendMessage(from, reply);
   } catch (err) {
     log.error('AI oracle error:', err.message);
-    return sendMessage(from, `something went wrong on my end. try again or type /help`);
+    return sendMessage(from, `Something went wrong on my end.\n\nTry again or type /help.`);
   }
+}
+
+// ── Welcome message sent automatically on first contact ──────────────────────
+async function sendWelcome(from) {
+  return sendMessage(from,
+    `*Huginn* — World Cup 2026 live intelligence, straight into WhatsApp.\n\n` +
+    `I track every goal, red card, and odds movement across all 104 fixtures, and break it down in real time.\n\n` +
+    `*To get started:*\n` +
+    `/follow <team> — live alerts for any match\n` +
+    `/live — see what's happening right now\n` +
+    `/schedule — upcoming fixtures\n` +
+    `/vibe <mode> — change my commentary style\n\n` +
+    `Or just ask me anything — team form, kick-off times, squad info, odds context.\n\n` +
+    `Powered by TxLINE live data · Llama 3.3 70B`
+  );
+}
+
+// /help — shown when explicitly requested (not first contact)
+async function handleHelp(from) {
+  return sendMessage(from,
+    `*Commands*\n\n` +
+    `/follow <team> — start getting live alerts for a match\n` +
+    `/unfollow <team> — stop alerts for a match\n` +
+    `/live — see every match in progress right now\n` +
+    `/schedule — full upcoming fixture list\n` +
+    `/status — check what you're currently following\n` +
+    `/vibe <mode> — switch commentary style\n\n` +
+    `*Vibe modes:*\n` +
+    `hype · tactical · funny · balanced\n\n` +
+    `You can also ask me anything directly — I have context on all live and upcoming matches.\n\n` +
+    `Powered by TxLINE · Llama 3.3 70B`
+  );
 }
 
 // /follow <team>
@@ -88,22 +129,22 @@ async function handleFollow(from, text) {
   const query = text.replace(/\/follow\s*/i, '').trim();
   if (!query) {
     return sendMessage(from,
-      `who do you want to follow? just type the team name after /follow\n\nexample: /follow Nigeria`
+      `Which team?\n\nExample: /follow Nigeria`
     );
   }
 
-  await sendMessage(from, `searching for ${query}...`);
+  await sendMessage(from, `Looking up ${query}...`);
 
   let matches;
   try {
     matches = await searchMatch(query);
   } catch (err) {
-    return sendMessage(from, `couldn't search right now. try again in a sec`);
+    return sendMessage(from, `Couldn't reach the live data feed right now.\n\nTry again in a few seconds.`);
   }
 
   if (!matches.length) {
     return sendMessage(from,
-      `no upcoming matches found for *${query}*\n\ntry a different spelling or check /schedule to see what's on`
+      `No upcoming matches found for *${query}*.\n\nCheck the spelling or use /schedule to see what's on.`
     );
   }
 
@@ -116,20 +157,22 @@ async function handleFollow(from, text) {
   });
 
   return sendMessage(from,
-    `got it! following *${m.home_team?.name} vs ${m.away_team?.name}*\n\nkickoff: ${kickoff}\n\nyou'll get goal alerts, red cards, half-time and full-time updates automatically`
+    `Following *${m.home_team?.name} vs ${m.away_team?.name}*.\n\n` +
+    `Kickoff: ${kickoff}\n\n` +
+    `You'll receive goal alerts, red cards, half-time and full-time reports automatically.`
   );
 }
 
 // /unfollow <team>
 async function handleUnfollow(from, text) {
   const query = text.replace(/\/unfollow\s*/i, '').trim();
-  if (!query) return sendMessage(from, `which match? e.g. /unfollow Nigeria`);
+  if (!query) return sendMessage(from, `Which match?\n\nExample: /unfollow Nigeria`);
 
   const matches = await searchMatch(query).catch(() => []);
-  if (!matches.length) return sendMessage(from, `couldn't find that match. type /status to see what you're following`);
+  if (!matches.length) return sendMessage(from, `Couldn't find that match.\n\nType /status to see what you're following.`);
 
   unfollowMatch(from, matches[0].id);
-  return sendMessage(from, `unfollowed *${matches[0].home_team?.name} vs ${matches[0].away_team?.name}*`);
+  return sendMessage(from, `Unfollowed *${matches[0].home_team?.name} vs ${matches[0].away_team?.name}*.`);
 }
 
 // /vibe <mode>
@@ -139,73 +182,52 @@ async function handleVibe(from, text) {
 
   if (!valid.includes(mode)) {
     return sendMessage(from,
-      `pick your style:\n\n` +
+      `Pick a vibe:\n\n` +
       `*/vibe hype* — full African pundit energy\n` +
-      `*/vibe tactical* — calm analyst, stats and tactics\n` +
-      `*/vibe funny* — banter and roasts\n` +
-      `*/vibe balanced* — clean match coverage`
+      `*/vibe tactical* — calm analyst, stats and formations\n` +
+      `*/vibe funny* — banter and dry wit\n` +
+      `*/vibe balanced* — clean factual coverage`
     );
   }
 
   setGroupVibe(from, mode);
-  const labels = { hype: 'hype mode', tactical: 'analyst mode', funny: 'banter mode', balanced: 'balanced mode' };
-  return sendMessage(from, `vibe set to *${labels[mode]}*. all future alerts will match this style`);
-}
-
-// /help
-async function handleHelp(from) {
-  return sendMessage(from,
-    `👋 hey! i'm Huginn — your World Cup 2026 companion\n\n` +
-
-    `here's what i do:\n\n` +
-
-    `*/follow <team>* — get live alerts for a match\n` +
-    `*/unfollow <team>* — stop following a match\n` +
-    `*/live* — see what's happening right now\n` +
-    `*/schedule* — see upcoming fixtures\n` +
-    `*/status* — see what you're following\n` +
-    `*/vibe <mode>* — change how i talk (hype / tactical / funny / balanced)\n\n` +
-
-    `you can also just ask me anything — "who are the favourites?", "what time does Nigeria play?", "best goals of WC2022?" — i'll answer\n\n` +
-
-    `powered by TxLINE live data ⚽`
-  );
+  const labels = { hype: 'Hype', tactical: 'Tactical', funny: 'Banter', balanced: 'Balanced' };
+  return sendMessage(from, `Vibe set to *${labels[mode]}*.\n\nAll future alerts will use this style.`);
 }
 
 // /status
 async function handleStatus(from) {
   const group = getGroup(from);
   if (!group || group.followedMatchIds.size === 0) {
-    return sendMessage(from, `you're not following any matches yet\n\ntype /follow <team> to start getting alerts`);
+    return sendMessage(from, `You're not following any matches yet.\n\nType /follow <team> to start.`);
   }
   const count = group.followedMatchIds.size;
   return sendMessage(from,
-    `you're following *${count} match${count > 1 ? 'es' : ''}*\n\nvibe: ${group.vibe}\n\ntype /vibe to change your commentary style`
+    `Following *${count} match${count > 1 ? 'es' : ''}*.\n\n` +
+    `Current vibe: *${group.vibe}*\n\n` +
+    `Type /vibe to change your commentary style.`
   );
 }
 
 // /live
 async function handleLive(from) {
   try {
-    const { getAllFixtures } = await import('../services/txline.js');
-    const fixtures = await getAllFixtures();
-    const live = fixtures.filter(m =>
-      ['live', 'in_play', 'HT', '1H', '2H'].includes(m.status)
-    );
+    const { getLiveMatches } = await import('../services/txline.js');
+    const live = await getLiveMatches();
 
     if (!live.length) {
       return sendMessage(from,
-        `nothing live right now\n\ntype /schedule to see what's coming up, or /follow <team> to get alerts when a match starts`
+        `Nothing live right now.\n\nType /schedule to see upcoming fixtures, or /follow <team> to get alerts when a match kicks off.`
       );
     }
 
     const lines = live.map(m =>
-      `*${m.home_team?.name} ${m.home_score ?? 0} - ${m.away_score ?? 0} ${m.away_team?.name}*${m.minute ? `  ${m.minute}'` : ''}`
+      `*${m.home_team?.name} ${m.home_score ?? 0}–${m.away_score ?? 0} ${m.away_team?.name}*${m.minute ? `  ${m.minute}'` : ''}${m.status === 'HT' ? '  (HT)' : ''}`
     ).join('\n\n');
 
-    return sendMessage(from, `🔴 live now:\n\n${lines}\n\ntype /follow <team> to get goal alerts`);
+    return sendMessage(from, `🔴 *Live now*\n\n${lines}\n\nType /follow <team> to receive goal alerts.`);
   } catch (err) {
-    return sendMessage(from, `couldn't fetch live matches right now. try again in a moment`);
+    return sendMessage(from, `Couldn't fetch live matches right now.\n\nTry again in a moment.`);
   }
 }
 
@@ -214,7 +236,7 @@ async function handleSchedule(from) {
   try {
     const upcoming = await getFixtureSchedule();
     if (!upcoming.length) {
-      return sendMessage(from, `no upcoming fixtures found right now. check back later`);
+      return sendMessage(from, `No upcoming fixtures found right now.\n\nCheck back later.`);
     }
 
     const lines = upcoming.slice(0, 10).map(m => {
@@ -224,8 +246,8 @@ async function handleSchedule(from) {
       return `*${m.home_team?.name} vs ${m.away_team?.name}*\n${d}`;
     }).join('\n\n');
 
-    return sendMessage(from, `📅 upcoming fixtures:\n\n${lines}\n\ntype /follow <team> to get live updates`);
+    return sendMessage(from, `📅 *Upcoming fixtures*\n\n${lines}\n\nType /follow <team> to get live updates.`);
   } catch (err) {
-    return sendMessage(from, `couldn't load fixtures right now. try again shortly`);
+    return sendMessage(from, `Couldn't load fixtures right now.\n\nTry again shortly.`);
   }
 }

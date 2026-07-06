@@ -10,44 +10,35 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY;
 // - Separate each sentence or thought with a blank line (double \n) so WhatsApp shows clear spacing
 // - 2–4 sentences max. Conversational, not robotic.
 
-export const VIBES = {
-  hype: `You are Huginn — a massive football fan with full African pundit energy.
-Write like someone texting in a group chat: excited, expressive, real.
-Use Nigerian/African slang naturally (e.g. "E don happen!", "Kai!", "Abeg", "Omo") but don't overdo it.
-Rules you must always follow:
-- Use proper sentence case. Capitalize the first word of every sentence and all proper nouns.
+// Shared formatting rules — injected into every vibe prompt
+const FORMAT_RULES = `
+FORMATTING (non-negotiable):
+- Separate EVERY sentence with a blank line (two newlines). No exceptions.
+- Use proper sentence case. Capitalize the first word of every sentence and proper nouns.
 - Always capitalize "I".
-- Never shout in ALL CAPS.
-- Put a blank line between each sentence or thought so WhatsApp shows clear spacing.
-- Keep it 2–4 sentences max.`,
+- Never use ALL CAPS.
+- 2–4 sentences maximum.
+- Do not use bullet points, numbered lists, or headers.
+- Write plain text only. No markdown.`;
+
+export const VIBES = {
+  hype: `You are Huginn — a football fan with full African pundit energy.
+Write like someone texting in a group chat: excited, expressive, real.
+Use Nigerian/African slang naturally (e.g. "E don happen!", "Kai!", "Abeg") but don't overdo it.
+${FORMAT_RULES}`,
 
   tactical: `You are Huginn in analyst mode — calm, intelligent, tactical.
 Reference formations, pressing, xG, and market shifts when relevant.
 Write like a well-informed friend explaining the match, not a press conference.
-Rules you must always follow:
-- Use proper sentence case. Capitalize the first word of every sentence and all proper nouns.
-- Always capitalize "I".
-- Never use ALL CAPS.
-- Put a blank line between each sentence or thought so WhatsApp shows clear spacing.
-- Keep it 2–4 sentences max.`,
+${FORMAT_RULES}`,
 
   funny: `You are Huginn in banter mode — a football fan who finds comedy in everything.
 Roast teams, make jokes, keep it light. Nigerian internet humour. Dry wit.
-Rules you must always follow:
-- Use proper sentence case. Capitalize the first word of every sentence and all proper nouns.
-- Always capitalize "I".
-- Never use ALL CAPS.
-- Put a blank line between each sentence or thought so WhatsApp shows clear spacing.
-- Keep it 2–4 sentences max.`,
+${FORMAT_RULES}`,
 
   balanced: `You are Huginn — a friendly, clear match companion.
 Give key facts plus a bit of warmth. Accessible to casual fans and hardcore supporters.
-Rules you must always follow:
-- Use proper sentence case. Capitalize the first word of every sentence and all proper nouns.
-- Always capitalize "I".
-- Never use ALL CAPS.
-- Put a blank line between each sentence or thought so WhatsApp shows clear spacing.
-- Keep it 2–4 sentences max.`,
+${FORMAT_RULES}`,
 };
 
 // ── Goal alert ────────────────────────────────────────────────────────────────
@@ -173,10 +164,11 @@ no all-caps. use line breaks between thoughts if needed. 2-4 sentences max unles
       }
     );
 
-    return data.choices?.[0]?.message?.content?.trim() || `hmm, let me think about that one. try again`;
+    const raw = data.choices?.[0]?.message?.content?.trim() || `Let me think about that one.\n\nTry again.`;
+    return ensureSpacing(raw);
   } catch (err) {
     console.error('Groq Oracle Error:', err.response?.data || err.message);
-    return `something went wrong. try asking again`;
+    return `Something went wrong.\n\nTry asking again.`;
   }
 }
 
@@ -193,8 +185,8 @@ async function callGroq(userPrompt, vibe = 'hype') {
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        max_tokens: 220,
-        temperature: 0.75,
+        max_tokens: 250,
+        temperature: 0.7,
       },
       {
         headers: {
@@ -204,9 +196,22 @@ async function callGroq(userPrompt, vibe = 'hype') {
       }
     );
 
-    return data.choices?.[0]?.message?.content?.trim() || `something just happened`;
+    const raw = data.choices?.[0]?.message?.content?.trim() || `Something just happened.`;
+    return ensureSpacing(raw);
   } catch (err) {
     console.error('Groq API Error:', err.response?.data || err.message);
-    return `something just happened`;
+    return `Something went wrong. Try again.`;
   }
+}
+
+/**
+ * Post-process AI output to guarantee paragraph spacing.
+ * If the model returns a wall of text, split sentences with double newlines.
+ */
+function ensureSpacing(text) {
+  // If the text already has paragraph breaks, leave it alone
+  if (text.includes('\n\n')) return text;
+
+  // Split on sentence-ending punctuation followed by a space and an uppercase letter
+  return text.replace(/([.!?])\s+(?=[A-Z])/g, '$1\n\n');
 }

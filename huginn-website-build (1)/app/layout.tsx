@@ -44,6 +44,8 @@ export const metadata: Metadata = {
   },
 }
 
+import { PushNotifications } from "@/components/push-notifications"
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -53,6 +55,7 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className={`${inter.variable} ${jetbrainsMono.variable} ${tourney.variable} ${GeistPixelLine.variable} font-sans antialiased`}>
         {children}
+        <PushNotifications />
         <Analytics />
       </body>
     </html>
