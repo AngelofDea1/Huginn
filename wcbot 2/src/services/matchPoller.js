@@ -13,6 +13,7 @@ import {
   getGroupsFollowingMatch
 } from '../utils/store.js';
 import { log } from '../utils/logger.js';
+import { sendPushNotification } from './pushNotify.js';
 
 /**
  * Called every 30 seconds by cron.
@@ -95,6 +96,7 @@ async function processMatch(match, groups) {
       vibe: groups[0]?.vibe,
     });
     await notifyMatchGroups(groups, msg);
+    await sendPushNotification('Half-time', `${homeTeam} ${currentHome}-${currentAway} ${awayTeam}`, '/');
     updateMatchState(matchId, { sentHT: true });
   }
 
@@ -109,6 +111,7 @@ async function processMatch(match, groups) {
         vibe: groups[0]?.vibe,
       });
       await notifyMatchGroups(groups, msg);
+      await sendPushNotification('Full-time', `${homeTeam} ${currentHome}-${currentAway} ${awayTeam}`, '/');
 
       // Distribute sweepstake points
       try {
@@ -132,6 +135,7 @@ async function processMatch(match, groups) {
         vibe: groups[0]?.vibe,
       });
       await notifyMatchGroups(groups, msg);
+      await sendPushNotification('Odds Shift', `${homeTeam} vs ${awayTeam}: ${shift.field} shifted from ${shift.from} to ${shift.to}`, '/');
     }
   }
 
@@ -157,6 +161,7 @@ async function handleEvent(event, { match, homeTeam, awayTeam, detail, oddsStr, 
       odds: oddsStr,
       vibe,
     });
+    await sendPushNotification('GOAL!!! ⚽', `${homeTeam} ${homeScore} - ${awayScore} ${awayTeam} (${event.minute}')`, '/');
   } else if (event.type === 'red_card') {
     msg = await generateRedCardAlert({
       player: event.player,
@@ -166,6 +171,7 @@ async function handleEvent(event, { match, homeTeam, awayTeam, detail, oddsStr, 
       odds: oddsStr,
       vibe,
     });
+    await sendPushNotification('Red Card! 🟥', `${event.player} sent off in the ${event.minute}'`, '/');
   }
 
   if (msg) {

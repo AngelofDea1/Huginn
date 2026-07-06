@@ -597,7 +597,7 @@ footer {
     <a href="#alerts">Alerts</a>
     <a href="#commands">Commands</a>
     <a href="https://github.com" target="_blank">GitHub ↗</a>
-    <a href="#cta" class="nav-cta">Get Started →</a>
+    <a href="/api/join" target="_blank" class="nav-cta">Get Started →</a>
   </div>
 </nav>
 
@@ -908,7 +908,7 @@ footer {
 </footer>
 
 
-<!-- FLOATING BELL BUTTON FOR PWA ALERTS -->
+<!-- FLOATING BELL BUTTON FOR WEB PUSH ALERTS -->
 <button id="pwa-bell" class="pwa-bell-btn" title="Enable Web Alerts">
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
 </button>
@@ -925,77 +925,39 @@ footer {
   color: var(--black);
   border: none;
   cursor: pointer;
-  box-shadow: 0 4px 20px rgba(0, 230, 118, 0.4);
+  box-shadow: 0 4px 20px rgba(0,230,118,0.4);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   transition: all 0.3s ease;
 }
-.pwa-bell-btn:hover {
-  transform: scale(1.1);
-  box-shadow: 0 6px 24px rgba(0, 230, 118, 0.6);
-}
-.pwa-bell-btn.subscribed {
-  background: #202030;
-  color: #fff;
-  border: 1px solid var(--border);
-  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-}
+.pwa-bell-btn:hover { transform: scale(1.1); box-shadow: 0 6px 24px rgba(0,230,118,0.6); }
+.pwa-bell-btn.subscribed { background: #202030; color: #fff; border: 1px solid rgba(255,255,255,0.07); box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
 </style>
 
 <script>
-// PWA service worker registration & push subscription
 const bellBtn = document.getElementById('pwa-bell');
 
 async function initPush() {
-  if ('serviceWorker' in navigator && 'PushManager' in window) {
-    try {
-      const reg = await navigator.serviceWorker.register('/sw.js');
-      console.log('Service Worker registered:', reg);
-      
-      const sub = await reg.pushManager.getSubscription();
-      if (sub) {
-        bellBtn.classList.add('subscribed');
-        bellBtn.title = "Disable Web Alerts";
-      }
-    } catch (err) {
-      console.error('Service Worker registration failed:', err);
-    }
-  } else {
-    bellBtn.style.display = 'none';
-  }
+  if (!('serviceWorker' in navigator && 'PushManager' in window)) { bellBtn.style.display='none'; return; }
+  try {
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) { bellBtn.classList.add('subscribed'); bellBtn.title = 'Disable Web Alerts'; }
+  } catch(e) { console.error('SW error:', e); }
 }
 
 async function subscribe() {
   const reg = await navigator.serviceWorker.ready;
-  
-  // Get VAPID public key from server
-  const keyResponse = await fetch('/api/push/key');
-  const { key } = await keyResponse.json();
-  
-  const convertedKey = urlBase64ToUint8Array(key);
-  
+  const { key } = await fetch('/api/push/key').then(r => r.json());
   try {
-    const sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: convertedKey
-    });
-    
-    // Save subscription on server
-    await fetch('/api/push/subscribe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(sub)
-    });
-    
+    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(key) });
+    await fetch('/api/push/subscribe', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(sub) });
     bellBtn.classList.add('subscribed');
-    bellBtn.title = "Disable Web Alerts";
-    alert('🎉 Notifications enabled! You will now get real-time match goals, cards, and odds updates directly to your screen!');
-  } catch (err) {
-    console.error('Failed to subscribe to push notifications:', err);
-    alert('Failed to enable notifications. Please grant notification permissions in your browser settings.');
-  }
+    bellBtn.title = 'Disable Web Alerts';
+    alert('🎉 Alerts enabled! You will get live goal, card and match updates directly to your screen.');
+  } catch(e) { alert('Could not enable notifications. Please allow notifications in your browser settings.'); }
 }
 
 async function unsubscribe() {
@@ -1003,43 +965,21 @@ async function unsubscribe() {
   const sub = await reg.pushManager.getSubscription();
   if (sub) {
     await sub.unsubscribe();
-    await fetch('/api/push/unsubscribe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(sub)
-    });
+    await fetch('/api/push/unsubscribe', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(sub) });
     bellBtn.classList.remove('subscribed');
-    bellBtn.title = "Enable Web Alerts";
-    alert('Notifications disabled.');
+    bellBtn.title = 'Enable Web Alerts';
   }
 }
 
 bellBtn.addEventListener('click', async () => {
-  if (Notification.permission === 'denied') {
-    alert('Please enable notification permissions in your browser settings to subscribe.');
-    return;
-  }
-  
-  if (bellBtn.classList.contains('subscribed')) {
-    await unsubscribe();
-  } else {
-    await subscribe();
-  }
+  if (Notification.permission === 'denied') { alert('Please enable notifications in your browser settings.'); return; }
+  bellBtn.classList.contains('subscribed') ? await unsubscribe() : await subscribe();
 });
 
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding)
-    .replace(/\-/g, '+')
-    .replace(/_/g, '/');
-
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
+function urlBase64ToUint8Array(b) {
+  const p = '='.repeat((4 - b.length % 4) % 4);
+  const d = atob((b + p).replace(/-/g,'+').replace(/_/g,'/'));
+  return new Uint8Array([...d].map(c => c.charCodeAt(0)));
 }
 
 initPush();
