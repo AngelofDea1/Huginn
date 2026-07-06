@@ -5,41 +5,15 @@ import { Navigation } from "@/components/landing/navigation";
 import { FooterSection } from "@/components/landing/footer-section";
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
-const fixtures = [
-  { id: 1, home: "Portugal", away: "Spain", time: "20:00", status: "SOON", homeScore: null, awayScore: null },
-  { id: 2, home: "Brazil", away: "Argentina", time: "17:00", status: "LIVE", homeScore: 1, awayScore: 0 },
-  { id: 3, home: "France", away: "Germany", time: "23:00", status: "SOON", homeScore: null, awayScore: null },
-  { id: 4, home: "England", away: "USA", time: "14:00", status: "FT", homeScore: 2, awayScore: 1 },
-];
-
-// ── Command responses ─────────────────────────────────────────────────────────
-function getResponse(input: string): string {
-  const cmd = input.trim().toLowerCase();
-  if (cmd === "/live") {
-    return "📡 LIVE NOW\n\nBrazil 1–0 Argentina (54')\nOdds: Brazil win 1.55 · Draw 3.80\n\nEngland 2–1 USA · FULL TIME";
-  }
-  if (cmd.startsWith("/follow ")) {
-    const team = input.trim().slice(8).trim() || "that team";
-    return `✅ Following ${team}\n\nYou'll receive automatic alerts for every ${team} match — goals, cards, odds shifts, and summaries.`;
-  }
-  if (cmd === "/schedule") {
-    return "📅 UPCOMING\n\nPortugal vs Spain · 20:00\nFrance vs Germany · 23:00\nItaly vs Netherlands · 02:00 (tomorrow)";
-  }
-  if (cmd === "/status") {
-    return "📋 YOUR FOLLOWS\n\nNo teams followed yet.\nSend /follow [team] to start tracking a match.";
-  }
-  if (cmd === "/vibe hype") return "🔥 Vibe set to HYPE\n\nEvery goal treated like a cup final. Loud, dramatic, and relentless.";
-  if (cmd === "/vibe tactical") return "📊 Vibe set to TACTICAL\n\nxG, formation shifts, and market movements explained cleanly.";
-  if (cmd === "/vibe funny") return "😂 Vibe set to FUNNY\n\nNothing is presented straight. Banter mode active.";
-  if (cmd === "/vibe balanced") return "⚖️ Vibe set to BALANCED\n\nFactual and easy to read. Default mode restored.";
-  if (cmd === "/help") {
-    return "📋 COMMANDS\n\n/follow [team] · start tracking\n/unfollow [team] · stop tracking\n/live · active matches now\n/schedule · upcoming fixtures\n/status · your active follows\n/vibe hype|tactical|funny|balanced";
-  }
-  if (cmd.startsWith("/")) {
-    return `Unknown command: ${input.trim()}\n\nTry /help for the full list.`;
-  }
-  return "Send a command to get started. Try /live or /follow Brazil.";
-}
+type Fixture = {
+  id: string;
+  home: string;
+  away: string;
+  time: string;
+  status: string;
+  homeScore: number | null;
+  awayScore: number | null;
+};
 
 type Message = { from: "user" | "huginn"; text: string };
 
@@ -51,30 +25,87 @@ const welcomeMessage: Message = {
 const quickCmds = ["/live", "/schedule", "/follow Brazil", "/vibe hype", "/help"];
 
 export default function DemoPage() {
+  const [fixtures, setFixtures] = useState<Fixture[]>([]);
   const [messages, setMessages] = useState<Message[]>([welcomeMessage]);
   const [input, setInput] = useState("");
-  const [selectedFixture, setSelectedFixture] = useState<(typeof fixtures)[0] | null>(null);
+  const [selectedFixture, setSelectedFixture] = useState<Fixture | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [sessionId, setSessionId] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Generate a simple session ID for tracking web follows/vibe
+  useEffect(() => {
+    setSessionId("web_" + Math.random().toString(36).substring(2, 11));
+    fetchScores();
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const send = (text: string) => {
+  async function fetchScores() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/live");
+      const data = await res.json();
+      
+      const liveList = (data.live || []).map((m: any) => ({
+        id: String(m.id),
+        home: m.home_team?.name || "Home",
+        away: m.away_team?.name || "Away",
+        time: m.minute ? `${m.minute}'` : "LIVE",
+        status: "LIVE",
+        homeScore: m.home_score ?? 0,
+        awayScore: m.away_score ?? 0
+      }));
+
+      const upcomingList = (data.upcoming || []).map((m: any) => {
+        const t = new Date(m.kickoff_time).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+        return {
+          id: String(m.id),
+          home: m.home_team?.name || "Home",
+          away: m.away_team?.name || "Away",
+          time: t,
+          status: "SOON",
+          homeScore: null,
+          awayScore: null
+        };
+      });
+
+      setFixtures([...liveList, ...upcomingList]);
+    } catch (err) {
+      console.error("Failed to load scores:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const send = async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
+
     const userMsg: Message = { from: "user", text: trimmed };
-    const botMsg: Message = { from: "huginn", text: getResponse(trimmed) };
-    setMessages((prev) => [...prev, userMsg, botMsg]);
+    setMessages((prev) => [...prev, userMsg]);
     setInput("");
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, message: trimmed }),
+      });
+      const data = await res.json();
+      const botMsg: Message = { from: "huginn", text: data.reply || "Something went wrong. Try again." };
+      setMessages((prev) => [...prev, botMsg]);
+    } catch (err) {
+      const errorMsg: Message = { from: "huginn", text: "❌ Connection error. Is the backend running?" };
+      setMessages((prev) => [...prev, errorMsg]);
+    }
   };
 
-  const handleFixtureClick = (f: (typeof fixtures)[0]) => {
+  const handleFixtureClick = (f: Fixture) => {
     setSelectedFixture(f);
-    const followCmd = `/follow ${f.home}`;
-    const userMsg: Message = { from: "user", text: followCmd };
-    const botMsg: Message = { from: "huginn", text: getResponse(followCmd) };
-    setMessages((prev) => [...prev, userMsg, botMsg]);
+    send(`/follow ${f.home}`);
   };
 
   return (
@@ -99,8 +130,12 @@ export default function DemoPage() {
             <div className="bg-card border border-border rounded-2xl overflow-hidden">
               <div className="px-5 py-4 border-b border-border flex items-center justify-between">
                 <span className="text-sm font-semibold">Live Scores</span>
-                <button className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
-                  <span className="text-base leading-none">↻</span> Update scores
+                <button 
+                  onClick={fetchScores} 
+                  disabled={loading}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 disabled:opacity-50"
+                >
+                  <span className={`text-base leading-none ${loading ? "animate-spin" : ""}`}>↻</span> {loading ? "Updating..." : "Update scores"}
                 </button>
               </div>
               <div className="divide-y divide-border">
