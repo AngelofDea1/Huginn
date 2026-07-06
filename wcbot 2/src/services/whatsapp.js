@@ -7,16 +7,66 @@ import makeWASocket, {
 import { Boom } from '@hapi/boom';
 import qrcode from 'qrcode-terminal';
 import pino from 'pino';
+import fs from 'fs';
+import path from 'path';
 import { log } from '../utils/logger.js';
 import { routeCommand } from '../handlers/webhook.js';
+
+// ── Constants ────────────────────────────────────────────────────────────────
+const AUTH_DIR = '.baileys_auth';
 
 // ── State ────────────────────────────────────────────────────────────────────
 export let activeQr = null;   // set while waiting for scan, null when connected
 let sock = null;              // active Baileys socket
 
+// ─────────────────────────────────────────────────────────────────────────────
+// STEP 1: On every startup, restore auth files from the WA_AUTH_DATA env var
+// (set this var in Render after your first scan using the /api/wa-auth-export endpoint)
+// ─────────────────────────────────────────────────────────────────────────────
+function restoreAuthFromEnv() {
+  const encoded = process.env.WA_AUTH_DATA;
+  if (!encoded) return; // first-time setup, no data yet
+
+  try {
+    const files = JSON.parse(Buffer.from(encoded, 'base64').toString('utf8'));
+    if (!fs.existsSync(AUTH_DIR)) fs.mkdirSync(AUTH_DIR, { recursive: true });
+
+    let restored = 0;
+    for (const [filename, content] of Object.entries(files)) {
+      const dest = path.join(AUTH_DIR, filename);
+      fs.writeFileSync(dest, JSON.stringify(content), 'utf8');
+      restored++;
+    }
+    log.info(`✅ Restored ${restored} auth file(s) from WA_AUTH_DATA env var.`);
+  } catch (err) {
+    log.warn('⚠️  Could not restore auth from WA_AUTH_DATA:', err.message);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STEP 2: After a successful connection, encode auth files to base64 and log
+// the string so the user can set it as WA_AUTH_DATA in Render
+// ─────────────────────────────────────────────────────────────────────────────
+function exportAuthToEnvString() {
+  try {
+    if (!fs.existsSync(AUTH_DIR)) return null;
+    const files = fs.readdirSync(AUTH_DIR);
+    const data = {};
+    for (const file of files) {
+      const fullPath = path.join(AUTH_DIR, file);
+      const raw = fs.readFileSync(fullPath, 'utf8');
+      try { data[file] = JSON.parse(raw); } catch { data[file] = raw; }
+    }
+    return Buffer.from(JSON.stringify(data)).toString('base64');
+  } catch (err) {
+    log.error('Failed to export auth:', err.message);
+    return null;
+  }
+}
+
 // ── Internal: create & wire up socket ───────────────────────────────────────
 async function connectToWhatsApp() {
-  const { state, saveCreds } = await useMultiFileAuthState('.baileys_auth');
+  const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
   const { version } = await fetchLatestBaileysVersion();
 
   sock = makeWASocket({
@@ -25,11 +75,13 @@ async function connectToWhatsApp() {
       creds: state.creds,
       keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' }))
     },
-    printQRInTerminal: false,         // we handle QR ourselves
-    logger: pino({ level: 'silent' }) // suppress Baileys internal logs
+    printQRInTerminal: false,
+    logger: pino({ level: 'silent' }),
+    // Keep the socket alive — send a keepalive ping every 25s
+    keepAliveIntervalMs: 25_000,
   });
 
-  // Persist credentials whenever they update
+  // Persist credentials to disk whenever they update
   sock.ev.on('creds.update', saveCreds);
 
   // Handle connection lifecycle
@@ -50,7 +102,9 @@ async function connectToWhatsApp() {
       const loggedOut = statusCode === DisconnectReason.loggedOut;
 
       if (loggedOut) {
-        log.warn('WhatsApp logged out. Visit /qr to scan a new QR code.');
+        log.warn('WhatsApp logged out (explicit logout). Clearing auth & waiting for re-scan.');
+        // Wipe stale credentials so next startup shows QR immediately
+        try { fs.rmSync(AUTH_DIR, { recursive: true, force: true }); } catch {}
       } else {
         log.warn(`WhatsApp disconnected (code ${statusCode}). Reconnecting in 5s...`);
         setTimeout(connectToWhatsApp, 5000);
@@ -59,7 +113,17 @@ async function connectToWhatsApp() {
 
     if (connection === 'open') {
       activeQr = null;
-      log.info('WhatsApp Client is ready and connected!');
+      log.info('✅ WhatsApp Client is ready and connected!');
+
+      // Export and log the auth data so the user can save it as WA_AUTH_DATA
+      const encoded = exportAuthToEnvString();
+      if (encoded) {
+        log.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        log.info('🔐 SESSION SAVED — copy the value from GET /api/wa-auth-export');
+        log.info('   and set it as the WA_AUTH_DATA environment variable in Render');
+        log.info('   to survive restarts without ever scanning a QR again.');
+        log.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      }
     }
   });
 
@@ -67,7 +131,6 @@ async function connectToWhatsApp() {
   sock.ev.on('messages.upsert', async ({ messages }) => {
     for (const msg of messages) {
       try {
-        // Skip messages sent by the bot itself, or system/status messages
         if (msg.key.fromMe) continue;
         if (msg.key.remoteJid === 'status@broadcast') continue;
 
@@ -92,9 +155,16 @@ async function connectToWhatsApp() {
 // ── Public: called once at startup ──────────────────────────────────────────
 export function initializeWhatsApp() {
   log.info('Initializing WhatsApp (Baileys)...');
+  // Restore session from env var BEFORE connecting
+  restoreAuthFromEnv();
   connectToWhatsApp().catch(err => {
     log.error('Failed to initialize WhatsApp Client:', err.message);
   });
+}
+
+// ── Public: export auth state as base64 (used by /api/wa-auth-export) ───────
+export function getAuthExport() {
+  return exportAuthToEnvString();
 }
 
 /**

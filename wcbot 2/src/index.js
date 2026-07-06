@@ -3,11 +3,12 @@ import express from 'express';
 import cron from 'node-cron';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { initializeWhatsApp, activeQr } from './services/whatsapp.js';
+import { initializeWhatsApp, activeQr, getAuthExport } from './services/whatsapp.js';
 import { pollMatches } from './services/matchPoller.js';
 import { schedulePreMatchBulletins } from './services/scheduler.js';
 import { log, logBuffer } from './utils/logger.js';
 import { handleChatMessage, getLiveMatchesAPI } from './handlers/chat.js';
+import { getVapidPublicKey, subscribeUser, unsubscribeUser, sendPushNotification } from './services/pushNotify.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = dirname(__filename);
@@ -162,6 +163,57 @@ app.get('/api/join', (_, res) => {
   if (!number) return res.status(503).send('WhatsApp number not configured.');
   const text = encodeURIComponent('Hi! I want to add Huginn to my WhatsApp group for World Cup 2026 alerts 🏆');
   res.redirect(302, `https://wa.me/${number}?text=${text}`);
+});
+
+// ─── PWA Push Notifications ───────────────────────────────────────────────────
+app.get('/api/push/key', (_, res) => {
+  res.json({ key: getVapidPublicKey() });
+});
+
+app.post('/api/push/subscribe', (req, res) => {
+  const subscription = req.body;
+  if (!subscription || !subscription.endpoint) {
+    return res.status(400).json({ error: 'Invalid subscription object.' });
+  }
+  subscribeUser(subscription);
+  res.status(201).json({ status: 'subscribed' });
+});
+
+app.post('/api/push/unsubscribe', (req, res) => {
+  const subscription = req.body;
+  if (!subscription || !subscription.endpoint) {
+    return res.status(400).json({ error: 'Invalid subscription object.' });
+  }
+  unsubscribeUser(subscription);
+  res.json({ status: 'unsubscribed' });
+});
+
+app.post('/api/push/test', async (req, res) => {
+  try {
+    await sendPushNotification('Goal!', 'MatchPulse Test: GOLAZOOOO! ⚽🔥', '/');
+    res.json({ status: 'sent' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── WhatsApp Session Export ────────────────────────────────────────────────
+// Visit /api/wa-auth-export ONCE after scanning the QR code.
+// Copy the "authData" value and set it as WA_AUTH_DATA in Render env vars.
+// The bot will then reconnect automatically on every restart — no more QR scans.
+app.get('/api/wa-auth-export', (_, res) => {
+  const authData = getAuthExport();
+  if (!authData) {
+    return res.status(503).json({
+      status: 'not_connected',
+      message: 'No active session yet. Scan the QR at /qr first, then come back here.'
+    });
+  }
+  res.json({
+    status: 'ok',
+    instruction: 'Copy the authData string below and set it as WA_AUTH_DATA in your Render environment variables. Done — the bot will survive every restart from now on.',
+    authData
+  });
 });
 
 // ─── Health check ─────────────────────────────────────────────────────────────
