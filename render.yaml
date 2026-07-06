@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: huginn-bot
+    runtime: docker
+    dockerfilePath: ./wcbot 2/Dockerfile
+    dockerContext: ./wcbot 2
+    branch: main
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: NODE_ENV
+        value: production
+      - key: TXLINE_BASE_URL
+        value: https://txline.txodds.com/api
+      - key: WA_NUMBER
+        value: "2349026755711"
+      - key: TXLINE_JWT
+        sync: false
+      - key: TXLINE_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: WA_AUTH_DATA
+        sync: false
