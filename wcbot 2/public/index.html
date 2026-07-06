@@ -43,21 +43,22 @@
     }
 
     .hero-content {
-      max-width: 800px;
+      max-width: 900px;
       margin: 0 auto;
       text-align: center;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 0 0 100px;
+      padding: 0 0 80px;
     }
 
     .hero-title {
-      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      font-size: clamp(2.4rem, 5.5vw, 4.2rem);
       margin-bottom: 20px;
       line-height: 0.95;
       letter-spacing: -0.02em;
-      white-space: nowrap;
+      font-family: 'Tourney', sans-serif;
+      font-weight: 800;
     }
 
     .hero-title .accent {
@@ -65,7 +66,7 @@
     }
 
     .hero-desc {
-      font-size: 1.15rem;
+      font-size: 1.1rem;
       color: var(--muted);
       line-height: 1.6;
       max-width: 600px;
@@ -77,46 +78,34 @@
       gap: 20px;
       align-items: center;
       justify-content: center;
-      margin-bottom: 0;
+      margin-bottom: 40px;
     }
 
     /* ── THREE PHONE STAGE ───────────────────────────────────────────────────── */
-    /*
-     * Stage height = iPhone visible height after clip-path (595px × 80% = 476px).
-     * Phones are top-aligned so nothing is ever clipped at the top.
-     * The bottom 20% of each phone is hidden by clip-path alone — no overflow:hidden
-     * needed — so the headline sits flush right below the stage with zero gap.
-     */
     .stage {
       position: relative;
       width: 820px;
       max-width: 100%;
-      height: 520px; /* iPhone visible height (650px * 80%) = 520px */
+      height: 520px;
       display: flex;
       align-items: flex-start;
       justify-content: center;
-      margin: 0 auto 20px;
+      margin: 0 auto 40px;
       pointer-events: none;
       flex-shrink: 0;
       z-index: 2;
     }
 
-
-    /* Green glow blob — matches Huginn palette */
     .blob {
       position: absolute;
-      top: 0;
+      top: -10%;
       left: 50%;
-      transform: translateX(-20%);
+      transform: translateX(-50%);
       width: 500px;
       height: 500px;
-      background:
-        radial-gradient(circle at 35% 35%, rgba(0, 230, 118, 0.28), transparent 60%),
-        radial-gradient(circle at 65% 65%, rgba(0, 200, 83, 0.18), transparent 55%);
+      background: radial-gradient(circle, rgba(0, 230, 118, 0.15), transparent 70%);
       filter: blur(60px);
-      opacity: 1;
       z-index: 0;
-      border-radius: 50%;
       pointer-events: none;
     }
 
@@ -127,7 +116,7 @@
       transform: translateX(-50%);
       width: 600px;
       height: 40px;
-      background: radial-gradient(ellipse, rgba(0,0,0,0.5), transparent 70%);
+      background: radial-gradient(ellipse, rgba(0,0,0,0.6), transparent 70%);
       z-index: 0;
       pointer-events: none;
     }
@@ -136,6 +125,9 @@
       position: absolute;
       z-index: 2;
       filter: drop-shadow(0 28px 40px rgba(0, 0, 0, 0.7));
+      border: 1px solid rgba(255,255,255,0.08);
+      background: #0d0d12;
+      overflow: hidden;
     }
 
     .screen {
@@ -143,189 +135,112 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-    }
-
-    /*
-     * content-layer: drop your <img> or <video> directly inside this div.
-     * It is absolutely positioned and fills the entire screen area.
-     * The placeholder div below it is shown when no image is present —
-     * replace it with: <img src="/screens/your-screenshot.png" alt="">
-     */
-    .content-layer {
-      position: absolute;
-      inset: 0;
-      z-index: 1;
-      background: var(--deep);
-    }
-    .content-layer img,
-    .content-layer video,
-    .content-layer iframe {
-      width: 100%; height: 100%;
-      object-fit: cover;
-      border: 0;
-      display: block;
-    }
-    /* Shown when no image has been dropped in yet */
-    .content-placeholder {
-      width: 100%; height: 100%;
+      background: #07070a;
       display: flex;
       flex-direction: column;
+    }
+
+    /* High-fidelity mock WhatsApp interface components */
+    .mock-wa-header {
+      background: #121218;
+      padding: 12px 14px 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      display: flex;
       align-items: center;
-      justify-content: center;
       gap: 8px;
-      padding: 20px;
     }
-    .content-placeholder .bar {
-      height: 8px;
-      border-radius: 6px;
-      background: rgba(255, 255, 255, 0.06);
-      width: 80%;
+    .mock-wa-avatar {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      background: url('/img/logo.jpeg') no-repeat center/cover;
+      border: 1px solid rgba(0,230,118,0.3);
     }
-    .content-placeholder .bar.accent {
-      background: rgba(0, 230, 118, 0.18);
-      width: 60%;
+    .mock-wa-title {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: #fff;
     }
-    .content-placeholder .bar.short {
-      width: 45%;
+    .mock-wa-status {
+      font-size: 0.52rem;
+      color: var(--green);
+    }
+    
+    .mock-wa-chat {
+      flex: 1;
+      padding: 12px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow: hidden;
+    }
+    .mock-wa-bubble {
+      max-width: 85%;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 0.65rem;
+      line-height: 1.4;
+      color: rgba(255,255,255,0.85);
+      align-self: flex-start;
+      background: #1c1c24;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    .mock-wa-bubble.right {
+      align-self: flex-end;
+      background: rgba(0, 230, 118, 0.12);
+      border-color: rgba(0, 230, 118, 0.2);
+    }
+    .mock-wa-bubble strong {
+      color: #fff;
+      display: block;
+      margin-bottom: 2px;
+      font-size: 0.68rem;
     }
 
     /* ── CENTER: iPhone 16 ───────────────────────────────────────────────── */
-    /*  top: 0  →  full top of device is always visible, never clipped.      */
-    /*  clip-path cuts the bottom 20% only, so the phone merges into the bg. */
     .iphone {
-      width: 320px;
-      height: 650px;
+      width: 300px;
+      height: 480px;
       left: 50%;
       top: 0;
       transform: translateX(-50%);
       z-index: 3;
-      border-radius: 54px;
-      background: linear-gradient(155deg, #4a4a4d, #111113 60%);
-      padding: 13px;
-      box-shadow: 0 0 0 2px rgba(255,255,255,0.08) inset;
-      /* Crops the bottom 20% (130px), leaving exactly 520px visible height */
-      clip-path: inset(0 -6px 20% -6px);
+      border-radius: 40px;
+      padding: 8px;
     }
-    .iphone::before {
-      content: "";
+    .iphone .screen { border-radius: 32px; }
+    .iphone-island {
       position: absolute;
-      right: -3px; top: 160px;
-      width: 3px; height: 70px;
-      background: #2a2a2c; border-radius: 2px;
-    }
-    .iphone::after {
-      content: "";
-      position: absolute;
-      left: -3px; top: 130px;
-      width: 3px; height: 20px;
-      background: #2a2a2c; border-radius: 2px;
-      box-shadow: 0 40px 0 #2a2a2c, 0 80px 0 #2a2a2c;
-    }
-    .iphone .screen { border-radius: 42px; background: #000; }
-    .iphone .dynamic-island {
-      position: absolute;
-      top: 15px; left: 50%;
+      top: 12px; left: 50%;
       transform: translateX(-50%);
-      width: 96px; height: 26px;
+      width: 80px; height: 20px;
       background: #000; border-radius: 20px; z-index: 20;
     }
 
-    /* ── LEFT: older Samsung (Galaxy S9-era) ────────────────────────────── */
-    /*  Offset 30px down from top to create a natural depth layering effect. */
+    /* ── LEFT: older Samsung ────────────────────────────── */
     .samsung-old {
       width: 250px;
-      height: 520px;
+      height: 420px;
       left: 50%;
-      top: 104px; /* Placed 104px down so its baseline sits at exactly 520px */
-      transform: translateX(-116%);
+      top: 40px;
+      transform: translateX(-114%);
       z-index: 1;
-      border-radius: 26px;
-      background: linear-gradient(155deg, #3a3a3e, #0f0f11 60%);
-      padding: 16px 8px;
-      /* Cropped bottom 20% so it is cut horizontally at the baseline */
-      clip-path: inset(0 -6px 20% -6px);
+      border-radius: 24px;
+      padding: 6px;
     }
-    .samsung-old::before {
-      content: "";
-      position: absolute;
-      right: -3px; top: 140px;
-      width: 3px; height: 55px;
-      background: #2a2a2c; border-radius: 2px;
-    }
-    .samsung-old::after {
-      content: "";
-      position: absolute;
-      left: -3px; top: 120px;
-      width: 3px; height: 45px;
-      background: #2a2a2c; border-radius: 2px;
-    }
-    .samsung-old .screen { border-radius: 8px; background: #000; }
-    .samsung-old .nav-bar {
-      position: absolute;
-      bottom: 0; left: 0; right: 0; z-index: 20;
-      height: 28px; background: #0a0a0a;
-      display: flex; align-items: center; justify-content: space-around;
-    }
-    .samsung-old .nav-bar .tri {
-      width: 0; height: 0;
-      border-top: 5px solid transparent;
-      border-bottom: 5px solid transparent;
-      border-right: 7px solid #666;
-    }
-    .samsung-old .nav-bar .circ {
-      width: 11px; height: 11px;
-      border: 1.5px solid #888; border-radius: 50%;
-    }
-    .samsung-old .nav-bar .sq {
-      width: 10px; height: 10px;
-      border: 1.5px solid #666; border-radius: 2px;
-    }
+    .samsung-old .screen { border-radius: 18px; }
 
     /* ── RIGHT: Samsung S25 Ultra ────────────────────────────────────────── */
     .samsung-new {
       width: 250px;
-      height: 520px;
+      height: 420px;
       left: 50%;
-      top: 104px; /* Placed 104px down to sit baseline flush at 520px */
-      transform: translateX(16%);
+      top: 40px;
+      transform: translateX(14%);
       z-index: 1;
-      border-radius: 30px;
-      background: linear-gradient(155deg, #3a3a3e, #0f0f11 60%);
+      border-radius: 24px;
       padding: 6px;
-      /* Cropped bottom 20% to cut horizontally */
-      clip-path: inset(0 -6px 20% -6px);
     }
-    .samsung-new::before {
-      content: "";
-      position: absolute;
-      right: -3px; top: 140px;
-      width: 3px; height: 55px;
-      background: #2a2a2c; border-radius: 2px;
-    }
-    .samsung-new::after {
-      content: "";
-      position: absolute;
-      left: -3px; top: 120px;
-      width: 3px; height: 45px;
-      background: #2a2a2c; border-radius: 2px;
-    }
-    .samsung-new .screen { border-radius: 25px; background: #000; }
-    .samsung-new .punch-hole {
-      position: absolute;
-      top: 12px; left: 50%;
-      transform: translateX(-50%);
-      width: 10px; height: 10px;
-      background: #000; border: 1px solid #1c1c1c;
-      border-radius: 50%; z-index: 20;
-    }
-    .samsung-new .gesture-pill {
-      position: absolute;
-      bottom: 6px; left: 50%;
-      transform: translateX(-50%);
-      width: 90px; height: 4px;
-      background: rgba(255,255,255,0.4);
-      border-radius: 3px; z-index: 20;
-    }
+    .samsung-new .screen { border-radius: 18px; }
 
     /* ── BOTTOM FEATURE STRIP ────────────────────────────────────────────────── */
     .feature-strip {
@@ -615,52 +530,26 @@
       text-overflow: ellipsis;
     }
 
-    /* ── RESPONSIVE ──────────────────────────────────────────────────── */
-    @media (max-width: 768px) {
-      /* Hero */
-      .hero { padding-top: 90px; }
-      .hero-content { padding: 0 0 48px; }
-      .hero-title { font-size: clamp(1.5rem, 5.5vw, 2.2rem); white-space: normal !important; margin-top: 0; line-height: 1.1; }
-      .hero-desc { font-size: 0.92rem; margin-bottom: 28px; }
-      .hero-actions { flex-direction: column; width: 100%; gap: 10px; }
-      .hero-actions .btn-primary,
-      .hero-actions .btn-secondary { width: 100%; justify-content: center; padding: 14px 20px !important; font-size: 0.9rem !important; }
-
-      /* Phone stage */
-      .stage { height: 160px; margin-bottom: 8px; width: 100%; max-width: 280px; }
-      .iphone { width: 90px; height: 180px; border-radius: 16px; padding: 4px; top: 0; transform: translateX(-50%); clip-path: inset(0 -4px 20% -4px); }
-      .iphone::before, .iphone::after { display: none; }
-      .iphone .screen { border-radius: 12px; }
-      .iphone .dynamic-island { width: 28px; height: 8px; top: 3px; }
-      .samsung-old { width: 76px; height: 156px; border-radius: 8px; padding: 4px 2px; top: 14px; transform: translateX(-120%); clip-path: inset(0 -4px 20% -4px); }
-      .samsung-old::before, .samsung-old::after { display: none; }
-      .samsung-new { width: 76px; height: 156px; border-radius: 9px; padding: 2px; top: 14px; transform: translateX(20%); clip-path: inset(0 -4px 20% -4px); }
-      .samsung-new::before, .samsung-new::after { display: none; }
-
-      /* Feature strip */
+    /* ── RESPONSIVE ──────────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .hero-inner { grid-template-columns: 1fr; gap: 48px; }
+      .hero-left { align-items: center; text-align: center; }
+      .hero-desc { max-width: 100%; }
+      .hero-actions { justify-content: center; }
+      .hero-proof { justify-content: center; }
+    }
+    @media (max-width: 600px) {
+      .hero { padding-top: 100px; padding-bottom: 48px; }
+      .hero-title { font-size: clamp(2.2rem, 8vw, 3rem); }
+      .hero-actions { flex-direction: column; width: 100%; }
+      .hero-actions .btn-primary, .hero-actions .btn-secondary { width: 100%; justify-content: center; }
+      .wa-chat-window { max-width: 100%; }
       .feature-strip { grid-template-columns: 1fr; margin-top: 32px; }
       .feature-strip-item { padding: 24px 20px; }
-
-      /* How section */
       .how-section { padding: 60px 0; }
       .how-inner { grid-template-columns: 1fr; gap: 40px; }
-      .how-title { font-size: clamp(1.4rem, 5vw, 2rem); }
-      .how-desc { font-size: 0.88rem; max-width: 100%; margin-bottom: 32px; }
-
-      /* Phone demo — constrain to viewport */
       .phone-demo { order: -1; }
-      .demo-phone { width: min(200px, 55vw); height: min(410px, 112vw); border-radius: 36px; padding: 9px; }
-      .demo-phone-screen { border-radius: 28px; }
-      .demo-phone-island { width: 70px; height: 20px; top: 10px; }
-      .demo-lock-time { font-size: 2.4rem; }
-      .demo-lockscreen { padding-top: 44px; }
-      .demo-notifs { top: 44px; left: 8px; right: 8px; }
-      .notif-banner { padding: 9px 10px; border-radius: 12px; }
-      .notif-app-icon { width: 26px; height: 26px; font-size: 0.75rem; }
-      .notif-title { font-size: 0.72rem; }
-      .notif-body { font-size: 0.66rem; }
-
-      /* Footer */
+      .demo-phone { width: min(200px, 55vw); height: min(410px, 112vw); }
       .footer-inner { flex-direction: column; text-align: center; gap: 16px; }
       .footer-links { justify-content: center; flex-wrap: wrap; gap: 14px; }
     }
@@ -687,75 +576,73 @@
     <div class="container">
       <div class="hero-content">
 
-        <!-- Three-phone stage: sits above the headline in normal document flow.
-             To add your screenshots later, uncomment the <img> tag inside each
-             .content-layer and set the src path. The placeholder bars disappear
-             automatically once a real image is loaded. -->
+        <!-- Three-phone stage showing professional mock UIs -->
         <div class="stage">
           <div class="blob"></div>
           <div class="floor-shadow"></div>
 
-          <!-- LEFT: older Samsung Galaxy ─────────────────────────────────── -->
+          <!-- LEFT: Samsung left ─────────────────────────────────── -->
           <div class="device samsung-old">
             <div class="screen">
-              <div class="content-layer">
-                <!-- ADD IMAGE: <img src="/screens/samsung-left.png" alt="Huginn WhatsApp alerts on older Samsung"> -->
-                <div class="content-placeholder">
-                  <div class="bar"></div>
-                  <div class="bar accent"></div>
-                  <div class="bar short"></div>
-                  <div class="bar"></div>
-                  <div class="bar accent"></div>
-                  <div class="bar short"></div>
-                  <div class="bar"></div>
+              <div class="mock-wa-header">
+                <div class="mock-wa-avatar"></div>
+                <div>
+                  <div class="mock-wa-title">🏆 World Cup Alerts</div>
+                  <div class="mock-wa-status">Huginn is active</div>
                 </div>
               </div>
-              <div class="nav-bar">
-                <div class="tri"></div>
-                <div class="circ"></div>
-                <div class="sq"></div>
+              <div class="mock-wa-chat">
+                <div class="mock-wa-bubble">
+                  <strong>📋 Lineups Released</strong>
+                  Germany vs Spain lineups are locked. Musiala starts in the midfield channel.
+                </div>
+                <div class="mock-wa-bubble right">
+                  /follow Germany
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- RIGHT: Samsung S25 Ultra ────────────────────────────────────── -->
+          <!-- RIGHT: Samsung right ────────────────────────────────────── -->
           <div class="device samsung-new">
             <div class="screen">
-              <div class="content-layer">
-                <!-- ADD IMAGE: <img src="/screens/samsung-right.png" alt="Huginn WhatsApp alerts on Samsung S25 Ultra"> -->
-                <div class="content-placeholder">
-                  <div class="bar accent"></div>
-                  <div class="bar"></div>
-                  <div class="bar short"></div>
-                  <div class="bar accent"></div>
-                  <div class="bar"></div>
-                  <div class="bar short"></div>
-                  <div class="bar"></div>
+              <div class="mock-wa-header">
+                <div class="mock-wa-avatar"></div>
+                <div>
+                  <div class="mock-wa-title">🏆 World Cup Alerts</div>
+                  <div class="mock-wa-status">Huginn is active</div>
                 </div>
               </div>
-              <div class="punch-hole"></div>
-              <div class="gesture-pill"></div>
+              <div class="mock-wa-chat">
+                <div class="mock-wa-bubble">
+                  <strong>📈 Market Alert</strong>
+                  Odds on Germany keeping a clean sheet dropped from 2.40 to 1.65 after Musiala's opener.
+                </div>
+              </div>
             </div>
           </div>
 
           <!-- CENTER: iPhone 16 ───────────────────────────────────────────── -->
           <div class="device iphone">
+            <div class="iphone-island"></div>
             <div class="screen">
-              <div class="content-layer">
-                <!-- ADD IMAGE: <img src="/screens/iphone-center.png" alt="Huginn WhatsApp alerts on iPhone 16"> -->
-                <div class="content-placeholder">
-                  <div class="bar"></div>
-                  <div class="bar accent"></div>
-                  <div class="bar short"></div>
-                  <div class="bar accent"></div>
-                  <div class="bar"></div>
-                  <div class="bar accent"></div>
-                  <div class="bar short"></div>
-                  <div class="bar"></div>
-                  <div class="bar accent"></div>
+              <div class="mock-wa-header" style="padding-top:20px;">
+                <div class="mock-wa-avatar" style="width:28px; height:28px;"></div>
+                <div>
+                  <div class="mock-wa-title" style="font-size:0.75rem;">🏆 World Cup Alerts</div>
+                  <div class="mock-wa-status" style="font-size:0.58rem;">Huginn is active</div>
                 </div>
               </div>
-              <div class="dynamic-island"></div>
+              <div class="mock-wa-chat" style="gap:12px; padding:16px 12px;">
+                <div class="mock-wa-bubble">
+                  <strong>⚽ GOAL ALERT · 34'</strong>
+                  Germany 1 — 0 Spain. Musiala clinical finish inside the box.
+                </div>
+                <div class="mock-wa-bubble">
+                  <strong>🟥 RED CARD · 54'</strong>
+                  Carvajal dismissed. Spain down to 10 men.
+                </div>
+              </div>
             </div>
           </div>
 
@@ -782,17 +669,17 @@
         <div class="feature-strip-item">
           <div class="fsi-num">01</div>
           <div class="fsi-title">Drop it in any group</div>
-          <p class="fsi-desc">Works in any existing WhatsApp group. No new chat, no extra setup. Add the bot number as a contact and invite it.</p>
+          <p class="fsi-desc">Works in any existing WhatsApp group. No new chat, no extra setup. Add Huginn as a contact and invite it in.</p>
         </div>
         <div class="feature-strip-item">
           <div class="fsi-num">02</div>
           <div class="fsi-title">One command to start</div>
-          <p class="fsi-desc">Type <span class="mono" style="color:var(--green);font-size:0.85em">/follow Brazil</span> and the bot tracks that team for the rest of the tournament. Follow multiple teams simultaneously.</p>
+          <p class="fsi-desc">Type <span class="mono" style="color:var(--green);font-size:0.85em">/follow Nigeria</span> and the bot locks onto that match. Follow multiple teams simultaneously.</p>
         </div>
         <div class="feature-strip-item">
           <div class="fsi-num">03</div>
           <div class="fsi-title">Everything else is automatic</div>
-          <p class="fsi-desc">Pre-match previews, live goal alerts, red card notifications, odds movements, half-time stats, and full-time wraps. All unprompted.</p>
+          <p class="fsi-desc">Pre-match previews, live goal alerts, red cards, odds shifts, half-time stats, and full-time wraps. All unprompted.</p>
         </div>
       </div>
     </div>
@@ -1069,6 +956,52 @@ function urlBase64ToUint8Array(b) {
 }
 
 initPush();
+</script>
+
+<script>
+/* ── Hero chat feed animation ─────────────────────────────────────────── */
+(function() {
+  const msgs = ['hm0','hm1','hm2','hm3'];
+  const typing = document.getElementById('heroTyping');
+  let idx = 0;
+
+  // reset all messages to hidden
+  function reset() {
+    msgs.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('visible');
+    });
+    if (typing) typing.classList.remove('visible');
+    idx = 0;
+  }
+
+  function showNext() {
+    if (idx >= msgs.length) {
+      // pause at end, then restart
+      setTimeout(() => { reset(); setTimeout(run, 800); }, 4000);
+      return;
+    }
+
+    // show typing for 1.2s
+    if (typing) typing.classList.add('visible');
+
+    setTimeout(() => {
+      if (typing) typing.classList.remove('visible');
+      const el = document.getElementById(msgs[idx]);
+      if (el) el.classList.add('visible');
+      idx++;
+      // gap between messages
+      setTimeout(showNext, idx < msgs.length ? 2200 : 500);
+    }, 1200);
+  }
+
+  function run() {
+    showNext();
+  }
+
+  // Kick off after a short page-load delay
+  setTimeout(run, 600);
+})();
 </script>
 </body>
 

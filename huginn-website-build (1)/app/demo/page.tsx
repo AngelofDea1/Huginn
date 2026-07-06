@@ -144,11 +144,13 @@ export default function DemoPage() {
 
               {/* Chat header */}
               <div className="px-5 py-4 border-b border-border flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center text-sm font-bold text-primary">
-                  HG
-                </div>
+                <img
+                  src="/logo.jpeg"
+                  alt="Huginn"
+                  className="w-9 h-9 rounded-full object-cover border border-primary/30"
+                />
                 <div>
-                  <div className="text-sm font-semibold">Huginn Assistant</div>
+                  <div className="text-sm font-semibold">Huginn</div>
                   <div className="text-xs text-muted-foreground">Live match intelligence · World Cup 2026</div>
                 </div>
                 <div className="ml-auto flex items-center gap-1.5 text-xs text-primary font-mono">

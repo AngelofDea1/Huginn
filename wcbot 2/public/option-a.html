@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Huginn — Option A: The Scoreboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #080b08; --surface: #0e120e; --border: rgba(0,255,100,0.1);
+      --green: #00ff64; --green-dim: rgba(0,255,100,0.08);
+      --text: #e8f5e8; --muted: rgba(232,245,232,0.45);
+      --red: #ff4455; --yellow: #ffd700;
+    }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--text); font-family: 'Space Grotesk', sans-serif; min-height: 100vh; overflow-x: hidden; }
+
+    /* TICKER */
+    .ticker { width:100%; background:var(--green); color:#000; font-family:'Space Mono',monospace; font-size:0.7rem; font-weight:700; letter-spacing:0.04em; overflow:hidden; white-space:nowrap; padding:7px 0; position:fixed; top:0; z-index:100; }
+    .ticker-inner { display:inline-block; animation:ticker-scroll 40s linear infinite; padding-left:100vw; }
+    @keyframes ticker-scroll { from { transform:translateX(0); } to { transform:translateX(-50%); } }
+
+    /* NAV */
+    nav { position:fixed; top:30px; left:0; right:0; z-index:99; display:flex; align-items:center; justify-content:space-between; padding:0 60px; height:64px; }
+    .nav-logo { display:flex; align-items:center; gap:10px; font-family:'Space Mono',monospace; font-size:1.05rem; font-weight:700; color:var(--green); letter-spacing:0.06em; text-decoration:none; }
+    .nav-logo img { width:34px; height:34px; border-radius:8px; border:1.5px solid rgba(0,255,100,0.3); }
+    .nav-cta { background:var(--green); color:#000; font-family:'Space Mono',monospace; font-size:0.75rem; font-weight:700; padding:10px 22px; border-radius:3px; text-decoration:none; letter-spacing:0.05em; transition:opacity .2s; }
+    .nav-cta:hover { opacity:.8; }
+
+    /* HERO */
+    .hero { min-height:100vh; padding:140px 60px 80px; display:grid; grid-template-columns:1fr 1fr; gap:80px; align-items:center; max-width:1300px; margin:0 auto; position:relative; }
+    .hero::before { content:''; position:fixed; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,255,100,0.012) 3px,rgba(0,255,100,0.012) 4px); pointer-events:none; z-index:0; }
+
+    .hero-left { position:relative; z-index:1; }
+    .hero-tag { display:inline-flex; align-items:center; gap:8px; font-family:'Space Mono',monospace; font-size:0.65rem; color:var(--green); border:1px solid rgba(0,255,100,0.25); padding:5px 12px; border-radius:2px; margin-bottom:32px; letter-spacing:0.08em; text-transform:uppercase; }
+    .blink { animation:blink 1.1s steps(1) infinite; }
+    @keyframes blink { 50% { opacity:0; } }
+
+    h1 { font-family:'Space Mono',monospace; font-size:clamp(2.2rem,4vw,4rem); font-weight:700; line-height:1.1; letter-spacing:-0.02em; margin-bottom:24px; }
+    h1 .g { color:var(--green); }
+    h1 .d { color:var(--muted); }
+
+    .hero-sub { font-size:1rem; color:var(--muted); line-height:1.7; max-width:440px; margin-bottom:40px; }
+
+    .cta-row { display:flex; gap:14px; align-items:center; flex-wrap:wrap; }
+    .btn-p { background:var(--green); color:#000; font-family:'Space Mono',monospace; font-size:0.78rem; font-weight:700; padding:13px 26px; border-radius:3px; text-decoration:none; letter-spacing:0.05em; display:inline-flex; align-items:center; gap:8px; transition:opacity .2s; }
+    .btn-p:hover { opacity:.85; }
+    .btn-g { color:var(--green); font-family:'Space Mono',monospace; font-size:0.78rem; font-weight:700; padding:13px 20px; text-decoration:none; letter-spacing:0.05em; border:1px solid rgba(0,255,100,0.22); border-radius:3px; transition:all .2s; }
+    .btn-g:hover { border-color:var(--green); background:var(--green-dim); }
+
+    .stats-row { display:flex; gap:36px; margin-top:48px; }
+    .stat-val { font-family:'Space Mono',monospace; font-size:1.5rem; font-weight:700; color:var(--green); line-height:1; }
+    .stat-label { font-size:0.7rem; color:var(--muted); margin-top:4px; text-transform:uppercase; letter-spacing:0.06em; }
+
+    /* TERMINAL */
+    .hero-right { position:relative; z-index:1; }
+    .terminal { background:#090d09; border:1px solid rgba(0,255,100,0.15); border-radius:8px; overflow:hidden; box-shadow:0 0 60px rgba(0,255,100,0.05),0 40px 80px rgba(0,0,0,0.85); }
+    .terminal-bar { background:#0f130f; padding:11px 16px; display:flex; align-items:center; gap:8px; border-bottom:1px solid rgba(0,255,100,0.08); }
+    .t-dot { width:10px; height:10px; border-radius:50%; }
+    .t-dot.r { background:#ff5f56; } .t-dot.y { background:#ffbd2e; } .t-dot.g2 { background:#27c93f; }
+    .t-title { font-family:'Space Mono',monospace; font-size:0.65rem; color:var(--muted); margin:0 auto; letter-spacing:0.04em; }
+    .terminal-body { padding:20px; font-family:'Space Mono',monospace; font-size:0.76rem; line-height:2; }
+    .t-line { display:flex; gap:10px; }
+    .t-prompt { color:var(--green); }
+    .t-cmd { color:var(--text); }
+    .t-out { padding-left:18px; color:rgba(0,255,100,0.6); }
+    .t-out.goal { color:#00ff64; font-weight:700; }
+    .t-out.card { color:var(--red); font-weight:700; }
+    .t-out.odds { color:var(--yellow); font-weight:700; }
+    .t-out.dim { color:rgba(232,245,232,0.28); }
+    .t-cursor { display:inline-block; width:8px; height:0.9em; background:var(--green); animation:blink 1s steps(1) infinite; vertical-align:text-bottom; margin-left:2px; }
+
+    /* FEATURES */
+    .features { padding:80px 60px; max-width:1300px; margin:0 auto; border-top:1px solid rgba(0,255,100,0.07); }
+    .section-label { font-family:'Space Mono',monospace; font-size:0.65rem; color:rgba(0,255,100,0.5); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:40px; }
+    .feat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:rgba(0,255,100,0.06); }
+    .feat-card { background:var(--bg); padding:32px; transition:background .2s; }
+    .feat-card:hover { background:#0a0f0a; }
+    .feat-num { font-family:'Space Mono',monospace; font-size:0.6rem; color:rgba(0,255,100,0.35); margin-bottom:16px; letter-spacing:0.06em; }
+    .feat-title { font-size:0.95rem; font-weight:600; margin-bottom:10px; }
+    .feat-desc { font-size:0.8rem; color:var(--muted); line-height:1.65; }
+
+    /* HOW */
+    .how { padding:80px 60px; max-width:1300px; margin:0 auto; border-top:1px solid rgba(0,255,100,0.07); }
+    .how-inner { display:grid; grid-template-columns:1fr 1fr; gap:80px; align-items:center; }
+    .how-title { font-size:clamp(1.6rem,2.4vw,2.4rem); font-weight:700; line-height:1.1; margin-bottom:14px; }
+    .how-desc { font-size:0.88rem; color:var(--muted); line-height:1.7; margin-bottom:36px; }
+    .steps { display:flex; flex-direction:column; }
+    .step { display:flex; gap:18px; padding:20px 0; border-bottom:1px solid rgba(0,255,100,0.07); }
+    .step:last-child { border-bottom:none; }
+    .step-num { font-family:'Space Mono',monospace; font-size:0.62rem; color:var(--green); background:var(--green-dim); border:1px solid rgba(0,255,100,0.18); width:30px; height:30px; border-radius:3px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:700; }
+    .step-body h4 { font-size:0.88rem; font-weight:600; margin-bottom:4px; }
+    .step-body p { font-size:0.78rem; color:var(--muted); line-height:1.6; }
+    .step-code { font-family:'Space Mono',monospace; color:var(--green); font-size:0.78rem; background:var(--green-dim); padding:2px 7px; border-radius:3px; }
+
+    .notif-stack { display:flex; flex-direction:column; gap:8px; background:#090d09; border:1px solid rgba(0,255,100,0.12); border-radius:12px; padding:20px; }
+    .notif-card { border-left:3px solid var(--green); background:rgba(0,255,100,0.04); border-radius:0 6px 6px 0; padding:12px 16px; }
+    .notif-card.red { border-left-color:var(--red); background:rgba(255,68,68,0.04); }
+    .notif-card.yellow { border-left-color:var(--yellow); background:rgba(255,215,0,0.04); }
+    .notif-top { display:flex; justify-content:space-between; margin-bottom:3px; }
+    .notif-type { font-family:'Space Mono',monospace; font-size:0.6rem; font-weight:700; color:var(--green); letter-spacing:0.06em; }
+    .notif-card.red .notif-type { color:var(--red); }
+    .notif-card.yellow .notif-type { color:var(--yellow); }
+    .notif-time { font-family:'Space Mono',monospace; font-size:0.58rem; color:var(--muted); }
+    .notif-main { font-size:0.8rem; font-weight:600; margin-bottom:2px; }
+    .notif-sub { font-size:0.72rem; color:var(--muted); }
+
+    /* CTA */
+    .cta-sect { border-top:1px solid rgba(0,255,100,0.07); padding:80px 60px; text-align:center; position:relative; overflow:hidden; }
+    .cta-sect::before { content:''; position:absolute; inset:0; background:radial-gradient(ellipse at center 100%,rgba(0,255,100,0.05),transparent 65%); pointer-events:none; }
+    .cta-h { font-family:'Space Mono',monospace; font-size:clamp(2rem,3.8vw,3.4rem); font-weight:700; line-height:1.1; margin-bottom:16px; }
+    .cta-sub { font-size:0.95rem; color:var(--muted); max-width:460px; margin:0 auto 32px; line-height:1.65; }
+
+    footer { border-top:1px solid rgba(0,255,100,0.07); padding:22px 60px; display:flex; justify-content:space-between; align-items:center; }
+    .footer-brand { font-family:'Space Mono',monospace; font-size:0.8rem; color:var(--green); font-weight:700; }
+    .footer-copy { font-family:'Space Mono',monospace; font-size:0.62rem; color:var(--muted); }
+
+    @media(max-width:900px){
+      nav { padding:0 24px; }
+      .hero { grid-template-columns:1fr; padding:130px 24px 60px; gap:48px; }
+      .features { padding:60px 24px; }
+      .feat-grid { grid-template-columns:1fr; }
+      .how { padding:60px 24px; }
+      .how-inner { grid-template-columns:1fr; gap:40px; }
+      .cta-sect { padding:60px 24px; }
+      footer { padding:20px 24px; flex-direction:column; gap:10px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="ticker">
+  <span class="ticker-inner">
+    ⚽ BRA 2–1 ARG · 73' &nbsp;&nbsp;&nbsp;&nbsp; 🟥 RED CARD: Otamendi 54' &nbsp;&nbsp;&nbsp;&nbsp; 📊 BRA WIN: 1.22 (▼0.38) &nbsp;&nbsp;&nbsp;&nbsp; ⚽ ENG 1–0 FRA · HT &nbsp;&nbsp;&nbsp;&nbsp; 🕐 HALF TIME: GER 0–0 ESP &nbsp;&nbsp;&nbsp;&nbsp; ⚡ HUGINN IS LIVE · World Cup 2026 &nbsp;&nbsp;&nbsp;&nbsp; ⚽ BRA 2–1 ARG · 73' &nbsp;&nbsp;&nbsp;&nbsp; 🟥 RED CARD: Otamendi 54' &nbsp;&nbsp;&nbsp;&nbsp; 📊 BRA WIN: 1.22 (▼0.38) &nbsp;&nbsp;&nbsp;&nbsp; ⚽ ENG 1–0 FRA · HT &nbsp;&nbsp;&nbsp;&nbsp;
+  </span>
+</div>
+
+<nav>
+  <a href="/" class="nav-logo">
+    <img src="/img/logo.jpeg" alt="Huginn"/>
+    HUGINN
+  </a>
+  <a href="/api/join" class="nav-cta" target="_blank">→ ADD TO WHATSAPP</a>
+</nav>
+
+<section class="hero">
+  <div class="hero-left">
+    <div class="hero-tag"><span class="blink">█</span> WORLD CUP 2026 · LIVE</div>
+    <h1>The match,<br/><span class="g">inside</span><br/>your chat.</h1>
+    <p class="hero-sub">Huginn is a WhatsApp-native football intelligence feed. Goals, red cards, odds shifts, AI analysis — delivered to your group the second they happen.</p>
+    <div class="cta-row">
+      <a href="/api/join" class="btn-p" target="_blank">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        ADD TO WHATSAPP
+      </a>
+      <a href="/demo.html" class="btn-g">LIVE DEMO →</a>
+    </div>
+    <div class="stats-row">
+      <div><div class="stat-val">&lt; 3s</div><div class="stat-label">Alert delay</div></div>
+      <div><div class="stat-val">64</div><div class="stat-label">WC Matches</div></div>
+      <div><div class="stat-val">0</div><div class="stat-label">Apps needed</div></div>
+    </div>
+  </div>
+
+  <div class="hero-right">
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="t-dot r"></div><div class="t-dot y"></div><div class="t-dot g2"></div>
+        <div class="t-title">huginn · live · world-cup-group</div>
+      </div>
+      <div class="terminal-body">
+        <div class="t-line"><span class="t-prompt">$</span><span class="t-cmd">&nbsp;huginn /follow Brazil</span></div>
+        <div class="t-out dim">✓ Tracking Brazil — all matches</div>
+        <br/>
+        <div class="t-line"><span class="t-prompt">$</span><span class="t-cmd">&nbsp;huginn /follow Argentina</span></div>
+        <div class="t-out dim">✓ Tracking Argentina — all matches</div>
+        <br/>
+        <div class="t-out dim">--- LIVE: BRA vs ARG ---</div>
+        <br/>
+        <div class="t-out goal">⚽ GOAL · 23' · Vinicius Jr.</div>
+        <div class="t-out dim">&nbsp;&nbsp; Brazil 1–0 Argentina</div>
+        <div class="t-out dim">&nbsp;&nbsp; BRA win odds: 1.22 (▼0.38)</div>
+        <br/>
+        <div class="t-out card">🟥 RED CARD · 54' · Otamendi</div>
+        <div class="t-out dim">&nbsp;&nbsp; Argentina down to 10 men</div>
+        <div class="t-out dim">&nbsp;&nbsp; ARG odds: 9.40 (▲5.20)</div>
+        <br/>
+        <div class="t-out odds">📊 ODDS SHIFT · 67'</div>
+        <div class="t-out dim">&nbsp;&nbsp; BRA clean sheet: 2.40 → 1.65</div>
+        <div class="t-out dim">&nbsp;&nbsp; Market sees something.</div>
+        <br/>
+        <div class="t-out goal">🕐 HT · BRA 2–0 ARG</div>
+        <div class="t-out dim">&nbsp;&nbsp; Huginn was watching.</div>
+        <div class="t-out dim">&nbsp;&nbsp; Were you?</div>
+        <br/>
+        <div class="t-line"><span class="t-prompt">$</span><span class="t-cursor"></span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="features">
+  <div class="section-label">// What Huginn tracks</div>
+  <div class="feat-grid">
+    <div class="feat-card"><div class="feat-num">01 ·</div><div class="feat-title">Goals & Assists</div><p class="feat-desc">Every goal, scorer, and assist with a one-line read on what it means for the match. No waiting, no refreshing.</p></div>
+    <div class="feat-card"><div class="feat-num">02 ·</div><div class="feat-title">Cards & Incidents</div><p class="feat-desc">Red cards, yellows, VAR decisions. Huginn catches every turning point and explains the impact instantly.</p></div>
+    <div class="feat-card"><div class="feat-num">03 ·</div><div class="feat-title">Odds Movements</div><p class="feat-desc">When the market shifts mid-match, Huginn flags it. Bookmakers don't move without a reason.</p></div>
+    <div class="feat-card"><div class="feat-num">04 ·</div><div class="feat-title">Pre-Match Bulletins</div><p class="feat-desc">Lineups, key absences, recent form, venue conditions, and a match preview — 1 hour before kick-off.</p></div>
+    <div class="feat-card"><div class="feat-num">05 ·</div><div class="feat-title">Half-Time Reports</div><p class="feat-desc">A structured breakdown of the first half with stats, tactical observations, and what to expect next.</p></div>
+    <div class="feat-card"><div class="feat-num">06 ·</div><div class="feat-title">Full-Time Wraps</div><p class="feat-desc">Post-match summary with player ratings, key moments, and a sharp analysis. Group chat gold.</p></div>
+  </div>
+</section>
+
+<section class="how">
+  <div class="how-inner">
+    <div>
+      <div class="section-label">// Setup</div>
+      <h2 class="how-title">Three commands.<br/>Then nothing.</h2>
+      <p class="how-desc">No app. No account. No dashboard. Huginn lives inside WhatsApp — already on every phone in your group.</p>
+      <div class="steps">
+        <div class="step"><div class="step-num">01</div><div class="step-body"><h4>Add Huginn to your group</h4><p>Save the number, add to any existing WhatsApp group. Done in 10 seconds.</p></div></div>
+        <div class="step"><div class="step-num">02</div><div class="step-body"><h4>Type <span class="step-code">/follow [team]</span></h4><p>Huginn locks on. Follow multiple teams simultaneously.</p></div></div>
+        <div class="step"><div class="step-num">03</div><div class="step-body"><h4>Watch the feed come in</h4><p>Pre-match, live alerts, half-time, full-time. Every moment. Zero effort.</p></div></div>
+      </div>
+    </div>
+    <div class="notif-stack">
+      <div style="font-family:'Space Mono',monospace;font-size:0.62rem;color:var(--muted);margin-bottom:4px;letter-spacing:0.06em;">// HUGINN · WORLD CUP GROUP</div>
+      <div class="notif-card"><div class="notif-top"><span class="notif-type">⚽ GOAL · 23'</span><span class="notif-time">now</span></div><div class="notif-main">Brazil 1 – 0 Argentina</div><div class="notif-sub">Vinicius Jr. — clinical from the left. Market moved hard.</div></div>
+      <div class="notif-card red"><div class="notif-top"><span class="notif-type">🟥 RED CARD · 54'</span><span class="notif-time">now</span></div><div class="notif-main">Otamendi off. Ten men.</div><div class="notif-sub">ARG win odds: 9.40. This match is done.</div></div>
+      <div class="notif-card yellow"><div class="notif-top"><span class="notif-type">📊 ODDS SHIFT · 67'</span><span class="notif-time">now</span></div><div class="notif-main">BRA clean sheet: 2.40 → 1.65</div><div class="notif-sub">Something is happening. Market sees it.</div></div>
+      <div class="notif-card"><div class="notif-top"><span class="notif-type">🕐 HALF TIME</span><span class="notif-time">now</span></div><div class="notif-main">Brazil 2 – 0 Argentina</div><div class="notif-sub">Huginn was watching. Were you?</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="cta-sect">
+  <div class="section-label" style="justify-content:center;display:flex;">// Ready</div>
+  <h2 class="cta-h">Never miss<br/><span style="color:var(--green)">a moment</span> again.</h2>
+  <p class="cta-sub">Add Huginn to your group before the next match. Takes 10 seconds. Works forever.</p>
+  <div class="cta-row" style="justify-content:center;">
+    <a href="/api/join" class="btn-p" target="_blank">ADD TO WHATSAPP</a>
+    <a href="/demo.html" class="btn-g">TRY THE DEMO</a>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-brand">HUGINN</div>
+  <div class="footer-copy">© 2026 Huginn · World Cup 2026</div>
+</footer>
+</body>
+</html>
