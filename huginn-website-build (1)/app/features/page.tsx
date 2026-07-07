@@ -23,10 +23,31 @@ const steps = [
 ];
 
 const stack = [
-  { name: "TxLINE", desc: "Live odds and match data across all 104 World Cup fixtures" },
-  { name: "Llama 3.3 70B", desc: "AI commentary generation running on match events in real time" },
-  { name: "WhatsApp", desc: "Direct delivery to your group chat without extra apps" },
-  { name: "Node.js", desc: "Always-on event processing and alert scheduling" },
+  {
+    name: "TxLINE",
+    desc: "Live odds and match data across all 104 World Cup fixtures",
+    // Official TxODDS logo — white on transparent
+    logo: "https://txodds.net/wp-content/uploads/2025/11/TxODDS-White-on-Transparent-300x60.png",
+    logoIsWide: true,
+  },
+  {
+    name: "Llama 3.3 70B",
+    desc: "AI commentary generation running on match events in real time",
+    logo: "https://cdn.simpleicons.org/meta/ffffff",
+    logoIsWide: false,
+  },
+  {
+    name: "WhatsApp",
+    desc: "Direct delivery to your group chat without extra apps",
+    logo: "https://cdn.simpleicons.org/whatsapp/ffffff",
+    logoIsWide: false,
+  },
+  {
+    name: "Node.js",
+    desc: "Always-on event processing and alert scheduling",
+    logo: "https://cdn.simpleicons.org/nodedotjs/ffffff",
+    logoIsWide: false,
+  },
 ];
 
 export default function FeaturesPage() {
@@ -41,11 +62,9 @@ export default function FeaturesPage() {
         <section className="py-24 bg-secondary/10 border-t border-border">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <div className="text-center mb-16">
-
               <h2 className="text-3xl lg:text-5xl font-semibold tracking-tight mb-4">
                 Three steps is all you need.
               </h2>
-
             </div>
 
             <div className="grid md:grid-cols-3 gap-px bg-border rounded-2xl overflow-hidden">
@@ -72,7 +91,7 @@ export default function FeaturesPage() {
             {/* Horizontal connected pipeline nodes */}
             <div className="relative">
               <div
-                className="absolute top-[28px] left-0 right-0 h-px hidden lg:block"
+                className="absolute top-[36px] left-0 right-0 h-px hidden lg:block"
                 style={{
                   background:
                     "linear-gradient(90deg, transparent, hsl(var(--border)) 10%, hsl(var(--border)) 90%, transparent)",
@@ -80,13 +99,21 @@ export default function FeaturesPage() {
               />
 
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 lg:gap-6">
-                {stack.map((s, i) => (
+                {stack.map((s) => (
                   <div key={s.name} className="relative flex flex-col items-start lg:items-center lg:text-center animate-fade-in">
+                    {/* Logo box */}
                     <div className="relative z-10 mb-5">
-                      <div className="w-14 h-14 rounded-2xl bg-card border border-border flex items-center justify-center shadow-sm">
-                        <span className="font-mono text-xs font-bold text-primary">
-                          {String(i + 1).padStart(2, "0")}
-                        </span>
+                      <div className="w-[72px] h-[72px] rounded-2xl bg-card border border-border flex items-center justify-center shadow-sm p-3">
+                        <img
+                          src={s.logo}
+                          alt={s.name}
+                          className={s.logoIsWide ? "w-full h-auto object-contain" : "w-8 h-8 object-contain"}
+                          style={{ filter: "brightness(0) invert(1)" }}
+                          onError={(e) => {
+                            // Fallback: hide broken image, show name initials
+                            (e.target as HTMLImageElement).style.display = "none";
+                          }}
+                        />
                       </div>
                     </div>
                     <h3 className="font-semibold text-base mb-2">{s.name}</h3>
@@ -102,3 +129,5 @@ export default function FeaturesPage() {
     </main>
   );
 }
+
+// File ends cleanly here
