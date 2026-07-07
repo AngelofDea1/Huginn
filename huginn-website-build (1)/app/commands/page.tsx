@@ -87,9 +87,6 @@ function AlertBubble({ card }: { card: typeof alertCards[0] }) {
       </div>
       <div className="flex-1 p-5">
         <div className="rounded-xl p-4 border border-border bg-background">
-          <div className="text-xs font-mono font-bold mb-2 tracking-widest text-primary">
-            HUGINN
-          </div>
           <div className="font-semibold text-sm mb-2">{card.title}</div>
           <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
             {card.body}
@@ -108,7 +105,7 @@ export default function CommandsPage() {
       <section className="py-32">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
 
-          {/* Centered Header (Single line description now) */}
+          {/* Centered Header */}
           <div className="text-center mb-20">
             <h1 className="text-4xl lg:text-6xl font-semibold tracking-tight mb-4">
               Commands &amp; Alerts
@@ -119,9 +116,6 @@ export default function CommandsPage() {
           <div className="mb-24">
             <div className="flex items-center justify-between border-b border-border pb-4 mb-8">
               <h2 className="text-lg font-semibold tracking-tight">Commands you send</h2>
-              <span className="text-xs font-mono text-muted-foreground border border-border rounded-full px-3 py-1 bg-secondary/35">
-                MANUAL INPUT
-              </span>
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
               {manualCommands.map((c) => (
@@ -155,9 +149,6 @@ export default function CommandsPage() {
           <div className="mb-24">
             <div className="flex items-center justify-between border-b border-border pb-4 mb-8">
               <h2 className="text-lg font-semibold tracking-tight">Commentary Voice</h2>
-              <span className="text-xs font-mono text-primary border border-primary/20 bg-primary/10 rounded-full px-3 py-1">
-                CUSTOM VIBES
-              </span>
             </div>
             
             <Tabs defaultValue="hype" className="w-full">
@@ -185,13 +176,10 @@ export default function CommandsPage() {
                     <div className="bg-card border border-border rounded-2xl overflow-hidden">
                       <div className="px-4 py-3 border-b border-border bg-secondary/30 flex items-center gap-2">
                         <span className="text-xs font-mono text-muted-foreground font-semibold">
-                          HUGINN · {v.name.toUpperCase()} MODE
+                          {v.name.toUpperCase()} PREVIEW
                         </span>
                       </div>
                       <div className="p-5">
-                        <div className="text-xs font-mono font-bold mb-2 tracking-widest text-primary">
-                          HUGINN
-                        </div>
                         <p className="text-sm leading-relaxed whitespace-pre-line text-foreground">
                           {v.preview}
                         </p>
@@ -207,9 +195,6 @@ export default function CommandsPage() {
           <div className="mb-24">
             <div className="flex items-center justify-between border-b border-border pb-4 mb-8">
               <h2 className="text-lg font-semibold tracking-tight">Real-time Alerts</h2>
-              <span className="text-xs font-mono text-primary border border-primary/20 bg-primary/10 rounded-full px-3 py-1">
-                AUTOMATIC
-              </span>
             </div>
             <div className="grid md:grid-cols-2 gap-4">
               {alertCards.map((card) => (

@@ -5,8 +5,8 @@ import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Huginn — Your World Cup in WhatsApp',
-  description: 'Live goals, red cards, odds shifts, and AI commentary delivered to your WhatsApp group. No app. No signup. Just football.',
+  title: 'Huginn · World Cup Live Intelligence',
+  description: 'Live goals, red cards, odds shifts, and AI commentary delivered to your WhatsApp or directly in your browser. No app. No signup. Just football.',
   generator: 'v0.app',
   icons: {
     icon: [

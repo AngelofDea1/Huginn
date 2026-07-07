@@ -19,7 +19,7 @@ export function FooterSection() {
               <span className="font-semibold tracking-tight">Huginn</span>
             </Link>
             <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
-              Live football alerts and AI commentary, delivered to your WhatsApp group.
+              Live football alerts and AI commentary, delivered to your WhatsApp or directly in your browser.
             </p>
           </div>
 
