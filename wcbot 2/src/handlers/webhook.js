@@ -210,21 +210,35 @@ async function handleStatus(from) {
 // /live
 async function handleLive(from) {
   try {
-    const { getLiveMatches } = await import('../services/txline.js');
+    const { getLiveMatches, getUpcomingMatches } = await import('../services/txline.js');
     const live = await getLiveMatches();
 
     if (!live.length) {
+      // Show upcoming as fallback
+      const upcoming = await getUpcomingMatches(6);
+      if (upcoming.length) {
+        const lines = upcoming.slice(0, 5).map(m => {
+          const kick = new Date(m.kickoff_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+          return `*${m.home_team?.name} vs ${m.away_team?.name}*  ${kick}`;
+        }).join('\n\n');
+        return sendMessage(from, `No matches live at the moment.\n\n📅 *Upcoming:*\n\n${lines}\n\nType /follow <team> to get alerts when a match kicks off.`);
+      }
       return sendMessage(from,
         `Nothing live right now.\n\nType /schedule to see upcoming fixtures, or /follow <team> to get alerts when a match kicks off.`
       );
     }
 
-    const lines = live.map(m =>
-      `*${m.home_team?.name} ${m.home_score ?? 0}–${m.away_score ?? 0} ${m.away_team?.name}*${m.minute ? `  ${m.minute}'` : ''}${m.status === 'HT' ? '  (HT)' : ''}`
-    ).join('\n\n');
+    const lines = live.map(m => {
+      const homeScore = m.home_score ?? 0;
+      const awayScore = m.away_score ?? 0;
+      const min = m.minute ? `  ${m.minute}'` : '';
+      const ht  = m.status === 'HT' ? '  *(HT)*' : '';
+      return `🔴 *${m.home_team?.name} ${homeScore}–${awayScore} ${m.away_team?.name}*${min}${ht}`;
+    }).join('\n\n');
 
     return sendMessage(from, `🔴 *Live now*\n\n${lines}\n\nType /follow <team> to receive goal alerts.`);
   } catch (err) {
+    log.error('handleLive error:', err.message);
     return sendMessage(from, `Couldn't fetch live matches right now.\n\nTry again in a moment.`);
   }
 }

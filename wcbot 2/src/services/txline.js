@@ -15,11 +15,16 @@ const BASE  = process.env.TXLINE_BASE_URL || 'https://txline.txodds.com/api';
 const JWT   = process.env.TXLINE_JWT;
 const TOKEN = process.env.TXLINE_API_KEY;
 
-// World Cup competition IDs (confirmed working with free tier)
-const WC_COMPETITION_IDS = [
-  72,   // FIFA World Cup 2026 (confirmed via API)
-  430,  // International Friendlies
-];
+// World Cup competition IDs — broader list to handle different API tier mappings
+// We try these in order; if none match, we fall back to returning ALL fixtures
+const WC_COMPETITION_IDS = new Set([
+  72,    // FIFA World Cup 2026 (primary)
+  83,    // FIFA World Cup (alternate ID seen in some feeds)
+  1,     // FIFA World Cup (generic)
+  430,   // International Friendlies
+  2000,  // FIFA World Cup 2026 (alternate)
+  2026,  // FIFA World Cup 2026 (year-based ID)
+]);
 
 // Game phase IDs that mean "in progress" (from Soccer Feed docs)
 const LIVE_PHASES = new Set([2, 4, 7, 9, 12]); // H1, H2, ET1, ET2, PE
@@ -45,13 +50,20 @@ const client = makeClient();
 // matchPoller.js, scheduler.js and webhook.js remain unchanged.
 
 function normaliseFixture(f) {
+  // Try to extract scores from snapshot's Score object if present
+  const homeScore = f.Score?.Participant1?.Total?.Goals ?? f.ScoreHome ?? null;
+  const awayScore = f.Score?.Participant2?.Total?.Goals ?? f.ScoreAway ?? null;
+
   return {
-    id:         String(f.FixtureId),
-    home_team:  { name: f.Participant1 || 'Team A' },
-    away_team:  { name: f.Participant2 || 'Team B' },
-    kickoff_time: f.StartTime,
-    status:     phaseToStatus(f.Phase),
-    stage:      f.CompetitionName || 'World Cup 2026',
+    id:           String(f.FixtureId),
+    home_team:    { name: f.Participant1 || f.HomeTeam || 'Team A' },
+    away_team:    { name: f.Participant2 || f.AwayTeam || 'Team B' },
+    kickoff_time: f.StartTime || f.KickoffTime,
+    status:       phaseToStatus(f.Phase),
+    stage:        f.CompetitionName || f.TournamentName || 'World Cup 2026',
+    home_score:   homeScore,
+    away_score:   awayScore,
+    minute:       f.Elapsed ?? null,
     // keep originals for reference
     _raw: f,
   };
@@ -64,11 +76,20 @@ function phaseToStatus(phase) {
   return 'NS';
 }
 
+function phaseStringToStatus(gameState) {
+  if (!gameState) return 'NS';
+  const s = String(gameState).toLowerCase();
+  if (s === 'live' || s === 'inplay' || s === 'in_play' || s === 'firsthalf' || s === 'first_half' || s === 'secondhalf' || s === 'second_half') return 'LIVE';
+  if (s === 'halftime' || s === 'half_time' || s === 'ht') return 'HT';
+  if (s === 'finished' || s === 'ft' || s === 'fulltime' || s === 'full_time' || s === 'completed') return 'FT';
+  return 'NS';
+}
+
 function normaliseScores(scoreUpdates, fixture) {
   let updates = [];
   if (typeof scoreUpdates === 'string') {
-    // Parse SSE lines
-    const matches = scoreUpdates.match(/data:\s*({.+?})/g);
+    // Parse SSE lines — each is "data: {...}\n"
+    const matches = scoreUpdates.match(/data:\s*(\{.+?\})\n/g) || scoreUpdates.match(/data:\s*(\{.+?})/g);
     if (matches) {
       for (const m of matches) {
         try {
@@ -84,18 +105,26 @@ function normaliseScores(scoreUpdates, fixture) {
   const latest = updates?.[updates.length - 1];
   if (!latest) return null;
 
-  // Extract scores from Score object
+  // Extract scores from Score object — may be absent if match hasn't started
   const homeScore = latest.Score?.Participant1?.Total?.Goals ?? 0;
   const awayScore = latest.Score?.Participant2?.Total?.Goals ?? 0;
   
-  // Extract phase / status
-  let status = phaseToStatus(latest.GamePhase);
-  if (status === 'NS' && latest.GameState === 'live') {
+  // Extract phase / status — try numeric Phase first, then string GameState
+  let status;
+  if (latest.Phase !== undefined && latest.Phase !== null) {
+    status = phaseToStatus(latest.Phase);
+  } else {
+    status = phaseStringToStatus(latest.GameState);
+  }
+  // Override with 'LIVE' if GameState explicitly says so
+  if (typeof latest.GameState === 'string' && (latest.GameState.toLowerCase() === 'live' || latest.GameState.toLowerCase() === 'inplay')) {
     status = 'LIVE';
   }
 
   const elapsedSeconds = latest.Clock?.Seconds ?? 0;
-  const minute = latest.Elapsed !== undefined && latest.Elapsed !== null ? latest.Elapsed : (Math.floor(elapsedSeconds / 60) || '?');
+  const minute = latest.Elapsed !== undefined && latest.Elapsed !== null 
+    ? latest.Elapsed 
+    : (elapsedSeconds > 0 ? Math.floor(elapsedSeconds / 60) : null);
 
   const events = buildEvents(updates);
 
@@ -194,18 +223,39 @@ export async function getLiveMatches() {
   try {
     const all = await getAllFixtures();
     const now = Date.now();
-    return all.filter(m => {
+    const live = all.filter(m => {
       // Direct live phase match
       if (m.status === 'LIVE' || m.status === 'HT') return true;
-      // Time-based fallback: if kickoff has started and less than 120 minutes ago, and it's not marked FT
+      // Time-based fallback: if kickoff has started and less than 130 minutes ago, and it's not marked FT
       if (m.status !== 'FT') {
         const kick = new Date(m.kickoff_time).getTime();
-        if (now >= kick && now <= kick + 120 * 60 * 1000) {
+        if (!isNaN(kick) && now >= kick && now <= kick + 130 * 60 * 1000) {
           return true;
         }
       }
       return false;
     });
+
+    // Enrich each live match with real-time scores from the scores endpoint
+    const enriched = await Promise.all(live.map(async (m) => {
+      try {
+        const detail = await getMatchDetail(m.id);
+        if (detail) {
+          return {
+            ...m,
+            home_score: detail.home_score,
+            away_score: detail.away_score,
+            minute:     detail.minute,
+            status:     detail.status !== 'NS' ? detail.status : m.status,
+          };
+        }
+      } catch (e) {
+        // Return base match if enrichment fails
+      }
+      return m;
+    }));
+
+    return enriched;
   } catch (err) {
     log.error('getLiveMatches failed:', err.message);
     return [];
@@ -327,13 +377,24 @@ export async function searchMatch(query) {
 //  Internal helpers 
 
 async function getAllFixtures() {
-  // Fetch all available fixtures in one call (no competitionId filter = all bundles)
-  // then filter locally to the competitions we care about
+  // Fetch all available fixtures in one call then filter locally
   try {
     const { data } = await client.get('/fixtures/snapshot');
     const all = (data || []).map(normaliseFixture);
-    // Filter to World Cup + Friendlies only
-    return all.filter(f => WC_COMPETITION_IDS.includes(f._raw?.CompetitionId));
+
+    // Filter to World Cup IDs if we have matching fixtures
+    const wcMatches = all.filter(f => WC_COMPETITION_IDS.has(f._raw?.CompetitionId));
+
+    if (wcMatches.length > 0) {
+      log.info(`getAllFixtures: ${wcMatches.length} WC fixtures (from ${all.length} total)`);
+      return wcMatches;
+    }
+
+    // Fallback: if no matches found with our ID set, log the unique competition IDs seen
+    // so we can identify the correct one, and return all fixtures
+    const seen = [...new Set(all.map(f => f._raw?.CompetitionId).filter(Boolean))];
+    log.warn(`getAllFixtures: No WC matches found. Competition IDs in feed: [${seen.join(', ')}]. Returning all ${all.length} fixtures as fallback.`);
+    return all;
   } catch (err) {
     log.warn('getAllFixtures failed:', err.message);
     return [];

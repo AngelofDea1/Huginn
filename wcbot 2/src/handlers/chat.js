@@ -186,7 +186,11 @@ async function handleLive() {
     if (live.length) {
       reply += `🔴 *LIVE NOW:*\n`;
       for (const m of live.slice(0, 5)) {
-        reply += `• ${m.home_team?.name} vs ${m.away_team?.name} (${m.status})\n`;
+        const homeScore = m.home_score ?? 0;
+        const awayScore = m.away_score ?? 0;
+        const min = m.minute ? ` ${m.minute}'` : '';
+        const ht  = m.status === 'HT' ? ' (HT)' : '';
+        reply += `• *${m.home_team?.name} ${homeScore}–${awayScore} ${m.away_team?.name}*${min}${ht}\n`;
       }
       reply += '\n';
     }
