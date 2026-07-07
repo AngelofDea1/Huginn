@@ -175,7 +175,7 @@ app.get('/api/qr-data', (_, res) => {
 app.get('/api/join', (_, res) => {
   const number = (process.env.WA_NUMBER || '2349026755711').replace(/\D/g, '');
   if (!number) return res.status(503).send('WhatsApp number not configured.');
-  const text = encodeURIComponent('Hi! I want to add Huginn to my WhatsApp group for World Cup 2026 alerts 🏆');
+  const text = encodeURIComponent('Hi Huginn. Eyes on the World Cup?');
   res.redirect(302, `https://wa.me/${number}?text=${text}`);
 });
 
