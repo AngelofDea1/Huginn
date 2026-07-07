@@ -238,9 +238,9 @@ app.get('/api/logs', (_, res) => {
   res.type('text/plain').send(logBuffer.join('\n'));
 });
 
-// ─── Cron: Poll TxLINE every 30 seconds ───────────────────────────────────────
+// ─── Cron: Poll TxLINE every 10 seconds ───────────────────────────────────────
 // Detects goals, red cards, HT, FT, big odds shifts
-cron.schedule('*/30 * * * * *', async () => {
+cron.schedule('*/10 * * * * *', async () => {
   try {
     await pollMatches();
   } catch (err) {
@@ -262,6 +262,6 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   log.info(`⚽ WC Companion Bot running on port ${PORT}`);
   log.info(`🌐 Web interface: http://localhost:${PORT}`);
-  log.info(`🔄 Polling TxLINE every 30 seconds`);
+  log.info(`🔄 Polling TxLINE every 10 seconds`);
   initializeWhatsApp();
 });
