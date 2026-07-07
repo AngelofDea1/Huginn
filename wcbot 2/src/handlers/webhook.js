@@ -95,14 +95,14 @@ export async function routeCommand(from, text) {
 // ── Welcome message sent automatically on first contact ──────────────────────
 async function sendWelcome(from) {
   return sendMessage(from,
-    `*Huginn* — World Cup 2026, straight into your WhatsApp.\n\n` +
-    `Every goal, red card, and odds movement across all 104 fixtures — broken down in real time.\n\n` +
-    `/follow <team> — live alerts for any match\n` +
-    `/live — matches happening right now\n` +
-    `/schedule — upcoming fixtures\n` +
-    `/vibe <mode> — hype · tactical · funny · balanced\n\n` +
+    `*Huginn* · World Cup 2026, straight into your WhatsApp.\n\n` +
+    `Every goal, red card, and odds movement across all 104 fixtures, broken down in real time.\n\n` +
+    `/follow <team> · live alerts for any match\n` +
+    `/live · matches happening right now\n` +
+    `/schedule · upcoming fixtures\n` +
+    `/vibe <mode> · hype, tactical, funny, balanced\n\n` +
     `Want the whole group in on it?\n` +
-    `Open any WhatsApp group → tap the group name → *Add participants* → search for me → done. Everyone gets the alerts from that point.\n\n` +
+    `Open any WhatsApp group, tap the group name, *Add participants*, search for me, done. Everyone gets the alerts from that point.\n\n` +
     `Or just ask me anything about the tournament.`
   );
 }
@@ -110,12 +110,12 @@ async function sendWelcome(from) {
 // /help — shown when explicitly requested (not first contact)
 async function handleHelp(from) {
   return sendMessage(from,
-    `/follow <team> — live alerts for any match\n` +
-    `/unfollow <team> — stop alerts\n` +
-    `/live — matches in progress now\n` +
-    `/schedule — upcoming fixtures\n` +
-    `/status — what you're currently tracking\n` +
-    `/vibe <mode> — hype · tactical · funny · balanced\n\n` +
+    `/follow <team> · live alerts for any match\n` +
+    `/unfollow <team> · stop alerts\n` +
+    `/live · matches in progress now\n` +
+    `/schedule · upcoming fixtures\n` +
+    `/status · what you're currently tracking\n` +
+    `/vibe <mode> · hype, tactical, funny, balanced\n\n` +
     `You can also ask me anything directly.`
   );
 }
@@ -148,7 +148,6 @@ async function handleFollow(from, text) {
   followMatch(from, m.id);
   initMatchState(m.id, {});
 
-  // Show kickoff in a clear, timezone-neutral format (UTC labelled)
   const kickoffDate = new Date(m.kickoff_time);
   const kickoff = kickoffDate.toLocaleString('en-GB', {
     weekday: 'short', day: 'numeric', month: 'short',
@@ -158,7 +157,7 @@ async function handleFollow(from, text) {
   return sendMessage(from,
     `Following *${m.home_team?.name} vs ${m.away_team?.name}*\n\n` +
     `Kick-off: ${kickoff}\n\n` +
-    `Goal alerts, red cards, and half/full-time summaries will fire automatically.`
+    `Goal alerts, red cards, and half/full-time summaries will come through automatically.`
   );
 }
 
@@ -182,10 +181,10 @@ async function handleVibe(from, text) {
   if (!valid.includes(mode)) {
     return sendMessage(from,
       `Pick a vibe:\n\n` +
-      `*/vibe hype* — full African pundit energy\n` +
-      `*/vibe tactical* — calm analyst, stats and formations\n` +
-      `*/vibe funny* — banter and dry wit\n` +
-      `*/vibe balanced* — clean factual coverage`
+      `*/vibe hype* · full African pundit energy\n` +
+      `*/vibe tactical* · calm analyst, stats and formations\n` +
+      `*/vibe funny* · banter and dry wit\n` +
+      `*/vibe balanced* · clean factual coverage`
     );
   }
 
