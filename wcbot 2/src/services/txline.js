@@ -84,15 +84,26 @@ function normaliseScores(scoreUpdates, fixture) {
   const latest = updates?.[updates.length - 1];
   if (!latest) return null;
 
-  const stats   = latest.Stats || {};
-  const events  = buildEvents(updates);
-  const phase   = latest.GamePhase;
+  // Extract scores from Score object
+  const homeScore = latest.Score?.Participant1?.Total?.Goals ?? 0;
+  const awayScore = latest.Score?.Participant2?.Total?.Goals ?? 0;
+  
+  // Extract phase / status
+  let status = phaseToStatus(latest.GamePhase);
+  if (status === 'NS' && latest.GameState === 'live') {
+    status = 'LIVE';
+  }
+
+  const elapsedSeconds = latest.Clock?.Seconds ?? 0;
+  const minute = latest.Elapsed !== undefined && latest.Elapsed !== null ? latest.Elapsed : (Math.floor(elapsedSeconds / 60) || '?');
+
+  const events = buildEvents(updates);
 
   return {
-    home_score: stats[1] ?? 0,
-    away_score: stats[2] ?? 0,
-    status:     phaseToStatus(phase),
-    minute:     latest.Elapsed ?? '?',
+    home_score: homeScore,
+    away_score: awayScore,
+    status:     status,
+    minute:     minute,
     events,
     _raw: latest,
   };
@@ -100,27 +111,45 @@ function normaliseScores(scoreUpdates, fixture) {
 
 function buildEvents(updates) {
   const events = [];
-  let prevStats = {};
+  let prevHome = 0;
+  let prevAway = 0;
+  let prevHomeRed = 0;
+  let prevAwayRed = 0;
+
   for (const u of updates) {
-    const s = u.Stats || {};
-    const ts = u.Elapsed || 0;
+    const elapsedSeconds = u.Clock?.Seconds ?? 0;
+    const ts = u.Elapsed !== undefined && u.Elapsed !== null ? u.Elapsed : (Math.floor(elapsedSeconds / 60) || 0);
+
+    const homeGoals = u.Score?.Participant1?.Total?.Goals ?? 0;
+    const awayGoals = u.Score?.Participant2?.Total?.Goals ?? 0;
+
+    const homeRed = u.Stats?.['5'] ?? u.Stats?.[5] ?? 0;
+    const awayRed = u.Stats?.['6'] ?? u.Stats?.[6] ?? 0;
 
     // Detect goals
-    if ((s[1] ?? 0) > (prevStats[1] ?? 0)) {
-      events.push({ id: `g1-${ts}`, type: 'goal', team: 'home', minute: ts, player: 'Goal', description: `Home goal at ${ts}'` });
+    if (homeGoals > prevHome) {
+      const scorer = u.Action === 'goal' && u.Data?.PlayerId ? `Player #${u.Data.PlayerId}` : 'Goal';
+      events.push({ id: `g1-${ts}`, type: 'goal', team: 'home', minute: ts, player: scorer, description: `Home goal at ${ts}'` });
     }
-    if ((s[2] ?? 0) > (prevStats[2] ?? 0)) {
-      events.push({ id: `g2-${ts}`, type: 'goal', team: 'away', minute: ts, player: 'Goal', description: `Away goal at ${ts}'` });
-    }
-    // Detect red cards
-    if ((s[5] ?? 0) > (prevStats[5] ?? 0)) {
-      events.push({ id: `rc1-${ts}`, type: 'red_card', team: 'home', minute: ts, player: 'Player', description: `Home red card at ${ts}'` });
-    }
-    if ((s[6] ?? 0) > (prevStats[6] ?? 0)) {
-      events.push({ id: `rc2-${ts}`, type: 'red_card', team: 'away', minute: ts, player: 'Player', description: `Away red card at ${ts}'` });
+    if (awayGoals > prevAway) {
+      const scorer = u.Action === 'goal' && u.Data?.PlayerId ? `Player #${u.Data.PlayerId}` : 'Goal';
+      events.push({ id: `g2-${ts}`, type: 'goal', team: 'away', minute: ts, player: scorer, description: `Away goal at ${ts}'` });
     }
 
-    prevStats = { ...s };
+    // Detect red cards
+    if (homeRed > prevHomeRed) {
+      const player = u.Data?.PlayerId ? `Player #${u.Data.PlayerId}` : 'Player';
+      events.push({ id: `rc1-${ts}`, type: 'red_card', team: 'home', minute: ts, player, description: `Home red card at ${ts}'` });
+    }
+    if (awayRed > prevAwayRed) {
+      const player = u.Data?.PlayerId ? `Player #${u.Data.PlayerId}` : 'Player';
+      events.push({ id: `rc2-${ts}`, type: 'red_card', team: 'away', minute: ts, player, description: `Away red card at ${ts}'` });
+    }
+
+    prevHome = homeGoals;
+    prevAway = awayGoals;
+    prevHomeRed = homeRed;
+    prevAwayRed = awayRed;
   }
   return events;
 }
