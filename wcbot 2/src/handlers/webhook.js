@@ -101,7 +101,8 @@ async function sendWelcome(from) {
     `/live — matches happening right now\n` +
     `/schedule — upcoming fixtures\n` +
     `/vibe <mode> — hype · tactical · funny · balanced\n\n` +
-    `Watching alone? Add me to any WhatsApp group and everyone gets the alerts — tap *Add to group* in my contact info.\n\n` +
+    `Want the whole group in on it?\n` +
+    `Open any WhatsApp group → tap the group name → *Add participants* → search for me → done. Everyone gets the alerts from that point.\n\n` +
     `Or just ask me anything about the tournament.`
   );
 }
