@@ -164,7 +164,19 @@ function normaliseOdds(oddsData) {
 export async function getLiveMatches() {
   try {
     const all = await getAllFixtures();
-    return all.filter(m => m.status === 'LIVE' || m.status === 'HT');
+    const now = Date.now();
+    return all.filter(m => {
+      // Direct live phase match
+      if (m.status === 'LIVE' || m.status === 'HT') return true;
+      // Time-based fallback: if kickoff has started and less than 120 minutes ago, and it's not marked FT
+      if (m.status !== 'FT') {
+        const kick = new Date(m.kickoff_time).getTime();
+        if (now >= kick && now <= kick + 120 * 60 * 1000) {
+          return true;
+        }
+      }
+      return false;
+    });
   } catch (err) {
     log.error('getLiveMatches failed:', err.message);
     return [];
@@ -180,9 +192,14 @@ export async function getUpcomingMatches(hoursAhead = 2) {
     const now     = Date.now();
     const cutoff  = now + hoursAhead * 60 * 60 * 1000;
     return all.filter(m => {
-      if (m.status !== 'NS') return false;
       const kick = new Date(m.kickoff_time).getTime();
-      return kick >= now && kick <= cutoff;
+      // If match hasn't started and is inside the future window
+      if (m.status !== 'FT' && kick > now && kick <= cutoff) {
+        // Also check that it's not currently marked live via getLiveMatches logic
+        const isLive = (m.status === 'LIVE' || m.status === 'HT' || (now >= kick && now <= kick + 120 * 60 * 1000));
+        return !isLive;
+      }
+      return false;
     });
   } catch (err) {
     log.error('getUpcomingMatches failed:', err.message);
@@ -196,7 +213,11 @@ export async function getUpcomingMatches(hoursAhead = 2) {
 export async function getFixtureSchedule() {
   try {
     const all = await getAllFixtures();
-    return all.filter(m => m.status === 'NS').sort((a, b) => {
+    const now = Date.now();
+    return all.filter(m => {
+      const kick = new Date(m.kickoff_time).getTime();
+      return m.status !== 'FT' && kick > now;
+    }).sort((a, b) => {
       return new Date(a.kickoff_time) - new Date(b.kickoff_time);
     });
   } catch (err) {

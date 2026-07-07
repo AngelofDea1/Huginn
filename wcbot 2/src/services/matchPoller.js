@@ -181,6 +181,16 @@ async function handleEvent(event, { match, homeTeam, awayTeam, detail, oddsStr, 
 
 function isAfterLastSeen(event, state) {
   if (!state.lastEventId) return true;
-  // Assumes event IDs are sequential integers
-  return Number(event.id) > Number(state.lastEventId);
+  
+  // If the event IDs are exact matches, it is not new
+  if (event.id === state.lastEventId) return false;
+
+  // Extract elapsed minute from IDs like "g1-15" or "rc2-44" as a fallback comparison
+  const getEventMinute = (id) => {
+    if (!id) return 0;
+    const parts = id.split('-');
+    return parts.length > 1 ? Number(parts[1]) : 0;
+  };
+
+  return getEventMinute(event.id) >= getEventMinute(state.lastEventId);
 }
