@@ -219,8 +219,7 @@ export function EnableNotificationsButton() {
   // Already subscribed
   if (state === "subscribed") {
     return (
-      <div className="flex items-center gap-2 text-xs text-emerald-400 font-mono">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+      <div className="text-xs text-emerald-400 font-mono">
         Notifications on
       </div>
     );
