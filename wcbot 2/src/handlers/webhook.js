@@ -95,32 +95,26 @@ export async function routeCommand(from, text) {
 // ── Welcome message sent automatically on first contact ──────────────────────
 async function sendWelcome(from) {
   return sendMessage(from,
-    `*Huginn* — World Cup 2026 live intelligence, straight into WhatsApp.\n\n` +
-    `I track every goal, red card, and odds movement across all 104 fixtures, and break it down in real time.\n\n` +
-    `*To get started:*\n` +
+    `*Huginn* — World Cup 2026, straight into your WhatsApp.\n\n` +
+    `Every goal, red card, and odds movement across all 104 fixtures — broken down in real time.\n\n` +
     `/follow <team> — live alerts for any match\n` +
-    `/live — see what's happening right now\n` +
+    `/live — matches happening right now\n` +
     `/schedule — upcoming fixtures\n` +
-    `/vibe <mode> — change my commentary style\n\n` +
-    `Or just ask me anything — team form, kick-off times, squad info, odds context.\n\n` +
-    `Powered by TxLINE live data · Llama 3.3 70B`
+    `/vibe <mode> — hype · tactical · funny · balanced\n\n` +
+    `Or just ask me anything about the tournament.`
   );
 }
 
 // /help — shown when explicitly requested (not first contact)
 async function handleHelp(from) {
   return sendMessage(from,
-    `*Commands*\n\n` +
-    `/follow <team> — start getting live alerts for a match\n` +
-    `/unfollow <team> — stop alerts for a match\n` +
-    `/live — see every match in progress right now\n` +
-    `/schedule — full upcoming fixture list\n` +
-    `/status — check what you're currently following\n` +
-    `/vibe <mode> — switch commentary style\n\n` +
-    `*Vibe modes:*\n` +
-    `hype · tactical · funny · balanced\n\n` +
-    `You can also ask me anything directly — I have context on all live and upcoming matches.\n\n` +
-    `Powered by TxLINE · Llama 3.3 70B`
+    `/follow <team> — live alerts for any match\n` +
+    `/unfollow <team> — stop alerts\n` +
+    `/live — matches in progress now\n` +
+    `/schedule — upcoming fixtures\n` +
+    `/status — what you're currently tracking\n` +
+    `/vibe <mode> — hype · tactical · funny · balanced\n\n` +
+    `You can also ask me anything directly.`
   );
 }
 
@@ -152,14 +146,17 @@ async function handleFollow(from, text) {
   followMatch(from, m.id);
   initMatchState(m.id, {});
 
-  const kickoff = new Date(m.kickoff_time).toLocaleString('en-GB', {
-    weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+  // Show kickoff in a clear, timezone-neutral format (UTC labelled)
+  const kickoffDate = new Date(m.kickoff_time);
+  const kickoff = kickoffDate.toLocaleString('en-GB', {
+    weekday: 'short', day: 'numeric', month: 'short',
+    hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
   });
 
   return sendMessage(from,
-    `Following *${m.home_team?.name} vs ${m.away_team?.name}*.\n\n` +
-    `Kickoff: ${kickoff}\n\n` +
-    `You'll receive goal alerts, red cards, half-time and full-time reports automatically.`
+    `Following *${m.home_team?.name} vs ${m.away_team?.name}*\n\n` +
+    `Kick-off: ${kickoff}\n\n` +
+    `Goal alerts, red cards, and half/full-time summaries will fire automatically.`
   );
 }
 
