@@ -124,18 +124,29 @@ export function PushNotifications() {
           from { opacity: 0; transform: translateY(16px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        .push-banner { animation: slideUp 0.35s cubic-bezier(0.16,1,0.3,1) both; }
+        .push-banner {
+          position: fixed;
+          bottom: 20px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: min(420px, calc(100vw - 24px));
+          animation: slideUp 0.35s cubic-bezier(0.16,1,0.3,1) both;
+        }
+        @media (max-width: 768px) {
+          .push-banner {
+            bottom: 16px;
+            left: 12px;
+            right: 12px;
+            width: auto;
+            transform: none;
+          }
+        }
       `}</style>
 
       <div
         className="push-banner"
         style={{
-          position: "fixed",
-          bottom: 20,
-          left: "50%",
-          transform: "translateX(-50%)",
           zIndex: 99999,
-          width: "min(420px, calc(100vw - 24px))",
           background: "rgba(10,10,22,0.95)",
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",

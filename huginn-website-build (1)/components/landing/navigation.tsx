@@ -199,37 +199,39 @@ export function Navigation() {
         .mobile-menu-popover {
           position: absolute;
           top: 58px;
+          left: 0;
           right: 0;
-          width: 200px;
-          background: #0d0d1a;
-          border-radius: 16px;
-          border: 1px solid rgba(255,255,255,0.07);
-          box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+          background: rgba(13,13,26,0.92);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border-radius: 20px;
+          border: 1px solid rgba(255,255,255,0.08);
+          box-shadow: 0 16px 40px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.05);
           z-index: 998;
-          padding: 8px;
+          padding: 10px;
         }
         .mobile-menu-list {
           list-style: none;
           margin: 0; padding: 0;
           display: flex;
           flex-direction: column;
-          gap: 4px;
+          gap: 6px;
         }
         .mobile-menu-link {
           display: block;
-          padding: 10px 16px;
-          color: #7070a0;
+          padding: 12px 18px;
+          color: #8c8ca8;
           text-decoration: none;
           font-family: var(--font-sans), sans-serif;
-          font-size: 0.875rem;
+          font-size: 0.95rem;
           font-weight: 500;
-          border-radius: 10px;
+          border-radius: 12px;
           transition: all 0.2s;
         }
-        .mobile-menu-link:hover { background: rgba(255,255,255,0.04); color: #f0f0f8; }
-        .mobile-menu-link.is-active { background: rgba(0,230,118,0.08); color: #00e676; font-weight: 600; }
+        .mobile-menu-link:hover { background: rgba(255,255,255,0.05); color: #f0f0f8; }
+        .mobile-menu-link.is-active { background: rgba(0,230,118,0.1); color: #00e676; font-weight: 600; }
         @media (max-width: 768px) {
-          .pill-nav-container { top: 10px; left: 10px; right: 10px; transform: none; width: calc(100% - 20px); align-items: flex-end; }
+          .pill-nav-container { top: 10px; left: 10px; right: 10px; transform: none; width: calc(100% - 20px); }
           .pill-nav { width: 100%; justify-content: space-between; }
           .desktop-only { display: none; }
           .mobile-only  { display: flex; }

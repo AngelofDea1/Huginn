@@ -100,7 +100,7 @@ export default function FeaturesPage() {
 
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 lg:gap-6">
                 {stack.map((s) => (
-                  <div key={s.name} className="relative flex flex-col items-start lg:items-center lg:text-center animate-fade-in">
+                  <div key={s.name} className="relative flex flex-col items-center text-center animate-fade-in">
                     {/* Logo box */}
                     <div className="relative z-10 mb-5">
                       <div className="w-[72px] h-[72px] rounded-2xl bg-card border border-border flex items-center justify-center shadow-sm p-3">
