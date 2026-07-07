@@ -226,16 +226,16 @@ export default function CommandsPage() {
                 Chat directly with Huginn or add it to any WhatsApp group to get started.
               </p>
             </div>
-            <div className="flex gap-3 flex-wrap shrink-0">
+            <div className="flex gap-4 flex-wrap shrink-0">
               <Link
                 href="/live-chat"
-                className="inline-flex items-center gap-2 border border-border text-foreground text-sm font-semibold px-6 py-3.5 rounded-xl hover:bg-secondary/50 transition-colors"
+                className="inline-flex items-center gap-2 border border-white/10 hover:border-white/20 bg-white/[0.03] backdrop-blur-md text-foreground text-sm font-semibold px-6 py-3.5 rounded-xl hover:bg-white/[0.08] shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] transition-all duration-300"
               >
                 Live Chat in Browser
               </Link>
               <a
                 href="/api/join"
-                className="inline-flex items-center gap-2 bg-primary text-primary-foreground font-bold text-sm px-6 py-3.5 rounded-xl hover:opacity-95 transition-opacity"
+                className="inline-flex items-center gap-2 bg-primary hover:bg-primary/95 text-primary-foreground font-bold text-sm px-6 py-3.5 rounded-xl border border-primary/20 shadow-[0_4px_0_#00a852] active:translate-y-[3px] active:shadow-[0_1px_0_#00a852] transition-all"
               >
                 Chat on WhatsApp
               </a>

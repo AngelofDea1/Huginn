@@ -40,18 +40,21 @@ export function CtaSection() {
               Chat directly with Huginn or invite it to any WhatsApp group. Simply send a message to get started.
             </p>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              {/* Glassy Button */}
               <Button
                 size="lg"
                 variant="outline"
-                className="h-11 px-6 text-sm font-semibold border-border hover:bg-secondary/50 bg-transparent text-foreground"
+                className="h-11 px-6 text-sm font-semibold border border-white/10 hover:border-white/20 bg-white/[0.03] backdrop-blur-md text-foreground transition-all duration-300 hover:bg-white/[0.08] shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] rounded-xl"
                 asChild
               >
                 <a href="/live-chat">Live Chat</a>
               </Button>
+
+              {/* Press/Tactile Button */}
               <Button
                 size="lg"
-                className="bg-primary hover:bg-primary/95 text-primary-foreground px-6 h-11 text-sm font-semibold group"
+                className="bg-primary hover:bg-primary/95 text-primary-foreground px-6 h-11 text-sm font-bold group rounded-xl border border-primary/20 shadow-[0_4px_0_#00a852] active:translate-y-[3px] active:shadow-[0_1px_0_#00a852] transition-all"
                 asChild
               >
                 <a href="/api/join">
