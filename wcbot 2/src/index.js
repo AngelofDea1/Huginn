@@ -30,7 +30,7 @@ const serveNextPage = (page) => (_, res) =>
 
 app.get('/features', serveNextPage('features'));
 app.get('/commands', serveNextPage('commands'));
-app.get('/demo', serveNextPage('demo'));
+app.get('/live-chat', serveNextPage('live-chat'));
 // Root fallback
 app.get('/', (_, res) => res.sendFile(join(frontendDir, 'index.html')));
 

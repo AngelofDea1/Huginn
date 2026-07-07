@@ -27,7 +27,7 @@ export function FooterSection() {
           <div className="flex flex-wrap gap-x-8 gap-y-3">
             <Link href="/features"  className="text-sm text-muted-foreground hover:text-foreground transition-colors">Features</Link>
             <Link href="/commands"  className="text-sm text-muted-foreground hover:text-foreground transition-colors">Commands</Link>
-            <Link href="/demo"      className="text-sm text-muted-foreground hover:text-foreground transition-colors">Live Demo</Link>
+            <Link href="/live-chat"  className="text-sm text-muted-foreground hover:text-foreground transition-colors">Live Chat</Link>
             <a
               href="https://txline.txodds.com/documentation/worldcup"
               target="_blank"

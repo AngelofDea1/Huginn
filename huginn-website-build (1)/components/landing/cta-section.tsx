@@ -47,14 +47,14 @@ export function CtaSection() {
                 className="h-11 px-6 text-sm font-semibold border-border hover:bg-secondary/50 bg-transparent text-foreground"
                 asChild
               >
-                <a href="/demo">See Demo</a>
+                <a href="/live-chat">Live Chat</a>
               </Button>
               <Button
                 size="lg"
                 className="bg-primary hover:bg-primary/95 text-primary-foreground px-6 h-11 text-sm font-semibold group"
                 asChild
               >
-                <a href="https://wa.me/message/HUGINN" target="_blank" rel="noopener noreferrer">
+                <a href="/api/join">
                   Add Huginn Now
                   <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-0.5" />
                 </a>

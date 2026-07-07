@@ -45,7 +45,7 @@ export function PushNotifications() {
       const registration = await navigator.serviceWorker.ready;
 
       // Get VAPID public key from our API
-      const res = await fetch("/api/push/vapid-key");
+      const res = await fetch("/api/push/key");
       const { key } = await res.json();
 
       const subscription = await registration.pushManager.subscribe({

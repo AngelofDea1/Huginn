@@ -8,7 +8,7 @@ const navLinks = [
   { name: "Home",     href: "/" },
   { name: "Features", href: "/features" },
   { name: "Commands", href: "/commands" },
-  { name: "Demo",     href: "/demo" },
+  { name: "Live Chat", href: "/live-chat" },
 ];
 
 export function Navigation() {

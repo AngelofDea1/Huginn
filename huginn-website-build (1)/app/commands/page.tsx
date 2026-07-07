@@ -228,14 +228,14 @@ export default function CommandsPage() {
             </div>
             <div className="flex gap-3 flex-wrap shrink-0">
               <Link
-                href="/demo"
+                href="/live-chat"
                 className="inline-flex items-center gap-2 border border-border text-foreground text-sm font-semibold px-6 py-3.5 rounded-xl hover:bg-secondary/50 transition-colors"
               >
                 Live Chat in Browser
               </Link>
               <a
-                href="https://wa.me/message/HUGINN"
-                className="inline-flex items-center gap-2 bg-primary text-primary-foreground font-bold text-sm px-6 py-3.5 rounded-xl hover:opacity-95 transition-opacity animate-pulse"
+                href="/api/join"
+                className="inline-flex items-center gap-2 bg-primary text-primary-foreground font-bold text-sm px-6 py-3.5 rounded-xl hover:opacity-95 transition-opacity"
               >
                 Chat on WhatsApp
               </a>
