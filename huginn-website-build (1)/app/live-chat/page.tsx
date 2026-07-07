@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Navigation } from "@/components/landing/navigation";
 import { FooterSection } from "@/components/landing/footer-section";
+import { EnableNotificationsButton } from "@/components/push-notifications";
 
 type Fixture = {
   id: string;
@@ -191,21 +192,13 @@ export default function LiveChatPage() {
         <div className="max-w-7xl mx-auto px-4 lg:px-8">
 
           {/* ── Header ─────────────────────────────────────────────────────── */}
-          <div className="flex items-end justify-between mb-10">
-            <div>
-              <h1 className="text-3xl lg:text-5xl font-semibold tracking-tight mb-3">
-                Live Chat
-              </h1>
-              <p className="text-base text-muted-foreground leading-relaxed max-w-xl">
-                Chat with Huginn directly. Click a fixture to follow it — alerts fire automatically into this window.
-              </p>
-            </div>
-            <button
-              onClick={clearHistory}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors border border-border rounded-lg px-3 py-1.5 shrink-0"
-            >
-              Clear history
-            </button>
+          <div className="text-center mb-10">
+            <h1 className="text-3xl lg:text-5xl font-semibold tracking-tight mb-3">
+              Live Chat
+            </h1>
+            <p className="text-base text-muted-foreground leading-relaxed max-w-xl mx-auto">
+              Chat with Huginn directly. Click a fixture to follow it, alerts fire automatically into this window.
+            </p>
           </div>
 
           <div className="grid lg:grid-cols-[260px_1fr] gap-5 items-start">
@@ -214,14 +207,23 @@ export default function LiveChatPage() {
             <div className="bg-card border border-border rounded-2xl overflow-hidden">
               <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
                 <span className="text-sm font-semibold">Fixtures</span>
-                <button
-                  onClick={fetchScores}
-                  disabled={loadingScores}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 disabled:opacity-40"
-                >
-                  <span className={`text-sm leading-none ${loadingScores ? "animate-spin inline-block" : ""}`}>↻</span>
-                  {loadingScores ? "Loading…" : "Refresh"}
-                </button>
+                <div className="flex items-center gap-3">
+                  {/* Clear history — mobile only */}
+                  <button
+                    onClick={clearHistory}
+                    className="lg:hidden text-xs text-muted-foreground hover:text-foreground transition-colors border border-border rounded-lg px-2.5 py-1"
+                  >
+                    Clear history
+                  </button>
+                  <button
+                    onClick={fetchScores}
+                    disabled={loadingScores}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 disabled:opacity-40"
+                  >
+                    <span className={`text-sm leading-none ${loadingScores ? "animate-spin inline-block" : ""}`}>↻</span>
+                    {loadingScores ? "Loading…" : "Refresh"}
+                  </button>
+                </div>
               </div>
 
               {fixtures.length === 0 && !loadingScores && (
@@ -276,7 +278,7 @@ export default function LiveChatPage() {
               {/* Chat header */}
               <div className="px-5 py-4 border-b border-border flex items-center gap-3">
                 <img
-                  src="/logo.jpeg"
+                  src="/raven-logo.jpeg"
                   alt="Huginn"
                   className="w-9 h-9 rounded-full object-cover border border-border"
                 />
@@ -286,9 +288,15 @@ export default function LiveChatPage() {
                     Live match intelligence · World Cup 2026
                   </div>
                 </div>
-                <div className="ml-auto flex items-center gap-1.5 text-xs text-emerald-400 font-mono">
+                <div className="ml-auto flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  TxLINE
+                  {/* Clear history — desktop only */}
+                  <button
+                    onClick={clearHistory}
+                    className="hidden lg:block text-xs text-muted-foreground hover:text-foreground transition-colors border border-border rounded-lg px-2.5 py-1 ml-2"
+                  >
+                    Clear history
+                  </button>
                 </div>
               </div>
 
@@ -378,6 +386,28 @@ export default function LiveChatPage() {
               </div>
             </div>
           </div>
+
+          {/* ── Notifications callout ─────────────────────────────────────── */}
+          <div className="mt-6 bg-card border border-border rounded-2xl px-6 py-5 flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex items-start gap-3 flex-1">
+              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="#00e676" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="#00e676" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold mb-0.5">Stay notified even when this tab is closed</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Enable alerts and Huginn will push goals, red cards, and odds shifts directly to your device, no need to keep this page open.
+                </p>
+              </div>
+            </div>
+            <div className="shrink-0">
+              <EnableNotificationsButton />
+            </div>
+          </div>
+
         </div>
       </section>
 

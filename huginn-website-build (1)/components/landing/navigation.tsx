@@ -27,7 +27,7 @@ export function Navigation() {
           {/* ── Logo pill ─────────────────────────────────────── */}
           <Link href="/" className="pill-logo" aria-label="Huginn home">
             <img
-              src="/logo.jpeg"
+              src="/raven-logo.jpeg"
               alt="Huginn logo"
               className="w-7 h-7 rounded-full object-cover border border-white/10"
             />
