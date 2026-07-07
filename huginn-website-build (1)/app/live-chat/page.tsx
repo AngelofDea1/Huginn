@@ -289,11 +289,10 @@ export default function LiveChatPage() {
                   </div>
                 </div>
                 <div className="ml-auto flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   {/* Clear history — desktop only */}
                   <button
                     onClick={clearHistory}
-                    className="hidden lg:block text-xs text-muted-foreground hover:text-foreground transition-colors border border-border rounded-lg px-2.5 py-1 ml-2"
+                    className="hidden lg:block text-xs text-muted-foreground hover:text-foreground transition-colors border border-border rounded-lg px-2.5 py-1"
                   >
                     Clear history
                   </button>
