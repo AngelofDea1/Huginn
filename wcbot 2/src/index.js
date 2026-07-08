@@ -31,6 +31,8 @@ const serveNextPage = (page) => (_, res) =>
 app.get('/features', serveNextPage('features'));
 app.get('/commands', serveNextPage('commands'));
 app.get('/live-chat', serveNextPage('live-chat'));
+// Match replay demo
+app.get('/demo', (_, res) => res.sendFile(join(__dirname, '..', 'public', 'demo.html')));
 // Root fallback
 app.get('/', (_, res) => res.sendFile(join(frontendDir, 'index.html')));
 

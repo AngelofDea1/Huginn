@@ -1,510 +1,642 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Demo — Huginn Live</title>
-<meta name="description" content="Live Huginn demo — try commands, track World Cup matches, and see the AI assistant respond in real time."/>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Tourney:wght@600;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"/>
-<link rel="manifest" href="/manifest.json" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Huginn" />
-<link rel="apple-touch-icon" href="/img/icon-192.png" />
-<link rel="stylesheet" href="/css/shared.css"/>
-<link rel="stylesheet" href="/css/pill-nav.css"/>
-<style>
-/* ── Demo layout ─────────────────────────────────────────────────────────── */
-.demo-section {
-  padding: 120px 0 80px;
-  min-height: 100vh;
-}
-.demo-header {
-  margin-bottom: 40px;
-}
-.demo-header .eyebrow {
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--green);
-  margin-bottom: 12px;
-}
-.demo-title {
-  font-size: clamp(1.8rem, 3vw, 2.6rem);
-  margin-bottom: 10px;
-}
-.demo-desc { color: var(--muted); font-size: 0.95rem; max-width: 580px; }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Huginn Match Replay — Argentina vs Egypt</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* ── App container ────────────────────────────────────────────────────────── */
-.app-container {
-  display: grid;
-  grid-template-columns: 300px 1fr;
-  gap: 20px;
-  align-items: start;
-}
-@media (max-width: 800px) {
-  .app-container { grid-template-columns: 1fr; gap: 16px; }
-  /* Scoreboard must NOT be sticky on mobile — it overlays the chat when stacked */
-  .scoreboard { position: static !important; top: auto !important; max-height: 240px; margin-bottom: 0; }
-  .match-list { max-height: 150px; }
-  /* Chat fills remaining vertical space on mobile */
-  .chat-wrapper { height: 480px; }
-}
+    :root {
+      --bg: #08080f;
+      --card: #111118;
+      --border: rgba(255,255,255,0.07);
+      --fg: #f0f0f8;
+      --muted: #6060a0;
+      --primary: #00e676;
+      --primary-fg: #000;
+      --wa-bg: #0a1a10;
+      --wa-bubble: #1f2c1f;
+      --wa-self: #075e54;
+      --huginn-bubble: #1a1a28;
+    }
 
-/* ── Scoreboard ──────────────────────────────────────────────────────────── */
-.scoreboard {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  overflow: hidden;
-  position: sticky;
-  top: 88px;
-}
-.scoreboard-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.scoreboard-header h2 {
-  font-family: 'Tourney', sans-serif;
-  font-size: 0.9rem;
-  font-weight: 700;
-}
-.match-list {
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-height: 400px;
-  overflow-y: auto;
-}
-.match-list::-webkit-scrollbar { width: 3px; }
-.match-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
-.match-item {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 11px 13px;
-  cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
-}
-.match-item:hover {
-  border-color: rgba(0,230,118,0.4);
-  background: rgba(0,230,118,0.05);
-}
-.match-teams { font-size: 0.82rem; font-weight: 600; margin-bottom: 4px; }
-.match-meta { display: flex; gap: 6px; align-items: center; font-size: 0.72rem; }
-.badge-live {
-  background: rgba(255,75,75,0.15);
-  border: 1px solid rgba(255,75,75,0.3);
-  color: #ff4b4b;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-weight: 700;
-  font-size: 0.62rem;
-}
-.badge-soon {
-  background: rgba(0,230,118,0.1);
-  border: 1px solid rgba(0,230,118,0.25);
-  color: var(--green);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-weight: 700;
-  font-size: 0.62rem;
-}
-.match-time { color: var(--muted); }
-.scoreboard-empty {
-  text-align: center;
-  padding: 28px 16px;
-  color: var(--muted);
-  font-size: 0.82rem;
-}
-.refresh-btn {
-  display: block;
-  width: calc(100% - 20px);
-  margin: 0 10px 10px;
-  padding: 9px;
-  background: rgba(0,230,118,0.07);
-  border: 1px solid rgba(0,230,118,0.2);
-  color: var(--green);
-  border-radius: 10px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.78rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.refresh-btn:hover { background: rgba(0,230,118,0.15); }
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: -apple-system, 'Inter', 'Segoe UI', sans-serif;
+      min-height: 100vh;
+    }
 
-/* ── Chat console ─────────────────────────────────────────────────────────── */
-.chat-wrapper {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  display: flex;
-  flex-direction: column;
-  height: 640px;
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-  overflow: hidden;
-}
-.chat-header {
-  padding: 18px 22px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
-}
-.chat-info h3 { font-family: 'Tourney', sans-serif; font-size: 0.95rem; font-weight: 700; }
-.chat-info p  { font-size: 0.76rem; color: var(--muted); }
+    /* ── Header ── */
+    .header {
+      border-bottom: 1px solid var(--border);
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .logo { font-size: 20px; font-weight: 700; color: var(--primary); letter-spacing: -0.5px; }
+    .match-badge {
+      font-size: 11px;
+      font-weight: 700;
+      font-family: monospace;
+      letter-spacing: 1px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    .score-display {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      font-family: monospace;
+    }
+    .score-display span { color: var(--primary); }
 
-.chat-messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.chat-messages::-webkit-scrollbar { width: 4px; }
-.chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.09); border-radius: 4px; }
+    /* ── Controls ── */
+    .controls {
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.02);
+    }
+    .btn {
+      height: 38px;
+      padding: 0 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-primary { background: var(--primary); color: var(--primary-fg); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .speed-label { font-size: 12px; color: var(--muted); }
+    .speed-select {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--fg);
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .progress-wrap { flex: 1; min-width: 100px; }
+    .progress-bar {
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 2px;
+      transition: width 0.3s ease;
+      width: 0%;
+    }
+    .event-label { font-size: 11px; font-family: monospace; color: var(--primary); min-width: 60px; }
 
-.msg { display: flex; gap: 10px; animation: msgIn 0.25s ease both; }
-.msg.user { flex-direction: row-reverse; }
-@keyframes msgIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+    /* ── Split layout ── */
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      height: calc(100vh - 140px);
+    }
+    @media (max-width: 768px) {
+      .split { grid-template-columns: 1fr; height: auto; }
+    }
 
-.msg-bubble {
-  max-width: 75%;
-  padding: 12px 16px;
-  border-radius: 14px;
-  font-size: 0.88rem;
-  line-height: 1.55;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-.msg.bot  .msg-bubble {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-bottom-left-radius: 3px;
-  color: var(--white);
-}
-.msg.user .msg-bubble {
-  background: var(--wa);
-  color: #000;
-  border-bottom-right-radius: 3px;
-  font-weight: 500;
-}
+    /* ── Panel ── */
+    .panel {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .panel:last-child { border-right: none; }
 
-.msg-avatar {
-  width: 32px; height: 32px;
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.65rem; font-weight: 700;
-  flex-shrink: 0;
-  align-self: flex-end;
-}
-.msg.bot  .msg-avatar { background: var(--card); border: 1px solid var(--border); color: var(--muted); }
-.msg.user .msg-avatar { background: rgba(255,255,255,0.08); border: 1px solid var(--border); color: var(--muted); }
+    .panel-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,0.015);
+      flex-shrink: 0;
+    }
+    .panel-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+    .panel-icon.wa { background: #25d366; }
+    .panel-icon.chat { background: rgba(0,230,118,0.12); font-size: 14px; }
+    .panel-title { font-size: 13px; font-weight: 600; }
+    .panel-sub { font-size: 11px; color: var(--muted); }
 
-.typing-indicator { display: none; gap: 10px; align-items: flex-end; padding: 0 20px 4px; }
-.typing-indicator.active { display: flex; }
-.typing-dots {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  border-bottom-left-radius: 3px;
-  padding: 12px 16px;
-  display: flex;
-  gap: 4px;
-}
-.typing-dots span {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: var(--muted);
-  animation: dot-bounce 1.2s ease-in-out infinite;
-}
-.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
-.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
-@keyframes dot-bounce {
-  0%,80%,100% { transform: translateY(0); opacity: 0.4; }
-  40%          { transform: translateY(-5px); opacity: 1; }
-}
+    /* ── Messages area ── */
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      scroll-behavior: smooth;
+    }
+    .messages::-webkit-scrollbar { width: 4px; }
+    .messages::-webkit-scrollbar-track { background: transparent; }
+    .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-.quick-cmds {
-  padding: 0 16px 10px;
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  flex-shrink: 0;
-}
-.quick-btn {
-  background: rgba(0,230,118,0.07);
-  border: 1px solid rgba(0,230,118,0.2);
-  color: var(--green);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.73rem;
-  font-weight: 700;
-  padding: 5px 11px;
-  border-radius: 100px;
-  cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
-}
-.quick-btn:hover { background: rgba(0,230,118,0.17); transform: translateY(-1px); }
+    /* ── WhatsApp message ── */
+    .wa-msg {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      animation: fadeSlideUp 0.3s ease both;
+    }
+    .wa-bubble {
+      max-width: 88%;
+      background: var(--wa-bubble);
+      border-radius: 0 10px 10px 10px;
+      padding: 10px 12px;
+      font-size: 13px;
+      line-height: 1.55;
+      white-space: pre-line;
+      color: #e8f5e9;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+    .wa-sender {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 3px;
+    }
+    .wa-time {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 4px;
+      padding-left: 2px;
+    }
 
-.chat-input-area {
-  padding: 14px 16px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  gap: 10px;
-  flex-shrink: 0;
-}
-#chat-input {
-  flex: 1;
-  background: var(--card);
-  border: 1px solid var(--border);
-  color: var(--white);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.9rem;
-  padding: 12px 16px;
-  border-radius: 10px;
-  outline: none;
-  transition: border-color 0.2s;
-}
-#chat-input:focus { border-color: rgba(0,230,118,0.4); }
-#chat-input::placeholder { color: var(--muted); }
-#send-btn {
-  width: 44px; height: 44px;
-  border-radius: 10px;
-  background: var(--wa);
-  border: none;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.1rem; color: #000;
-  transition: transform 0.2s;
-  flex-shrink: 0;
-  box-shadow: 0 4px 14px rgba(37,211,102,0.25);
-}
-#send-btn:hover { transform: scale(1.06); }
-</style>
+    /* ── Chat message ── */
+    .chat-msg {
+      display: flex;
+      flex-direction: column;
+      animation: fadeSlideUp 0.3s ease both;
+    }
+    .chat-msg.huginn { align-items: flex-start; }
+    .chat-msg.user { align-items: flex-end; }
+    .chat-bubble {
+      max-width: 88%;
+      padding: 10px 14px;
+      border-radius: 16px;
+      font-size: 13px;
+      line-height: 1.55;
+      white-space: pre-line;
+    }
+    .chat-msg.huginn .chat-bubble {
+      background: var(--huginn-bubble);
+      border: 1px solid var(--border);
+      color: var(--fg);
+      border-radius: 4px 16px 16px 16px;
+    }
+    .chat-msg.user .chat-bubble {
+      background: var(--primary);
+      color: #000;
+      border-radius: 16px 4px 16px 16px;
+    }
+    .chat-time {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 4px;
+      padding: 0 4px;
+    }
+
+    /* ── Event divider ── */
+    .event-divider {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 4px 0;
+      animation: fadeSlideUp 0.3s ease both;
+    }
+    .event-divider::before, .event-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+    .event-divider span {
+      font-size: 10px;
+      font-family: monospace;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+
+    /* ── Typing indicator ── */
+    .typing {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      padding: 10px 14px;
+      background: var(--huginn-bubble);
+      border: 1px solid var(--border);
+      border-radius: 4px 16px 16px 16px;
+      width: fit-content;
+    }
+    .typing-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+      animation: typingBounce 1.2s ease-in-out infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes typingBounce {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-5px); opacity: 1; }
+    }
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Done banner ── */
+    .done-banner {
+      display: none;
+      text-align: center;
+      padding: 14px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--primary);
+      border-top: 1px solid var(--border);
+      background: rgba(0,230,118,0.04);
+      flex-shrink: 0;
+    }
+  </style>
 </head>
 <body>
 
-<section class="demo-section">
-  <div class="container">
-
-    <div class="demo-header" style="text-align: center; display: flex; flex-direction: column; align-items: center; margin-bottom: 48px;">
-      <h1 class="display demo-title">Live Chat in Browser</h1>
-      <p class="demo-desc" style="text-align: center; margin: 0 auto; max-width: 580px;">Type any command below to test the Huginn assistant live in your browser.</p>
-    </div>
-
-    <div class="app-container">
-
-      <!-- Live Scores -->
-      <div class="scoreboard">
-        <div class="scoreboard-header">
-          <h2>Live Scores</h2>
-        </div>
-        <div class="match-list" id="match-list">
-          <div class="scoreboard-empty">Loading...</div>
-        </div>
-        <button class="refresh-btn" onclick="loadMatches()">↻ Update scores</button>
-      </div>
-
-      <!-- Chat console -->
-        <div class="chat-wrapper">
-        <div class="chat-header">
-          <div class="chat-avatar" style="background-image: url('/img/logo.jpeg'); background-size: cover; background-position: center; font-size: 0; width: 40px; height: 40px; border-radius: 50%;">HG</div>
-          <div class="chat-info">
-            <h3>Huginn Assistant</h3>
-            <p>Live match intelligence · World Cup 2026</p>
-          </div>
-        </div>
-
-        <div class="chat-messages" id="chat-messages"></div>
-
-        <div class="typing-indicator" id="typing">
-          <div class="msg-avatar" style="background-image: url('/img/logo.jpeg'); background-size: cover; background-position: center; border: 1px solid var(--border); font-size: 0; width: 36px; height: 36px; border-radius: 50%;">HG</div>
-          <div class="typing-dots">
-            <span></span><span></span><span></span>
-          </div>
-        </div>
-
-
-
-        <div class="chat-input-area">
-          <input type="text" id="chat-input" placeholder="Type a command (e.g. /live, /follow Brazil, /vibe hype)..." autocomplete="off"/>
-          <button id="send-btn" onclick="sendMessage()">→</button>
-        </div>
-      </div>
-
+<div class="header">
+  <div class="header-left">
+    <div class="logo">⚽ Huginn</div>
+    <div>
+      <div style="font-size:14px;font-weight:600;">Match Replay</div>
+      <div class="match-badge">Group C · World Cup 2026 · 7 Jul 2026 · MetLife Stadium</div>
     </div>
   </div>
-</section>
+  <div>
+    <div class="score-display">Argentina <span>3</span> – <span>1</span> Egypt</div>
+    <div style="font-size:11px;color:var(--muted);text-align:right;margin-top:2px;">Full Time</div>
+  </div>
+</div>
 
-<!-- FOOTER -->
-<footer>
-  <div class="container">
-    <div class="footer-inner">
-      <a href="/" class="footer-logo">Huginn</a>
-      <p class="footer-note">World Cup 2026 · Built on TxLINE</p>
-      <div class="footer-links">
-        <a href="https://txline.txodds.com/documentation/worldcup" target="_blank">TxLINE</a>
-        <a href="/commands.html">Commands</a>
-        <a href="/features.html">Features</a>
+<div class="controls">
+  <button class="btn btn-primary" id="playBtn" onclick="startReplay()">▶ Play Match</button>
+  <button class="btn btn-ghost" id="resetBtn" onclick="resetReplay()">↺ Reset</button>
+  <div class="speed-label">Speed</div>
+  <select class="speed-select" id="speedSelect">
+    <option value="0.5">0.5×</option>
+    <option value="1" selected>1×</option>
+    <option value="2">2×</option>
+    <option value="4">4×</option>
+    <option value="8">8×</option>
+  </select>
+  <div class="progress-wrap">
+    <div class="event-label" id="eventLabel">—</div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  </div>
+</div>
+
+<div class="split">
+  <!-- WhatsApp Panel -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-icon wa">💬</div>
+      <div>
+        <div class="panel-title">WhatsApp Group Chat</div>
+        <div class="panel-sub">World Cup 2026 🏆 · 47 members</div>
       </div>
     </div>
+    <div class="messages" id="waMsgs"></div>
+    <div class="done-banner" id="waDone">⚽ Full time. Argentina 3–1 Egypt.</div>
   </div>
-</footer>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-<script src="/js/pill-nav.js"></script>
+  <!-- Live Chat Panel -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-icon chat">🦅</div>
+      <div>
+        <div class="panel-title">Huginn Live Chat</div>
+        <div class="panel-sub">huginn-w7d9.onrender.com/live-chat</div>
+      </div>
+    </div>
+    <div class="messages" id="chatMsgs"></div>
+    <div class="done-banner" id="chatDone">⚽ Full time. Argentina 3–1 Egypt.</div>
+  </div>
+</div>
+
 <script>
-  initPillNav({
-    activeHref: '/demo.html',
-    baseColor: '#0d0d1a',
-    pillColor: 'rgba(255,255,255,0.06)',
-    pillTextColor: '#f0f0f8',
-    hoveredPillTextColor: '#ffffff',
+// ── Match timeline ──────────────────────────────────────────────────────────────
+// Each event: { delay (ms at 1x), minute, label, wa, chat }
+// "user" type is what the user typed. "huginn" is what Huginn sent. "divider" is a separator.
+
+const BASE = 1200; // ms between events at 1x speed
+
+const events = [
+  {
+    delay: 0,
+    label: "User joins",
+    chat: [{ from: "user", text: "/follow Argentina" }]
+  },
+  {
+    delay: BASE,
+    label: "Follow confirmed",
+    wa: [{ text: "✅ Following!\n\n🏟️ Argentina vs Egypt\n⏰ Kickoff: 20:00 · MetLife Stadium\n\nI'll send you goal alerts, red cards, half-time report, and full-time wrap-up automatically here in this chat." }],
+    chat: [{ from: "huginn", text: "✅ Following!\n\n🏟️ *Argentina vs Egypt*\n⏰ Kickoff: 20:00 · MetLife Stadium\n\nI'll send you goal alerts, red cards, half-time report, and full-time wrap-up automatically here in this chat." }]
+  },
+  {
+    delay: BASE * 2,
+    label: "T-30 Bulletin",
+    divider: "30 MINS TO KICKOFF",
+    wa: [{ text: "⚽ MATCH DAY BULLETIN — 30 MINS TO KICKOFF\n\nArgentina vs Egypt\n🏟️ MetLife Stadium, East Rutherford\n⏰ Kickoff: 20:00 local\n\nODDS\nArgentina Win: 1.35\nDraw: 4.80\nEgypt Win: 8.50\n\nMessi leads Argentina into what could be his final World Cup group stage game. Egypt arrive with Salah hungry. The defending champions are heavy favourites — but this tournament has already shown nothing is guaranteed.\n\nLet's go. 🦅" }],
+    chat: [{ from: "huginn", text: "⚽ *MATCH DAY BULLETIN — 30 MINS TO KICKOFF*\n\n*Argentina vs Egypt*\n🏟️ MetLife Stadium, East Rutherford\n⏰ Kickoff: 20:00 local\n\n*ODDS*\nArgentina Win: 1.35\nDraw: 4.80\nEgypt Win: 8.50\n\nMessi leads Argentina into what could be his final World Cup group stage game. Egypt arrive with Salah hungry. The defending champions are heavy favourites — but this tournament has already shown nothing is guaranteed.\n\nLet's go. 🦅" }]
+  },
+  {
+    delay: BASE * 2.5,
+    label: "Kickoff",
+    divider: "KICKOFF — 20:00",
+  },
+  {
+    delay: BASE * 2,
+    label: "18' GOAL Messi",
+    divider: "18'",
+    wa: [{ text: "⚽ GOAL — ARGENTINA\nLIONEL MESSI | 18'\nArgentina 1–0 Egypt\n\nA PENALTY. Messi steps up like he's done it a thousand times and slots it into the bottom right. The keeper went the wrong way. Ice cold.\n\nOdds: Argentina 1.12 · Draw 7.20 · Egypt 22.00\nThe market has basically called this one." }],
+    chat: [{ from: "huginn", text: "⚽ *GOAL — ARGENTINA*\n*LIONEL MESSI | 18'*\nArgentina 1–0 Egypt\n\nA PENALTY. Messi steps up like he's done it a thousand times and slots it into the bottom right. The keeper went the wrong way. Ice cold.\n\nOdds: Argentina 1.12 · Draw 7.20 · Egypt 22.00\nThe market has basically called this one." }]
+  },
+  {
+    delay: BASE * 1.5,
+    label: "23' Yellow card",
+    divider: "23'",
+    wa: [{ text: "🟨 YELLOW CARD\nIbrahim Said | Egypt | 23'\nArgentina 1–0 Egypt\n\nCynical foul on Messi as he drove at the Egyptian defence. Said lucky not to see red there. Egypt starting to fray." }],
+    chat: [{ from: "huginn", text: "🟨 *YELLOW CARD*\nIbrahim Said | Egypt | 23'\nArgentina 1–0 Egypt\n\nCynical foul on Messi as he drove at the Egyptian defence. Said lucky not to see red there. Egypt starting to fray." }]
+  },
+  {
+    delay: BASE * 2,
+    label: "37' Odds shift",
+    divider: "37'",
+    wa: [{ text: "⚡ ODDS SHIFT\nArgentina vs Egypt · 37'\n\nArgentina odds compressed from 1.12 to 1.09 — a 2.7% swing. Egypt are barely getting out of their own half. Market already pricing this as a formality." }],
+    chat: [{ from: "huginn", text: "⚡ *ODDS SHIFT*\nArgentina vs Egypt · 37'\n\nArgentina odds compressed from 1.12 to 1.09 — a 2.7% swing. Egypt are barely getting out of their own half. Market already pricing this as a formality." }]
+  },
+  {
+    delay: BASE * 2,
+    label: "45+3' GOAL Álvarez",
+    divider: "45+3'",
+    wa: [{ text: "⚽ GOAL — ARGENTINA\nJULIÁN ÁLVAREZ | 45+3'\nArgentina 2–0 Egypt\n\nRIGHT on the stroke of half time! Álvarez latches onto a De Paul through ball and chips the keeper with ridiculous composure. Argentina going in two up.\n\nOdds: Argentina 1.08 · Draw 9.50 · Egypt 35.00\nEffectively game over in the market's eyes." }],
+    chat: [{ from: "huginn", text: "⚽ *GOAL — ARGENTINA*\n*JULIÁN ÁLVAREZ | 45+3'*\nArgentina 2–0 Egypt\n\nRIGHT on the stroke of half time! Álvarez latches onto a De Paul through ball and chips the keeper with ridiculous composure. Argentina going in two up.\n\nOdds: Argentina 1.08 · Draw 9.50 · Egypt 35.00\nEffectively game over in the market's eyes." }]
+  },
+  {
+    delay: BASE * 1.5,
+    label: "Half Time",
+    divider: "HALF TIME",
+    wa: [{ text: "📊 HALF TIME — Argentina 2–0 Egypt\n\n45 minutes in and Argentina are dominant. Messi with a penalty, Álvarez with that audacious chip just before the whistle. Egypt have barely had a sniff.\n\nPossession: Argentina 68% · Egypt 32%\nShots: 7–2 · On target: 5–1\n\nOdds at the break:\nArgentina 1.08 · Draw 9.50 · Egypt 35.00\n\nThe second half will tell us if Egypt can find something or if Argentina are just going through the motions." }],
+    chat: [{ from: "huginn", text: "📊 *HALF TIME — Argentina 2–0 Egypt*\n\n45 minutes in and Argentina are dominant. Messi with a penalty, Álvarez with that audacious chip just before the whistle. Egypt have barely had a sniff.\n\nPossession: Argentina 68% · Egypt 32%\nShots: 7–2 · On target: 5–1\n\nOdds at the break:\nArgentina 1.08 · Draw 9.50 · Egypt 35.00\n\nThe second half will tell us if Egypt can find something or if Argentina are just going through the motions." }]
+  },
+  {
+    delay: BASE * 1.5,
+    label: "54' Yellow Enzo",
+    divider: "54'",
+    wa: [{ text: "🟨 YELLOW CARD\nEnzo Fernández | Argentina | 54'\nArgentina 2–0 Egypt\n\nFernández caught in a late challenge. Caution. No danger to the result here." }],
+    chat: [{ from: "huginn", text: "🟨 *YELLOW CARD*\nEnzo Fernández | Argentina | 54'\nArgentina 2–0 Egypt\n\nFernández caught in a late challenge. Caution. No danger to the result here." }]
+  },
+  {
+    delay: BASE * 2,
+    label: "61' GOAL Salah",
+    divider: "61'",
+    wa: [{ text: "⚽ GOAL — EGYPT\nMOHAMED SALAH | 61'\nArgentina 2–1 Egypt\n\nSALAH. He makes it look effortless. Right foot, top corner. Egypt are ALIVE.\n\nOdds: Argentina 1.28 · Draw 5.20 · Egypt 6.50\nThe market is nervous. That goal just changed this completely." }],
+    chat: [{ from: "huginn", text: "⚽ *GOAL — EGYPT*\n*MOHAMED SALAH | 61'*\nArgentina 2–1 Egypt\n\nSALAH. He makes it look effortless. Right foot, top corner. Egypt are ALIVE.\n\nOdds: Argentina 1.28 · Draw 5.20 · Egypt 6.50\nThe market is nervous. That goal just changed this completely." }]
+  },
+  {
+    delay: BASE * 1.5,
+    label: "67' Odds shift",
+    divider: "67'",
+    wa: [{ text: "⚡ ODDS SHIFT\nArgentina vs Egypt · 67'\n\nArgentina drifted from 1.28 to 1.38 in under two minutes — a 7.8% swing. Egypt are pushing hard and the market is taking notice. Something has changed." }],
+    chat: [{ from: "huginn", text: "⚡ *ODDS SHIFT*\nArgentina vs Egypt · 67'\n\nArgentina drifted from 1.28 to 1.38 in under two minutes — a 7.8% swing. Egypt are pushing hard and the market is taking notice. Something has changed." }]
+  },
+  {
+    delay: BASE * 2,
+    label: "79' GOAL Lautaro",
+    divider: "79'",
+    wa: [{ text: "⚽ GOAL — ARGENTINA\nLAUTARO MARTÍNEZ | 79'\nArgentina 3–1 Egypt\n\nGAME OVER. Lautaro with a fierce header from a corner. Perfectly timed, perfectly placed. Argentina restore the two-goal cushion with 11 minutes left.\n\nOdds: Argentina 1.06 · Draw 14.00 · Egypt 28.00\nMarket has made its decision." }],
+    chat: [{ from: "huginn", text: "⚽ *GOAL — ARGENTINA*\n*LAUTARO MARTÍNEZ | 79'*\nArgentina 3–1 Egypt\n\nGAME OVER. Lautaro with a fierce header from a corner. Perfectly timed, perfectly placed. Argentina restore the two-goal cushion with 11 minutes left.\n\nOdds: Argentina 1.06 · Draw 14.00 · Egypt 28.00\nMarket has made its decision." }]
+  },
+  {
+    delay: BASE * 1.2,
+    label: "82' Red card",
+    divider: "82'",
+    wa: [{ text: "🟥 RED CARD\nOmar Marmoush | Egypt | 82'\nArgentina 3–1 Egypt\n\nStraight red. Reckless challenge on Enzo Fernández with 8 minutes left. Egypt down to 10 men. This match is done.\n\nOdds barely move — already priced in. Argentina 1.05." }],
+    chat: [{ from: "huginn", text: "🟥 *RED CARD*\nOmar Marmoush | Egypt | 82'\nArgentina 3–1 Egypt\n\nStraight red. Reckless challenge on Enzo Fernández with 8 minutes left. Egypt down to 10 men. This match is done.\n\nOdds barely move — already priced in. Argentina 1.05." }]
+  },
+  {
+    delay: BASE * 2,
+    label: "Full Time",
+    divider: "FULL TIME",
+    wa: [{ text: "✅ FULL TIME — Argentina 3–1 Egypt\n\nARGENTINA WIN. A statement performance from the world champions.\n\nGoals:\nMessi (pen) 18' · Álvarez 45+3' · Martínez 79'\nSalah 61' (Egypt)\n\nPossession: 69% · Shots: 12–4 · On target: 7–2\n\nArgentina advance with maximum points from their opening game. Egypt can still qualify but the goal difference hit will sting. Salah did everything he could.\n\nThe raven watched. ⚽🦅" }],
+    chat: [{ from: "huginn", text: "✅ *FULL TIME — Argentina 3–1 Egypt*\n\nARGENTINA WIN. A statement performance from the world champions.\n\nGoals:\nMessi (pen) 18' · Álvarez 45+3' · Martínez 79'\nSalah 61' (Egypt)\n\nPossession: 69% · Shots: 12–4 · On target: 7–2\n\nArgentina advance with maximum points from their opening game. Egypt can still qualify but the goal difference hit will sting. Salah did everything he could.\n\nThe raven watched. ⚽🦅" }]
+  }
+];
+
+// ── Replay engine ────────────────────────────────────────────────────────────────
+let playing = false;
+let aborted = false;
+let timeouts = [];
+
+function getSpeed() {
+  return parseFloat(document.getElementById('speedSelect').value);
+}
+
+function sleep(ms) {
+  return new Promise(resolve => {
+    const t = setTimeout(resolve, ms / getSpeed());
+    timeouts.push(t);
   });
+}
 
-  // Register service worker
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js')
-        .then(reg => console.log('Service Worker registered:', reg.scope))
-        .catch(err => console.log('Service Worker failed:', err));
-    });
-  }
+function scrollBottom(el) {
+  el.scrollTop = el.scrollHeight;
+}
 
-  /* ── Chat logic ───────────────────────────────────────────────────────── */
-  const SESSION_ID = 'web_' + Math.random().toString(36).slice(2, 10) + '_' + Date.now();
-  const $msgs   = document.getElementById('chat-messages');
-  const $input  = document.getElementById('chat-input');
-  const $typing = document.getElementById('typing');
+function addDivider(container, text) {
+  const d = document.createElement('div');
+  d.className = 'event-divider';
+  d.innerHTML = `<span>${text}</span>`;
+  container.appendChild(d);
+  scrollBottom(container);
+}
 
-  function scrollBottom() { $msgs.scrollTop = $msgs.scrollHeight; }
+function addWaMessage(text) {
+  const wa = document.getElementById('waMsgs');
+  const now = new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  const wrap = document.createElement('div');
+  wrap.className = 'wa-msg';
+  wrap.innerHTML = `
+    <div class="wa-sender">Huginn 🦅</div>
+    <div class="wa-bubble">${escHtml(text)}</div>
+    <div class="wa-time">${now}</div>
+  `;
+  wa.appendChild(wrap);
+  scrollBottom(wa);
+}
 
-  function escapeHtml(s) {
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
+function addChatMessage(from, text) {
+  const chat = document.getElementById('chatMsgs');
+  const now = new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  const wrap = document.createElement('div');
+  wrap.className = `chat-msg ${from}`;
+  wrap.innerHTML = `
+    <div class="chat-bubble">${escHtml(text)}</div>
+    <div class="chat-time">${now}</div>
+  `;
+  chat.appendChild(wrap);
+  scrollBottom(chat);
+}
 
-  function addMessage(text, role = 'bot') {
-    const wrapper = document.createElement('div');
-    wrapper.className = `msg ${role}`;
+function showTyping() {
+  const chat = document.getElementById('chatMsgs');
+  const el = document.createElement('div');
+  el.className = 'chat-msg huginn';
+  el.id = 'typingIndicator';
+  el.innerHTML = `<div class="typing"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
+  chat.appendChild(el);
+  scrollBottom(chat);
+  return el;
+}
 
-    const avatar = document.createElement('div');
-    avatar.className = 'msg-avatar';
-    if (role === 'bot') {
-      avatar.style.backgroundImage = "url('/img/logo.jpeg')";
-      avatar.style.backgroundSize = "cover";
-      avatar.style.backgroundPosition = "center";
-      avatar.style.fontSize = "0";
-    } else {
-      avatar.textContent = 'You';
+function removeTyping() {
+  const el = document.getElementById('typingIndicator');
+  if (el) el.remove();
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+          .replace(/\*([^*]+)\*/g,'<strong>$1</strong>');
+}
+
+async function startReplay() {
+  if (playing) return;
+  playing = true;
+  aborted = false;
+  document.getElementById('playBtn').disabled = true;
+
+  const total = events.length;
+
+  for (let i = 0; i < events.length; i++) {
+    if (aborted) break;
+
+    const ev = events[i];
+    await sleep(ev.delay || 0);
+    if (aborted) break;
+
+    // Update progress
+    const pct = Math.round((i / (total - 1)) * 100);
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('eventLabel').textContent = ev.label || '';
+
+    // Divider
+    if (ev.divider) {
+      addDivider(document.getElementById('waMsgs'), ev.divider);
+      addDivider(document.getElementById('chatMsgs'), ev.divider);
+      await sleep(200);
+      if (aborted) break;
     }
 
-    const bubble = document.createElement('div');
-    bubble.className = 'msg-bubble';
-    bubble.innerHTML = escapeHtml(text)
-      .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
-      .replace(/\n/g, '<br/>');
-
-    wrapper.appendChild(avatar);
-    wrapper.appendChild(bubble);
-    $msgs.appendChild(wrapper);
-    scrollBottom();
-    return wrapper;
-  }
-
-  async function sendMessage() {
-    const text = $input.value.trim();
-    if (!text) return;
-
-    addMessage(text, 'user');
-    $input.value = '';
-    $typing.classList.add('active');
-    scrollBottom();
-
-    try {
-      const res  = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: SESSION_ID, message: text }),
-      });
-      const data = await res.json();
-      $typing.classList.remove('active');
-      addMessage(data.reply || 'No response received.', 'bot');
-    } catch {
-      $typing.classList.remove('active');
-      addMessage('Server offline. Check that the Node.js server is running.', 'bot');
-    }
-  }
-
-  function sendQuick(cmd) {
-    $input.value = cmd;
-    sendMessage();
-  }
-
-  $input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); sendMessage(); }
-  });
-
-  /* ── Scoreboard logic ─────────────────────────────────────────────────── */
-  async function loadMatches() {
-    const list = document.getElementById('match-list');
-    list.innerHTML = '<div class="scoreboard-empty">Loading...</div>';
-    try {
-      const res  = await fetch('/api/live');
-      const data = await res.json();
-      const all  = [
-        ...(data.live     || []).map(m => ({ ...m, _status: 'LIVE' })),
-        ...(data.upcoming || []).map(m => ({ ...m, _status: 'SOON' })),
-      ];
-
-      if (!all.length) {
-        list.innerHTML = '<div class="scoreboard-empty">No active matches at this time.</div>';
-        return;
+    // Chat user message (no typing indicator for user)
+    if (ev.chat) {
+      for (const m of ev.chat) {
+        if (m.from === 'user') {
+          addChatMessage('user', m.text);
+          await sleep(400);
+        }
       }
+    }
 
-      list.innerHTML = '';
-      all.slice(0, 8).forEach(m => {
-        const div  = document.createElement('div');
-        div.className = 'match-item';
-        const kick = m.kickoff_time
-          ? new Date(m.kickoff_time).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' })
-          : '';
-        const badge = m._status === 'LIVE'
-          ? '<span class="badge-live">● LIVE</span>'
-          : '<span class="badge-soon">SOON</span>';
+    // Show typing in chat while bot "processes"
+    const hasHuginnChat = ev.chat && ev.chat.some(m => m.from === 'huginn');
+    const hasWa = ev.wa && ev.wa.length > 0;
 
-        div.innerHTML = `
-          <div class="match-teams">${m.home_team?.name || '?'} vs ${m.away_team?.name || '?'}</div>
-          <div class="match-meta">${badge}<span class="match-time">${kick}</span></div>
-        `;
-        div.onclick = () => sendQuick(`/follow ${m.home_team?.name}`);
-        list.appendChild(div);
-      });
-    } catch {
-      list.innerHTML = '<div class="scoreboard-empty">Failed to load — check server</div>';
+    if (hasHuginnChat || hasWa) {
+      const typing = showTyping();
+      await sleep(900);
+      if (aborted) { typing.remove(); break; }
+      removeTyping();
+    }
+
+    // WhatsApp messages
+    if (ev.wa) {
+      for (const m of ev.wa) {
+        addWaMessage(m.text);
+        await sleep(200);
+      }
+    }
+
+    // Chat Huginn messages
+    if (ev.chat) {
+      for (const m of ev.chat) {
+        if (m.from === 'huginn') {
+          addChatMessage('huginn', m.text);
+          await sleep(150);
+        }
+      }
     }
   }
 
-  /* ── Init ─────────────────────────────────────────────────────────────── */
-  addMessage(
-    `*Huginn* · connected to TxLINE.\n\n/follow [team] · start tracking a match\n/live · see what is on right now\n/vibe [mode] · hype, tactical, funny, balanced\n/status · check your active follows\n/help · full list\n\nClick a match on the left, or type below.`,
-    'bot'
-  );
-  loadMatches();
-  setInterval(loadMatches, 60000);
+  if (!aborted) {
+    document.getElementById('progressFill').style.width = '100%';
+    document.getElementById('eventLabel').textContent = 'Full Time';
+    document.getElementById('waDone').style.display = 'block';
+    document.getElementById('chatDone').style.display = 'block';
+  }
+
+  playing = false;
+  document.getElementById('playBtn').disabled = false;
+}
+
+function resetReplay() {
+  aborted = true;
+  playing = false;
+  timeouts.forEach(clearTimeout);
+  timeouts = [];
+  document.getElementById('waMsgs').innerHTML = '';
+  document.getElementById('chatMsgs').innerHTML = '';
+  document.getElementById('waDone').style.display = 'none';
+  document.getElementById('chatDone').style.display = 'none';
+  document.getElementById('progressFill').style.width = '0%';
+  document.getElementById('eventLabel').textContent = '—';
+  document.getElementById('playBtn').disabled = false;
+  setTimeout(() => { aborted = false; }, 100);
+}
 </script>
 </body>
 </html>
