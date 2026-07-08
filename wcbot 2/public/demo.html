@@ -308,7 +308,7 @@
     </div>
   </div>
   <div>
-    <div class="score-display">Argentina <span>3</span> – <span>1</span> Egypt</div>
+    <div class="score-display">Argentina <span>3</span> – <span>2</span> Egypt</div>
     <div style="font-size:11px;color:var(--muted);text-align:right;margin-top:2px;">Full Time</div>
   </div>
 </div>
@@ -341,7 +341,7 @@
       </div>
     </div>
     <div class="messages" id="waMsgs"></div>
-    <div class="done-banner" id="waDone">⚽ Full time. Argentina 3–1 Egypt.</div>
+    <div class="done-banner" id="waDone">⚽ Full time. Argentina 3–2 Egypt.</div>
   </div>
 
   <!-- Live Chat Panel -->
@@ -354,7 +354,7 @@
       </div>
     </div>
     <div class="messages" id="chatMsgs"></div>
-    <div class="done-banner" id="chatDone">⚽ Full time. Argentina 3–1 Egypt.</div>
+    <div class="done-banner" id="chatDone">⚽ Full time. Argentina 3–2 Egypt.</div>
   </div>
 </div>
 
@@ -449,8 +449,8 @@ const events = [
     delay: BASE * 2,
     label: "79' GOAL Lautaro",
     divider: "79'",
-    wa: [{ text: "⚽ GOAL — ARGENTINA\nLAUTARO MARTÍNEZ | 79'\nArgentina 3–1 Egypt\n\nGAME OVER. Lautaro with a fierce header from a corner. Perfectly timed, perfectly placed. Argentina restore the two-goal cushion with 11 minutes left.\n\nOdds: Argentina 1.06 · Draw 14.00 · Egypt 28.00\nMarket has made its decision." }],
-    chat: [{ from: "huginn", text: "⚽ *GOAL — ARGENTINA*\n*LAUTARO MARTÍNEZ | 79'*\nArgentina 3–1 Egypt\n\nGAME OVER. Lautaro with a fierce header from a corner. Perfectly timed, perfectly placed. Argentina restore the two-goal cushion with 11 minutes left.\n\nOdds: Argentina 1.06 · Draw 14.00 · Egypt 28.00\nMarket has made its decision." }]
+    wa: [{ text: "⚽ GOAL — ARGENTINA\nLAUTARO MARTÍNEZ | 79'\nArgentina 3–1 Egypt\n\nLautaro with a fierce header from a corner. Perfectly timed, perfectly placed. Argentina restore the two-goal cushion with 11 minutes left.\n\nOdds: Argentina 1.06 · Draw 14.00 · Egypt 28.00" }],
+    chat: [{ from: "huginn", text: "⚽ *GOAL — ARGENTINA*\n*LAUTARO MARTÍNEZ | 79'*\nArgentina 3–1 Egypt\n\nLautaro with a fierce header from a corner. Perfectly timed, perfectly placed. Argentina restore the two-goal cushion with 11 minutes left.\n\nOdds: Argentina 1.06 · Draw 14.00 · Egypt 28.00" }]
   },
   {
     delay: BASE * 1.2,
@@ -461,10 +461,17 @@ const events = [
   },
   {
     delay: BASE * 2,
+    label: "89' GOAL Trezeguet",
+    divider: "89'",
+    wa: [{ text: "⚽ GOAL — EGYPT\nMAHMOUD TREZEGUET | 89'\nArgentina 3–2 Egypt\n\nINCREDIBLE! 10-man Egypt strike back in the dying minutes. Trezeguet fires a low shot into the bottom corner. Squeaky bum time for Argentina!\n\nOdds: Argentina 1.04 · Draw 19.00 · Egypt 45.00" }],
+    chat: [{ from: "huginn", text: "⚽ *GOAL — EGYPT*\n*MAHMOUD TREZEGUET | 89'*\nArgentina 3–2 Egypt\n\nINCREDIBLE! 10-man Egypt strike back in the dying minutes. Trezeguet fires a low shot into the bottom corner. Squeaky bum time for Argentina!\n\nOdds: Argentina 1.04 · Draw 19.00 · Egypt 45.00" }]
+  },
+  {
+    delay: BASE * 2,
     label: "Full Time",
     divider: "FULL TIME",
-    wa: [{ text: "✅ FULL TIME — Argentina 3–1 Egypt\n\nARGENTINA WIN. A statement performance from the world champions.\n\nGoals:\nMessi (pen) 18' · Álvarez 45+3' · Martínez 79'\nSalah 61' (Egypt)\n\nPossession: 69% · Shots: 12–4 · On target: 7–2\n\nArgentina advance with maximum points from their opening game. Egypt can still qualify but the goal difference hit will sting. Salah did everything he could.\n\nThe raven watched. ⚽🦅" }],
-    chat: [{ from: "huginn", text: "✅ *FULL TIME — Argentina 3–1 Egypt*\n\nARGENTINA WIN. A statement performance from the world champions.\n\nGoals:\nMessi (pen) 18' · Álvarez 45+3' · Martínez 79'\nSalah 61' (Egypt)\n\nPossession: 69% · Shots: 12–4 · On target: 7–2\n\nArgentina advance with maximum points from their opening game. Egypt can still qualify but the goal difference hit will sting. Salah did everything he could.\n\nThe raven watched. ⚽🦅" }]
+    wa: [{ text: "✅ FULL TIME — Argentina 3–2 Egypt\n\nARGENTINA WIN. An absolute thriller at MetLife Stadium!\n\nGoals:\nMessi (pen) 18' · Álvarez 45+3' · Martínez 79'\nSalah 61' · Trezeguet 89' (Egypt)\n\nPossession: 64% · Shots: 14–6 · On target: 8–4\n\nArgentina grab all 3 points but Egypt fought like lions till the very last second. What a match!\n\nThe raven watched. ⚽🦅" }],
+    chat: [{ from: "huginn", text: "✅ *FULL TIME — Argentina 3–2 Egypt*\n\nARGENTINA WIN. An absolute thriller at MetLife Stadium!\n\nGoals:\nMessi (pen) 18' · Álvarez 45+3' · Martínez 79'\nSalah 61' · Trezeguet 89' (Egypt)\n\nPossession: 64% · Shots: 14–6 · On target: 8–4\n\nArgentina grab all 3 points but Egypt fought like lions till the very last second. What a match!\n\nThe raven watched. ⚽🦅" }]
   }
 ];
 
