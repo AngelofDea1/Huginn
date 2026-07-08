@@ -85,6 +85,9 @@ async function routeWebCommand(sessionId, text) {
   if (lower === '/schedule' || lower === 'schedule' || lower === '/fixtures' || lower === 'fixtures') {
     return handleSchedule();
   }
+  if (lower.startsWith('/stats') || lower.startsWith('stats')) {
+    return handleStats(sessionId, text);
+  }
 
   // Fallback: Fallback to AI Football Oracle with live matches context
   try {
@@ -235,6 +238,27 @@ async function handleSchedule() {
   }
 }
 
+async function handleStats(sessionId, text) {
+  const player = text.replace(/\/?(stats)\s*/i, '').trim();
+  if (!player) {
+    return (
+      `👤 Who do you want stats on?\n\n` +
+      `Example: */stats Vinicius Jr*\n\n` +
+      `I can give you career background, playing style, and injury history for any player at the tournament.`
+    );
+  }
+
+  const group = getGroup(sessionId);
+  const vibe = group?.vibe || 'hype';
+
+  try {
+    const { generatePlayerStats } = await import('../services/ai.js');
+    return await generatePlayerStats(player, vibe);
+  } catch (err) {
+    return `⚽ Couldn't pull stats for ${player} right now.\n\nTry again in a moment!`;
+  }
+}
+
 function helpText() {
   return (
     `🏆 *Huginn Companion Bot* — World Cup 2026\n\n` +
@@ -244,6 +268,7 @@ function helpText() {
     `*/vibe <mode>* — Change commentary style\n` +
     `*/live* — See live matches\n` +
     `*/schedule* — See upcoming tournament fixtures\n` +
+    `*/stats <player>* — Career profile, playing style, injury history\n` +
     `*/status* — See what you're following\n\n` +
     `*What I send automatically:*\n` +
     `🔔 Pre-match bulletin (30 mins before)\n` +

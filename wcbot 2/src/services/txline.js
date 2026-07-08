@@ -310,7 +310,7 @@ export async function getFixtureSchedule() {
  */
 export async function getMatchDetail(matchId) {
   try {
-    const { data } = await client.get(`/scores/updates/${matchId}`);
+    const { data } = await client.get(`/scores/snapshot/${matchId}`);
     const updates = data || [];
     return normaliseScores(updates);
   } catch (err) {

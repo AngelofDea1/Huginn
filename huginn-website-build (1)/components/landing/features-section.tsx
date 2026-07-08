@@ -187,7 +187,7 @@ const features = [
   },
   {
     title: "Player Stats",
-    description: "Comprehensive player performance metrics, injury reports, and form analysis.",
+    description: "Type /stats [player] for a full career profile — goals, assists, playing style, strengths, and injury history for any player at the tournament.",
     animationKey: "playerStats" as const,
   },
   {

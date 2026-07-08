@@ -75,7 +75,7 @@ async function processMatch(match) {
 
   //  Detect new events — only alert if someone is following 
   if (groups.length) {
-    const newEvents = events.filter(e => e.id !== state.lastEventId && isAfterLastSeen(e, state));
+    const newEvents = events.filter(e => isAfterLastSeen(e, state));
 
     for (const event of newEvents) {
       await handleEvent(event, { match, homeTeam, awayTeam, detail, oddsStr, groups });
@@ -184,7 +184,7 @@ async function processMatch(match) {
     }
   }
 
-  updateMatchState(matchId, { odds, status: detail?.status });
+  updateMatchState(matchId, { odds, ...(detail ? { status: detail.status } : {}) });
 }
 
 async function handleEvent(event, { match, homeTeam, awayTeam, detail, oddsStr, groups }) {

@@ -137,6 +137,53 @@ no all-caps. short paragraphs with line breaks.
   return callGroq(prompt, vibe);
 }
 
+// ── Player stats & profile ────────────────────────────────────────────────────
+export async function generatePlayerStats(playerName, vibe = 'hype') {
+  const prompt = `
+Give a pundit-style player profile for: ${playerName}
+
+Cover these points naturally in your answer (do not use headers or bullet lists — write in flowing sentences with blank lines between thoughts):
+1. Position and club
+2. Key career stats (goals, assists, trophies — use real numbers from your training data)
+3. Playing style and strengths
+4. Known injury history (if any notable ones)
+5. What to expect from them at World Cup 2026
+
+Be honest that your stats are from training data and may not include goals scored in the current tournament.
+Keep it to 5–8 sentences max. Sound like a pundit, not a Wikipedia article.
+`.trim();
+
+  const systemPrompt = (VIBES[vibe] || VIBES.hype) +
+    `\n\nYou are a knowledgeable football pundit with deep knowledge of players' careers, stats, styles, and history up to early 2024. For current tournament stats you acknowledge you are working from pre-tournament knowledge.`;
+
+  try {
+    const { data } = await axios.post(
+      'https://api.groq.com/openai/v1/chat/completions',
+      {
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt },
+        ],
+        max_tokens: 400,
+        temperature: 0.7,
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${GROQ_API_KEY}`,
+        },
+      }
+    );
+
+    const raw = data.choices?.[0]?.message?.content?.trim() || `I don't have enough on ${playerName} right now. Try asking me about them directly.`;
+    return ensureSpacing(raw);
+  } catch (err) {
+    console.error('Groq Player Stats Error:', err.response?.data || err.message);
+    return `Couldn't pull stats right now.\n\nTry again in a moment.`;
+  }
+}
+
 // ── General football Q&A ──────────────────────────────────────────────────────
 export async function answerFootballQuestion(question, matchContext = '', vibe = 'hype') {
   const prompt = `

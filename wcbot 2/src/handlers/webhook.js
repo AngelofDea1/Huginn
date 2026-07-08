@@ -5,7 +5,7 @@ import {
   followMatch, unfollowMatch, initMatchState, isFirstContact, markContacted
 } from '../utils/store.js';
 import { log } from '../utils/logger.js';
-import { VIBES } from '../services/ai.js';
+import { VIBES, generatePlayerStats } from '../services/ai.js';
 
 //  Webhook verification (Meta calls this once when you set up the webhook)
 export function verifyWebhook(req, res) {
@@ -60,6 +60,7 @@ export async function routeCommand(from, text) {
   if (lower === '/status')                                      return handleStatus(from);
   if (lower === '/schedule' || lower === '/fixtures' || lower === '/upcoming') return handleSchedule(from);
   if (lower === '/live')                                        return handleLive(from);
+  if (lower.startsWith('/stats'))                              return handleStats(from, text);
   if (lower.startsWith('/sweepstake')) {
     const { handleSweepstakeCommand } = await import('./sweepstake.js');
     return handleSweepstakeCommand(from, text);
@@ -114,6 +115,7 @@ async function handleHelp(from) {
     `/unfollow <team> · stop alerts\n` +
     `/live · matches in progress now\n` +
     `/schedule · upcoming fixtures\n` +
+    `/stats <player> · career stats, style, injury history\n` +
     `/status · what you're currently tracking\n` +
     `/vibe <mode> · hype, tactical, funny, balanced\n\n` +
     `You can also ask me anything directly.`
@@ -240,6 +242,27 @@ async function handleLive(from) {
   } catch (err) {
     log.error('handleLive error:', err.message);
     return sendMessage(from, `Couldn't fetch live matches right now.\n\nTry again in a moment.`);
+  }
+}
+
+// /stats <player>
+async function handleStats(from, text) {
+  const player = text.replace(/\/stats\s*/i, '').trim();
+  if (!player) {
+    return sendMessage(from,
+      `Who do you want stats on?\n\nExample: /stats Vinicius Jr\n\nI can give you career background, playing style, and injury history for any World Cup player.`
+    );
+  }
+
+  const group = getGroup(from);
+  const vibe = group?.vibe || 'hype';
+
+  try {
+    const reply = await generatePlayerStats(player, vibe);
+    return sendMessage(from, reply);
+  } catch (err) {
+    log.error('handleStats error:', err.message);
+    return sendMessage(from, `Couldn't pull stats for ${player} right now.\n\nTry again in a moment.`);
   }
 }
 

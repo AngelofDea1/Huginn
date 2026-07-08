@@ -11,6 +11,7 @@ const manualCommands = [
   { cmd: "/unfollow [team]", desc: "Stop receiving alerts for a specific team. Your other followed teams are not affected." },
   { cmd: "/live", desc: "Show all currently active World Cup matches, live scores, and current odds in a clean summary." },
   { cmd: "/schedule", desc: "View the full list of upcoming fixtures and kickoff times for the remainder of the tournament." },
+  { cmd: "/stats [player]", desc: "Get a full player profile — career goals, assists, playing style, known injury history, and what to expect from them at this World Cup. Powered by AI." },
   { cmd: "/status", desc: "See which teams you are currently following and which commentary vibe is active." },
   { cmd: "/vibe hype", desc: "Switch to high-energy, dramatic commentary. Every goal feels like a final." },
   { cmd: "/vibe tactical", desc: "Switch to calm, data-driven analysis. xG, formations, and odds movements explained clearly." },

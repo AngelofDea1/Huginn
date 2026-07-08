@@ -51,7 +51,7 @@ const welcomeMessage: Message = {
   ts: Date.now(),
 };
 
-const quickCmds = ["/live", "/schedule", "/follow Brazil", "/vibe hype", "/help"];
+const quickCmds = ["/live", "/schedule", "/follow Brazil", "/stats Mbappé", "/vibe hype", "/help"];
 
 export default function LiveChatPage() {
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
@@ -60,13 +60,13 @@ export default function LiveChatPage() {
   const [selectedFixture, setSelectedFixture] = useState<Fixture | null>(null);
   const [loadingScores, setLoadingScores] = useState(false);
   const [sending, setSending] = useState(false);
-  const [sessionId, setSessionId] = useState("");
+  const sessionIdRef = useRef("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // ── Load session + history from localStorage on mount ───────────────────────
   useEffect(() => {
     const { sessionId: sid, messages: stored } = loadStored();
-    setSessionId(sid);
+    sessionIdRef.current = sid;
     if (stored.length > 0) {
       setMessages(stored);
     } else {
@@ -153,7 +153,7 @@ export default function LiveChatPage() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, message: trimmed }),
+        body: JSON.stringify({ sessionId: sessionIdRef.current, message: trimmed }),
       });
       const data = await res.json();
       const botMsg: Message = {
@@ -172,7 +172,7 @@ export default function LiveChatPage() {
     } finally {
       setSending(false);
     }
-  }, [sessionId, sending]);
+  }, [sending]);
 
   const handleFixtureClick = useCallback((f: Fixture) => {
     setSelectedFixture(f);
