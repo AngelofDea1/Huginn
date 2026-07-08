@@ -273,9 +273,8 @@ export default function LiveChatPage() {
                           {/* Status row */}
                           <div className="flex items-center justify-between mb-2">
                             {f.status === "LIVE" ? (
-                              <span className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-emerald-400">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                                {f.minute ? `${f.minute}'` : "LIVE"}
+                              <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded-sm">
+                                {f.minute ? `● ${f.minute}'` : "● LIVE"}
                               </span>
                             ) : (
                               <span className="text-[10px] font-mono text-muted-foreground bg-secondary px-1.5 py-0.5 rounded-sm">
