@@ -9,8 +9,10 @@ type Fixture = {
   id: string;
   home: string;
   away: string;
-  time: string;
-  status: string;
+  kickoffIso: string; // raw ISO string for date grouping
+  time: string;       // formatted local time for display
+  status: "LIVE" | "SOON" | "FT";
+  minute: number | null;
   homeScore: number | null;
   awayScore: number | null;
 };
@@ -18,7 +20,7 @@ type Fixture = {
 type Message = {
   from: "user" | "huginn";
   text: string;
-  ts: number; // epoch ms — used to show local time
+  ts: number;
 };
 
 const STORAGE_KEY = "huginn_chat_v1";
@@ -29,6 +31,16 @@ function formatTime(ts: number) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function formatDate(iso: string) {
+  const d = new Date(iso);
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  if (d.toDateString() === today.toDateString()) return "Today";
+  if (d.toDateString() === tomorrow.toDateString()) return "Tomorrow";
+  return d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
 }
 
 function loadStored(): { sessionId: string; messages: Message[] } {
@@ -47,7 +59,7 @@ function loadStored(): { sessionId: string; messages: Message[] } {
 
 const welcomeMessage: Message = {
   from: "huginn",
-  text: "Connected to TxLINE.\n\n/follow [team] · live alerts for any match\n/live · what's on right now\n/schedule · upcoming fixtures\n/vibe [mode] · hype, tactical, funny, balanced\n/help · full command list\n\nClick a match on the left to follow it, or type below.",
+  text: "Connected to TxLINE.\n\n/follow [team] · live alerts for any match\n/live · what's on right now\n/schedule · upcoming fixtures\n/stats [player] · career profile & injury history\n/vibe [mode] · hype, tactical, funny, balanced\n/help · full command list\n\nClick a match on the left to follow it, or type below.",
   ts: Date.now(),
 };
 
@@ -80,7 +92,6 @@ export default function LiveChatPage() {
   useEffect(() => {
     if (messages.length === 0) return;
     try {
-      // Keep last 100 messages max
       const toStore = messages.slice(-100);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
     } catch {}
@@ -90,12 +101,6 @@ export default function LiveChatPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  // ── Auto-refresh live scores every 30 seconds ────────────────────────────────
-  useEffect(() => {
-    const interval = setInterval(fetchScores, 30_000);
-    return () => clearInterval(interval);
-  }, []);
 
   // ── Fetch live + upcoming scores ─────────────────────────────────────────────
   const fetchScores = useCallback(async () => {
@@ -108,15 +113,17 @@ export default function LiveChatPage() {
         id: String(m.id),
         home: m.home_team?.name || "Home",
         away: m.away_team?.name || "Away",
+        kickoffIso: m.kickoff_time || new Date().toISOString(),
         time: m.minute ? `${m.minute}'` : "LIVE",
-        status: "LIVE",
+        status: "LIVE" as const,
+        minute: m.minute ?? null,
         homeScore: m.home_score ?? 0,
         awayScore: m.away_score ?? 0,
       }));
 
       const upcomingList: Fixture[] = (data.upcoming || []).map((m: any) => {
-        // Show time in the user's local timezone
-        const t = new Date(m.kickoff_time).toLocaleTimeString(undefined, {
+        const kickoff = new Date(m.kickoff_time);
+        const t = kickoff.toLocaleTimeString(undefined, {
           hour: "2-digit",
           minute: "2-digit",
         });
@@ -124,8 +131,10 @@ export default function LiveChatPage() {
           id: String(m.id),
           home: m.home_team?.name || "Home",
           away: m.away_team?.name || "Away",
+          kickoffIso: m.kickoff_time,
           time: t,
-          status: "SOON",
+          status: "SOON" as const,
+          minute: null,
           homeScore: null,
           awayScore: null,
         };
@@ -138,6 +147,13 @@ export default function LiveChatPage() {
       setLoadingScores(false);
     }
   }, []);
+
+  // ── Auto-refresh: 10s when any match is live, 30s otherwise ─────────────────
+  useEffect(() => {
+    const hasLive = fixtures.some((f) => f.status === "LIVE");
+    const interval = setInterval(fetchScores, hasLive ? 10_000 : 30_000);
+    return () => clearInterval(interval);
+  }, [fixtures, fetchScores]);
 
   // ── Send a message ───────────────────────────────────────────────────────────
   const send = useCallback(async (text: string) => {
@@ -163,12 +179,10 @@ export default function LiveChatPage() {
       };
       setMessages((prev) => [...prev, botMsg]);
     } catch {
-      const errorMsg: Message = {
-        from: "huginn",
-        text: "Connection error. Make sure the server is reachable.",
-        ts: Date.now(),
-      };
-      setMessages((prev) => [...prev, errorMsg]);
+      setMessages((prev) => [
+        ...prev,
+        { from: "huginn", text: "Connection error. Make sure the server is reachable.", ts: Date.now() },
+      ]);
     } finally {
       setSending(false);
     }
@@ -184,6 +198,17 @@ export default function LiveChatPage() {
     setMessages([welcomeMessage]);
   };
 
+  // ── Group fixtures by date ───────────────────────────────────────────────────
+  const grouped = fixtures.reduce<Record<string, Fixture[]>>((acc, f) => {
+    const label = f.status === "LIVE" ? "🔴 Live Now" : formatDate(f.kickoffIso);
+    if (!acc[label]) acc[label] = [];
+    acc[label].push(f);
+    return acc;
+  }, {});
+
+  // Ensure Live Now appears first
+  const groupOrder = Object.keys(grouped).sort((a) => (a === "🔴 Live Now" ? -1 : 1));
+
   return (
     <main className="relative min-h-screen overflow-x-hidden">
       <Navigation />
@@ -197,75 +222,84 @@ export default function LiveChatPage() {
               Live Chat
             </h1>
             <p className="text-base text-muted-foreground leading-relaxed max-w-xl mx-auto">
-              Chat with Huginn directly. Click a fixture to follow it, alerts fire automatically into this window.
+              Chat with Huginn directly. Click a fixture to follow it — alerts fire automatically into this window.
             </p>
           </div>
 
           <div className="grid lg:grid-cols-[260px_1fr] gap-5 items-start">
 
-            {/* ── Left: Live Scores ─────────────────────────────────────── */}
+            {/* ── Left: Fixtures ─────────────────────────────────────────── */}
             <div className="bg-card border border-border rounded-2xl overflow-hidden">
               <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
                 <span className="text-sm font-semibold">Fixtures</span>
-                <div className="flex items-center gap-3">
-                  {/* Clear history — mobile only */}
-                  <button
-                    onClick={clearHistory}
-                    className="lg:hidden text-xs text-muted-foreground hover:text-foreground transition-colors border border-border rounded-lg px-2.5 py-1"
-                  >
-                    Clear history
-                  </button>
-                  <button
-                    onClick={fetchScores}
-                    disabled={loadingScores}
-                    className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 disabled:opacity-40"
-                  >
-                    <span className={`text-sm leading-none ${loadingScores ? "animate-spin inline-block" : ""}`}>↻</span>
-                    {loadingScores ? "Loading…" : "Refresh"}
-                  </button>
-                </div>
+                <button
+                  onClick={fetchScores}
+                  disabled={loadingScores}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 disabled:opacity-40"
+                >
+                  <span className={`text-sm leading-none ${loadingScores ? "animate-spin inline-block" : ""}`}>↻</span>
+                  {loadingScores ? "Loading…" : "Refresh"}
+                </button>
               </div>
 
               {fixtures.length === 0 && !loadingScores && (
-                <div className="px-5 py-8 text-center text-xs text-muted-foreground">
-                  No matches right now
+                <div className="px-5 py-8 text-center">
+                  <p className="text-xs text-muted-foreground mb-1">No matches right now</p>
+                  <p className="text-[10px] text-muted-foreground/60">Updates every 30 seconds</p>
                 </div>
               )}
 
-              <div className="divide-y divide-border">
-                {fixtures.map((f) => (
-                  <button
-                    key={f.id}
-                    onClick={() => handleFixtureClick(f)}
-                    className={`w-full text-left px-5 py-4 hover:bg-secondary/50 transition-colors ${
-                      selectedFixture?.id === f.id
-                        ? "bg-primary/5 border-l-2 border-l-primary"
-                        : ""
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span
-                        className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-sm ${
-                          f.status === "LIVE"
-                            ? "text-emerald-400 bg-emerald-400/10"
-                            : "text-muted-foreground bg-secondary"
-                        }`}
-                      >
-                        {f.status === "LIVE" ? "● LIVE" : f.time}
+              <div className="overflow-y-auto" style={{ maxHeight: 480 }}>
+                {groupOrder.map((label) => (
+                  <div key={label}>
+                    {/* Date group header */}
+                    <div className="px-5 py-2 bg-secondary/30 border-b border-border">
+                      <span className="text-[10px] font-mono font-bold tracking-widest text-muted-foreground uppercase">
+                        {label}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between text-sm gap-2">
-                      <span className="font-medium truncate">{f.home}</span>
-                      {f.homeScore !== null ? (
-                        <span className="font-mono font-bold text-sm shrink-0">
-                          {f.homeScore}–{f.awayScore}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground text-xs shrink-0">vs</span>
-                      )}
-                      <span className="font-medium truncate text-right">{f.away}</span>
+
+                    <div className="divide-y divide-border">
+                      {grouped[label].map((f) => (
+                        <button
+                          key={f.id}
+                          onClick={() => handleFixtureClick(f)}
+                          className={`w-full text-left px-5 py-4 hover:bg-secondary/50 transition-colors ${
+                            selectedFixture?.id === f.id
+                              ? "bg-primary/5 border-l-2 border-l-primary"
+                              : ""
+                          }`}
+                        >
+                          {/* Status row */}
+                          <div className="flex items-center justify-between mb-2">
+                            {f.status === "LIVE" ? (
+                              <span className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-emerald-400">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                                {f.minute ? `${f.minute}'` : "LIVE"}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-mono text-muted-foreground bg-secondary px-1.5 py-0.5 rounded-sm">
+                                {f.time}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Teams + score */}
+                          <div className="flex items-center justify-between text-sm gap-2">
+                            <span className="font-medium truncate flex-1 text-left">{f.home}</span>
+                            {f.homeScore !== null ? (
+                              <span className="font-mono font-bold text-base shrink-0 tabular-nums">
+                                {f.homeScore}–{f.awayScore}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground text-xs shrink-0">vs</span>
+                            )}
+                            <span className="font-medium truncate flex-1 text-right">{f.away}</span>
+                          </div>
+                        </button>
+                      ))}
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             </div>
@@ -275,7 +309,7 @@ export default function LiveChatPage() {
               className="bg-card border border-border rounded-2xl overflow-hidden flex flex-col"
               style={{ minHeight: 560 }}
             >
-              {/* Chat header */}
+              {/* Chat header — Huginn identity + clear history */}
               <div className="px-5 py-4 border-b border-border flex items-center gap-3">
                 <img
                   src="/raven-logo.jpeg"
@@ -288,11 +322,10 @@ export default function LiveChatPage() {
                     Live match intelligence · World Cup 2026
                   </div>
                 </div>
-                <div className="ml-auto flex items-center gap-1.5">
-                  {/* Clear history — desktop only */}
+                <div className="ml-auto">
                   <button
                     onClick={clearHistory}
-                    className="hidden lg:block text-xs text-muted-foreground hover:text-foreground transition-colors border border-border rounded-lg px-2.5 py-1"
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors border border-border rounded-lg px-2.5 py-1"
                   >
                     Clear history
                   </button>
@@ -372,13 +405,7 @@ export default function LiveChatPage() {
                   className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shrink-0 hover:opacity-90 transition-opacity disabled:opacity-30"
                   aria-label="Send"
                 >
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    className="text-primary-foreground"
-                  >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-primary-foreground">
                     <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
                   </svg>
                 </button>
@@ -386,23 +413,25 @@ export default function LiveChatPage() {
             </div>
           </div>
 
-          {/* ── Notifications callout ─────────────────────────────────────── */}
-          <div className="mt-6 bg-card border border-border rounded-2xl px-6 py-5 flex flex-col sm:flex-row sm:items-center gap-4">
-            <div className="flex items-start gap-3 flex-1">
+          {/* ── Push Notifications callout ─────────────────────────────────── */}
+          {/* Stack vertically on mobile so the Enable button is always visible */}
+          <div className="mt-6 bg-card border border-border rounded-2xl px-6 py-5 flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="flex items-start gap-3 flex-1 min-w-0">
               <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                   <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="#00e676" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="#00e676" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-semibold mb-0.5">Stay notified even when this tab is closed</p>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Enable alerts and Huginn will push goals, red cards, and odds shifts directly to your device, no need to keep this page open.
+                  Enable alerts and Huginn will push goals, red cards, and odds shifts directly to your device — no need to keep this page open.
                 </p>
               </div>
             </div>
-            <div className="shrink-0">
+            {/* Button always on its own row on mobile, inline on sm+ */}
+            <div className="shrink-0 self-start sm:self-center">
               <EnableNotificationsButton />
             </div>
           </div>
