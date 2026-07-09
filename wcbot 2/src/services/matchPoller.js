@@ -136,7 +136,7 @@ async function processMatch(match) {
         awayScore: currentAway,
         events,
         odds: oddsStr,
-        vibe: groups[0]?.vibe,
+        vibe: groups[0]?.style,
       });
       await notifyMatchGroups(groups, msg);
       await sendPushNotification('Half-time', `${homeTeam} ${currentHome}-${currentAway} ${awayTeam}`, '/');
@@ -153,7 +153,7 @@ async function processMatch(match) {
         homeScore: currentHome,
         awayScore: currentAway,
         events,
-        vibe: groups[0]?.vibe,
+        vibe: groups[0]?.style,
       });
       await notifyMatchGroups(groups, msg);
       await sendPushNotification('Full-time', `${homeTeam} ${currentHome}-${currentAway} ${awayTeam}`, '/');
@@ -177,7 +177,7 @@ async function processMatch(match) {
       const msg = await generateOddsShiftAlert({
         homeTeam, awayTeam, minute,
         ...shift,
-        vibe: groups[0]?.vibe,
+        vibe: groups[0]?.style,
       });
       await notifyMatchGroups(groups, msg);
       await sendPushNotification('Odds Shift', `${homeTeam} vs ${awayTeam}: ${shift.field} shifted from ${shift.from} to ${shift.to}`, '/');
@@ -191,7 +191,7 @@ async function handleEvent(event, { match, homeTeam, awayTeam, detail, oddsStr, 
   const matchId = String(match.id);
   const homeScore = detail?.home_score ?? 0;
   const awayScore = detail?.away_score ?? 0;
-  const vibe = groups[0]?.vibe || 'hype';
+  const vibe = groups[0]?.style || 'hype';
 
   log.event(`New event [${match.id}] ${event.type}: ${event.description}`);
 
