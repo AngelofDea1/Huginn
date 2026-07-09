@@ -18,19 +18,22 @@ app.use(express.json());
 
 // ─── Serve Next.js frontend ──────────────────────────────────────────────────
 // The huginn-website (Next.js static export) lives in public/huginn/
-// Next.js trailingSlash=true generates /features/index.html, /demo/index.html etc.
-// so express.static handles SPA routes automatically without a catch-all.
+// redirect:false prevents express.static from 301-redirecting /live-chat → /live-chat/
+// which breaks client-side Next.js navigation and causes garbled content in browsers.
 const frontendDir = join(__dirname, '..', 'public', 'huginn');
-app.use(express.static(frontendDir));
+app.use(express.static(frontendDir, { redirect: false }));
 
-// SPA fallback: for any route not matched by an API or static file,
-// serve the Next.js index.html (handles direct URL navigation)
+// Explicitly serve both /page and /page/ for every Next.js route.
+// This ensures direct URL visits and client-side navigations both work cleanly.
 const serveNextPage = (page) => (_, res) =>
   res.sendFile(join(frontendDir, page, 'index.html'));
 
-app.get('/features', serveNextPage('features'));
-app.get('/commands', serveNextPage('commands'));
-app.get('/live-chat', serveNextPage('live-chat'));
+app.get('/features',    serveNextPage('features'));
+app.get('/features/',   serveNextPage('features'));
+app.get('/commands',    serveNextPage('commands'));
+app.get('/commands/',   serveNextPage('commands'));
+app.get('/live-chat',   serveNextPage('live-chat'));
+app.get('/live-chat/',  serveNextPage('live-chat'));
 // Root fallback
 app.get('/', (_, res) => res.sendFile(join(frontendDir, 'index.html')));
 
