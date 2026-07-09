@@ -39,13 +39,30 @@ export async function handleWebhook(req, res) {
 }
 
 //  Command router
-export async function routeCommand(from, text) {
-  const lower = text.toLowerCase().trim();
+export async function routeCommand(from, text, meta = {}) {
+  const { mentionedJids = [], botJid = null } = meta;
 
-  // Group chat guard: only respond to messages that start with / in group chats
+  // Group chat guard:
+  // In group chats (@g.us), only respond if:
+  //   1. Message starts with /  (explicit command), OR
+  //   2. Huginn's number was @mentioned in the message
   const isGroupChat = from.endsWith('@g.us');
-  if (isGroupChat && !lower.startsWith('/')) return;
+  const botMentioned = botJid && mentionedJids.includes(botJid);
 
+  if (isGroupChat && !text.trim().startsWith('/') && !botMentioned) return;
+
+  // If Huginn was @mentioned, strip the @mention prefix from the text so
+  // command routing still works (e.g. "@2349026755711 /follow Nigeria" → "/follow Nigeria")
+  let cleanText = text;
+  if (botMentioned && botJid) {
+    const botNumber = botJid.replace('@s.whatsapp.net', '');
+    // Remove @PHONENUMBER from anywhere in the string, then trim
+    cleanText = text.replace(new RegExp(`@${botNumber}\\s*`, 'g'), '').trim();
+    // If nothing remains after stripping the mention, send help
+    if (!cleanText) cleanText = '/help';
+  }
+
+  const lower = cleanText.toLowerCase().trim();
   const isNew = isFirstContact(from);
 
   registerGroup(from);
@@ -58,17 +75,17 @@ export async function routeCommand(from, text) {
     if (lower === 'hi' || lower === 'hello' || lower === '/start' || lower === '/help') return;
   }
 
-  if (lower.startsWith('/follow'))                              return handleFollow(from, text);
-  if (lower.startsWith('/unfollow'))                            return handleUnfollow(from, text);
-  if (lower.startsWith('/style'))                               return handleStyle(from, text);
+  if (lower.startsWith('/follow'))                              return handleFollow(from, cleanText);
+  if (lower.startsWith('/unfollow'))                            return handleUnfollow(from, cleanText);
+  if (lower.startsWith('/style'))                               return handleStyle(from, cleanText);
   if (lower === '/help' || lower === '/start' || lower === 'hi' || lower === 'hello') return handleHelp(from);
   if (lower === '/status')                                      return handleStatus(from);
   if (lower === '/schedule' || lower === '/fixtures' || lower === '/upcoming') return handleSchedule(from);
   if (lower === '/live')                                        return handleLive(from);
-  if (lower.startsWith('/stats'))                               return handleStats(from, text);
+  if (lower.startsWith('/stats'))                               return handleStats(from, cleanText);
   if (lower.startsWith('/sweepstake')) {
     const { handleSweepstakeCommand } = await import('./sweepstake.js');
-    return handleSweepstakeCommand(from, text);
+    return handleSweepstakeCommand(from, cleanText);
   }
 
   // Catch-all: AI Football Oracle (only in direct/private chats; group chats are blocked above)
@@ -90,7 +107,7 @@ export async function routeCommand(from, text) {
       }).join('\n');
     }
 
-    const reply = await answerFootballQuestion(text, ctx, style);
+    const reply = await answerFootballQuestion(cleanText, ctx, style);
     return sendMessage(from, reply);
   } catch (err) {
     log.error('AI oracle error:', err.message);

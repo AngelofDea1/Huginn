@@ -129,6 +129,10 @@ async function connectToWhatsApp() {
 
   // Handle incoming messages
   sock.ev.on('messages.upsert', async ({ messages }) => {
+    // Derive the bot's own JID once (used for @mention detection in groups)
+    const botNumber = (process.env.WA_NUMBER || '').replace(/[^0-9]/g, '');
+    const botJid = botNumber ? `${botNumber}@s.whatsapp.net` : null;
+
     for (const msg of messages) {
       try {
         if (msg.key.fromMe) continue;
@@ -142,9 +146,12 @@ async function connectToWhatsApp() {
 
         if (!text) continue;
 
+        // Collect any @mentioned JIDs from the message
+        const mentionedJids = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+
         const from = msg.key.remoteJid;
         log.info(`Incoming message from ${from}: ${text}`);
-        await routeCommand(from, text);
+        await routeCommand(from, text, { mentionedJids, botJid });
       } catch (err) {
         log.error('Error handling message:', err.message);
       }
