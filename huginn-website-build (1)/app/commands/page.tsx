@@ -17,7 +17,9 @@ const manualCommands = [
   { cmd: "/vibe tactical", desc: "Switch to calm, data-driven analysis. xG, formations, and odds movements explained clearly." },
   { cmd: "/vibe funny", desc: "Switch to light-hearted banter mode. Football is entertainment after all." },
   { cmd: "/vibe balanced", desc: "The default. Friendly, informative, and never annoying." },
+  { cmd: "/vibe", desc: "Check the current commentary vibe configuration for your chat." }
 ];
+
 
 const alertCards = [
   {
@@ -139,7 +141,7 @@ export default function CommandsPage() {
             {/* Styled /help card */}
             <div className="bg-gradient-to-r from-primary/5 via-transparent to-transparent border border-primary/20 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-primary/45 transition-all duration-300">
               <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-mono font-bold text-primary">// GETTING HELP</span>
+                <span className="text-xs font-mono font-bold text-primary"> GETTING HELP</span>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   Lost or need a quick refresher? Send this command straight to the chat at any time.
                 </p>
@@ -155,19 +157,20 @@ export default function CommandsPage() {
             <div className="flex items-center justify-between border-b border-border pb-4 mb-8">
               <h2 className="text-lg font-semibold tracking-tight">Commentary Voice</h2>
             </div>
-            
+
             <div className="grid lg:grid-cols-[300px_1fr] gap-8 items-stretch">
               {/* Left Carousel Controller Card (matching drawing) */}
-              <div className="bg-card border border-border rounded-2xl p-6 flex flex-col justify-between items-center text-center min-h-[220px]">
-                <span className="text-[10px] font-mono font-bold tracking-widest text-muted-foreground uppercase mb-4">
+              <div className="bg-card border border-border rounded-2xl p-6 flex flex-col justify-center items-center text-center gap-5">
+                <span className="text-[10px] font-mono font-bold tracking-widest text-muted-foreground uppercase">
                   Voice Command
                 </span>
-                
-                <code className="text-sm text-primary bg-primary/10 border border-primary/20 px-4 py-2 rounded-xl font-mono font-bold tracking-wide my-4 select-all">
+
+                <code className="text-sm text-primary bg-primary/10 border border-primary/20 px-4 py-2 rounded-xl font-mono font-bold tracking-wide select-all">
                   {vibes[vibeIndex].cmd}
                 </code>
 
-                <div className="flex flex-col gap-4 items-center w-full mt-auto">
+                <div className="flex flex-col gap-4 items-center w-full mt-2">
+
                   {/* Left & Right chevron buttons */}
                   <div className="flex items-center gap-6">
                     <button
@@ -196,9 +199,8 @@ export default function CommandsPage() {
                       <button
                         key={idx}
                         onClick={() => setVibeIndex(idx)}
-                        className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                          idx === vibeIndex ? "bg-primary w-4" : "bg-border hover:bg-muted-foreground/40"
-                        }`}
+                        className={`w-2 h-2 rounded-full transition-all duration-300 ${idx === vibeIndex ? "bg-primary w-4" : "bg-border hover:bg-muted-foreground/40"
+                          }`}
                         aria-label={`Go to slide ${idx + 1}`}
                       />
                     ))}
@@ -256,17 +258,18 @@ export default function CommandsPage() {
             <div className="flex gap-4 flex-wrap shrink-0">
               <Link
                 href="/live-chat"
-                className="inline-flex items-center gap-2 border border-white/10 hover:border-white/20 bg-white/[0.03] backdrop-blur-md text-foreground text-sm font-semibold px-6 py-3.5 rounded-xl hover:bg-white/[0.08] shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] transition-all duration-300"
+                className="inline-flex items-center justify-center h-11 px-6 text-sm font-semibold border border-white/10 hover:border-white/20 bg-white/[0.03] backdrop-blur-md text-foreground transition-all duration-300 hover:bg-white/[0.08] hover:text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] rounded-xl"
               >
                 Live Chat in Browser
               </Link>
               <a
                 href="/api/join"
-                className="inline-flex items-center gap-2 bg-primary hover:bg-primary/95 text-primary-foreground font-bold text-sm px-6 py-3.5 rounded-xl border border-primary/20 shadow-[0_4px_0_#00a852] active:translate-y-[3px] active:shadow-[0_1px_0_#00a852] transition-all"
+                className="inline-flex items-center justify-center bg-primary hover:bg-primary/95 text-primary-foreground px-6 h-11 text-sm font-bold group rounded-xl border border-primary/20 shadow-[0_4px_0_#00a852] active:translate-y-[3px] active:shadow-[0_1px_0_#00a852] transition-all cursor-pointer"
               >
                 Chat on WhatsApp
               </a>
             </div>
+
           </div>
 
         </div>

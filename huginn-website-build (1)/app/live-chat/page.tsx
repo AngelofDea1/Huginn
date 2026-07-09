@@ -414,31 +414,9 @@ export default function LiveChatPage() {
             </div>
           </div>
 
-          {/* ── Push Notifications callout ─────────────────────────────────── */}
-          {/* Stack vertically on mobile so the Enable button is always visible */}
-          <div className="mt-6 bg-card border border-border rounded-2xl px-6 py-5 flex flex-col gap-4 sm:flex-row sm:items-center">
-            <div className="flex items-start gap-3 flex-1 min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="#00e676" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="#00e676" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold mb-0.5">Stay notified even when this tab is closed</p>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Enable alerts and Huginn will push goals, red cards, and odds shifts directly to your device — no need to keep this page open.
-                </p>
-              </div>
-            </div>
-            {/* Button always on its own row on mobile, inline on sm+ */}
-            <div className="shrink-0 self-start sm:self-center">
-              <EnableNotificationsButton />
-            </div>
-          </div>
-
         </div>
       </section>
+
 
       <FooterSection />
     </main>

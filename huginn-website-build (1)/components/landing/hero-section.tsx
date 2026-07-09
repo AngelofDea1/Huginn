@@ -56,7 +56,7 @@ export function HeroSection() {
           <Button 
             size="lg" 
             variant="outline" 
-            className="h-11 px-6 text-sm font-semibold border border-white/10 hover:border-white/20 bg-white/[0.03] backdrop-blur-md text-foreground transition-all duration-300 hover:bg-white/[0.08] shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] rounded-xl"
+            className="h-11 px-6 text-sm font-semibold border border-white/10 hover:border-white/20 bg-white/[0.03] backdrop-blur-md text-foreground transition-all duration-300 hover:bg-white/[0.08] hover:text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] rounded-xl"
             asChild
           >
             <a href="/live-chat">Live Chat</a>
@@ -65,7 +65,7 @@ export function HeroSection() {
           {/* Press/Tactile Button */}
           <Button 
             size="lg" 
-            className="bg-primary hover:bg-primary/95 text-primary-foreground px-6 h-11 text-sm font-bold group rounded-xl border border-primary/20 shadow-[0_4px_0_#00a852] active:translate-y-[3px] active:shadow-[0_1px_0_#00a852] transition-all"
+            className="bg-primary hover:bg-primary/95 text-primary-foreground px-6 h-11 text-sm font-bold group rounded-xl border border-primary/20 shadow-[0_4px_0_#00a852] active:translate-y-[3px] active:shadow-[0_1px_0_#00a852] transition-all cursor-pointer"
             asChild
           >
             <a href="/api/join">
@@ -73,6 +73,7 @@ export function HeroSection() {
               <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-0.5" />
             </a>
           </Button>
+
         </div>
       </div>
     </section>
