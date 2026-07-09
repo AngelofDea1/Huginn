@@ -89,6 +89,18 @@ async function processMatch(match) {
     log.info(`[${matchId}] No followers — skipping alerts`);
   }
 
+  //  Kickoff alert
+  const currentStatus = detail?.status || match.status;
+  if ((currentStatus === 'LIVE' || currentStatus === 'HT') && (state.status === 'pre' || state.status === 'NS')) {
+    log.event(`Kick-off: ${homeTeam} vs ${awayTeam}`);
+    if (groups.length) {
+      const msg = `⚽ *Kick-off!* ${homeTeam} vs ${awayTeam} is underway.\n\nAll goals, cards, and odds updates will be sent here in real time.`;
+      await notifyMatchGroups(groups, msg);
+      await sendPushNotification('Kick-off!', `${homeTeam} vs ${awayTeam} is underway.`, '/');
+    }
+    updateMatchState(matchId, { status: currentStatus });
+  }
+
   //  Detect score change (backup in case events miss) 
   if (currentHome !== state.homeScore || currentAway !== state.awayScore) {
     log.event(`Score change: ${homeTeam} ${currentHome}-${currentAway} ${awayTeam}`);
