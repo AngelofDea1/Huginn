@@ -16,7 +16,7 @@ const steps = [
   {
     number: "02",
     title: "Follow Your Teams",
-    description: "Tell Huginn which teams to track. Get only the alerts that matter — goals, cards, odds, and AI commentary.",
+    description: "Tell Huginn which teams to track. Get only the alerts that matter: goals, cards, odds, and AI commentary.",
     code: `// Set your favourites:
 /follow Brazil Portugal
 
@@ -28,12 +28,13 @@ const steps = [
     title: "Get Live Alerts",
     description: "Every goal, red card, and odds movement hits your group in under a second, with AI insight attached.",
     code: `// Auto-sent to your group:
-⚽ GOAL — Vinicius Jr (23')
+⚽ GOAL: Vinicius Jr (23')
 Brazil 1–0 France
 Odds: Brazil win 1.62 ▼
 
 // Powered by TxLINE · <100ms`,
   },
+
 ];
 
 export function HowItWorksSection() {

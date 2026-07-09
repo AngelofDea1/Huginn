@@ -217,14 +217,15 @@ export default function LiveChatPage() {
         <div className="max-w-7xl mx-auto px-4 lg:px-8">
 
           {/* ── Header ─────────────────────────────────────────────────────── */}
-          <div className="text-center mb-10">
-            <h1 className="text-3xl lg:text-5xl font-semibold tracking-tight mb-3">
+          <div className="flex flex-col items-center text-center mb-10">
+            <h1 className="text-3xl lg:text-5xl font-semibold tracking-tight mb-6">
               Live Chat
             </h1>
-            <p className="text-base text-muted-foreground leading-relaxed max-w-xl mx-auto">
-              Chat with Huginn directly. Click a fixture to follow it — alerts fire automatically into this window.
+            <p className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto mb-8">
+              Chat with Huginn directly. Click a fixture to follow it, alerts fire automatically into this window.
             </p>
           </div>
+
 
           <div className="grid lg:grid-cols-[280px_1fr] gap-4 items-start">
 

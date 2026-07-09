@@ -187,9 +187,10 @@ const features = [
   },
   {
     title: "Player Stats",
-    description: "Type /stats [player] for a full career profile — goals, assists, playing style, strengths, and injury history for any player at the tournament.",
+    description: "Type /stats [player] for a full career profile containing goals, assists, playing style, strengths, and injury history for any player at the tournament.",
     animationKey: "playerStats" as const,
   },
+
   {
     title: "One Command Setup",
     description: "Add Huginn to any WhatsApp group with a single command. No registration needed.",

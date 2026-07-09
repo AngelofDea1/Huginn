@@ -54,9 +54,10 @@ export default function FeaturesPage() {
   return (
     <main className="relative min-h-screen overflow-x-hidden">
       <Navigation />
-      <div className="pt-24">
+      <div className="pt-0">
         {/* Animated ASCII Features Grid */}
         <FeaturesSection />
+
 
         {/* ── SECTION 2: Setup ─────────────────────────────────── */}
         <section className="py-24 bg-secondary/10 border-t border-border">

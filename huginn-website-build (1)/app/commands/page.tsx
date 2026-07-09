@@ -5,13 +5,15 @@ import { Navigation } from "@/components/landing/navigation";
 import { FooterSection } from "@/components/landing/footer-section";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 
 const manualCommands = [
   { cmd: "/follow [team]", desc: "Start receiving live alerts for every match featuring that team. Works in any WhatsApp group or direct chat." },
   { cmd: "/unfollow [team]", desc: "Stop receiving alerts for a specific team. Your other followed teams are not affected." },
   { cmd: "/live", desc: "Show all currently active World Cup matches, live scores, and current odds in a clean summary." },
   { cmd: "/schedule", desc: "View the full list of upcoming fixtures and kickoff times for the remainder of the tournament." },
-  { cmd: "/stats [player]", desc: "Get a full player profile — career goals, assists, playing style, known injury history, and what to expect from them at this World Cup. Powered by AI." },
+  { cmd: "/stats [player]", desc: "Get a full player profile containing career goals, assists, playing style, known injury history, and what to expect from them at this World Cup. Powered by AI." },
+
   { cmd: "/status", desc: "See which teams you are currently following and which commentary vibe is active." },
   { cmd: "/vibe hype", desc: "Switch to high-energy, dramatic commentary. Every goal feels like a final." },
   { cmd: "/vibe tactical", desc: "Switch to calm, data-driven analysis. xG, formations, and odds movements explained clearly." },
@@ -54,7 +56,7 @@ const vibes = [
     cmd: "/vibe hype",
     name: "Hype FC",
     desc: "Every goal treated like a cup final. Loud, dramatic, and relentless. Made for groups where the match is all that exists.",
-    preview: "⚽ GOOOAL!! Vinícius EXPLODES past the keeper!! Brazil are ALIVE!! 2–1 and the crowd goes absolutely mental!! Odds PLUMMETING — Brazil now 1.44 favourites!! This. Is. FOOTBALL!! 🔥🔥🔥",
+    preview: "⚽ GOOOAL!! Vinícius EXPLODES past the keeper!! Brazil are ALIVE!! 2–1 and the crowd goes absolutely mental!! Odds PLUMMETING: Brazil now 1.44 favourites!! This. Is. FOOTBALL!! 🔥🔥🔥",
   },
   {
     id: "tactical",
@@ -74,9 +76,10 @@ const vibes = [
     id: "balanced",
     cmd: "/vibe balanced",
     name: "Match Day",
-    desc: "Factual and easy to read. Covers every event without editorialising. The default mode — works in any group.",
+    desc: "Factual and easy to read. Covers every event without editorialising. The default mode that works in any group.",
     preview: "GOAL · Vinícius Jr (67')\nBrazil 2–1 Germany.\n\nOdds updated: Brazil win 1.44 · Draw 4.10 · Germany 7.20.\n\nBrazil lead for the first time in the match.",
   },
+
 ];
 
 function AlertBubble({ card }: { card: typeof alertCards[0] }) {
@@ -110,12 +113,12 @@ export default function CommandsPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
 
           {/* Centered Header */}
-          <div className="text-center mb-20">
-            <h1 className="text-4xl lg:text-6xl font-semibold tracking-tight mb-4">
+          <div className="flex flex-col items-center text-center mb-10">
+            <h1 className="text-3xl lg:text-5xl font-semibold tracking-tight mb-6">
               Commands &amp; Alerts
             </h1>
-            <p className="text-base text-muted-foreground max-w-xl mx-auto leading-relaxed">
-              Everything you can send to Huginn — and everything it sends back, automatically.
+            <p className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto mb-8">
+              Everything you can send to Huginn, and everything it sends back, automatically.
             </p>
           </div>
 
@@ -152,17 +155,17 @@ export default function CommandsPage() {
             </div>
           </div>
 
-          {/* ── Commentary Voice Vibes (Interactive Carousel Slider) ── */}
+          {/* ── Commentary Vibe Style (Interactive Carousel Slider) ── */}
           <div className="mb-24">
             <div className="flex items-center justify-between border-b border-border pb-4 mb-8">
-              <h2 className="text-lg font-semibold tracking-tight">Commentary Voice</h2>
+              <h2 className="text-lg font-semibold tracking-tight">Commentary Vibe</h2>
             </div>
 
             <div className="grid lg:grid-cols-[300px_1fr] gap-8 items-stretch">
               {/* Left Carousel Controller Card (matching drawing) */}
               <div className="bg-card border border-border rounded-2xl p-6 flex flex-col justify-center items-center text-center gap-5">
                 <span className="text-[10px] font-mono font-bold tracking-widest text-muted-foreground uppercase">
-                  Voice Command
+                  Vibe Command
                 </span>
 
                 <code className="text-sm text-primary bg-primary/10 border border-primary/20 px-4 py-2 rounded-xl font-mono font-bold tracking-wide select-all">
@@ -267,7 +270,9 @@ export default function CommandsPage() {
                 className="inline-flex items-center justify-center bg-primary hover:bg-primary/95 text-primary-foreground px-6 h-11 text-sm font-bold group rounded-xl border border-primary/20 shadow-[0_4px_0_#00a852] active:translate-y-[3px] active:shadow-[0_1px_0_#00a852] transition-all cursor-pointer"
               >
                 Chat on WhatsApp
+                <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-0.5" />
               </a>
+
             </div>
 
           </div>
