@@ -20,11 +20,29 @@ export let activeQr = null;   // set while waiting for scan, null when connected
 let sock = null;              // active Baileys socket
 
 // ─────────────────────────────────────────────────────────────────────────────
-// STEP 1: On every startup, restore auth files from the WA_AUTH_DATA env var
-// (set this var in Render after your first scan using the /api/wa-auth-export endpoint)
+// STEP 1: On every startup, restore auth files from either:
+//   a) Render Secret File at /etc/secrets/wa_auth  (preferred — avoids ARG_MAX)
+//   b) WA_AUTH_DATA environment variable           (fallback)
 // ─────────────────────────────────────────────────────────────────────────────
 function restoreAuthFromEnv() {
-  const encoded = process.env.WA_AUTH_DATA;
+  // Try Secret File first (bypasses Linux ARG_MAX / "argument list too long")
+  const SECRET_FILE = '/etc/secrets/wa_auth';
+  let encoded = null;
+
+  if (fs.existsSync(SECRET_FILE)) {
+    try {
+      encoded = fs.readFileSync(SECRET_FILE, 'utf8').trim();
+      log.info('🔑 Reading auth from Render Secret File.');
+    } catch (err) {
+      log.warn('⚠️  Could not read secret file:', err.message);
+    }
+  }
+
+  // Fall back to env var (local dev / previous Render setup)
+  if (!encoded) {
+    encoded = process.env.WA_AUTH_DATA;
+  }
+
   if (!encoded) return; // first-time setup, no data yet
 
   try {
@@ -37,11 +55,12 @@ function restoreAuthFromEnv() {
       fs.writeFileSync(dest, JSON.stringify(content), 'utf8');
       restored++;
     }
-    log.info(`✅ Restored ${restored} auth file(s) from WA_AUTH_DATA env var.`);
+    log.info(`✅ Restored ${restored} auth file(s) from session data.`);
   } catch (err) {
-    log.warn('⚠️  Could not restore auth from WA_AUTH_DATA:', err.message);
+    log.warn('⚠️  Could not restore auth:', err.message);
   }
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // STEP 2: After a successful connection, encode auth files to base64 and log
