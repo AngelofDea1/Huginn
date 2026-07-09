@@ -9,6 +9,7 @@ import qrcode from 'qrcode-terminal';
 import pino from 'pino';
 import fs from 'fs';
 import path from 'path';
+import zlib from 'zlib';
 import { log } from '../utils/logger.js';
 import { routeCommand } from '../handlers/webhook.js';
 
@@ -46,11 +47,23 @@ function restoreAuthFromEnv() {
   if (!encoded) return; // first-time setup, no data yet
 
   try {
-    const files = JSON.parse(Buffer.from(encoded, 'base64').toString('utf8'));
-    if (!fs.existsSync(AUTH_DIR)) fs.mkdirSync(AUTH_DIR, { recursive: true });
+    // Auto-detect: gzipped base64 starts with 'H4sI' (magic bytes 1f 8b in base64)
+    // Plain JSON base64 starts with 'eyJ' ({")
+    let json;
+    if (encoded.startsWith('H4sI')) {
+      // Compressed — decompress first
+      const compressed = Buffer.from(encoded, 'base64');
+      const decompressed = zlib.gunzipSync(compressed);
+      json = JSON.parse(decompressed.toString('utf8'));
+      log.info('🗜️  Decompressed gzipped auth data.');
+    } else {
+      // Plain base64 JSON (legacy)
+      json = JSON.parse(Buffer.from(encoded, 'base64').toString('utf8'));
+    }
 
+    if (!fs.existsSync(AUTH_DIR)) fs.mkdirSync(AUTH_DIR, { recursive: true });
     let restored = 0;
-    for (const [filename, content] of Object.entries(files)) {
+    for (const [filename, content] of Object.entries(json)) {
       const dest = path.join(AUTH_DIR, filename);
       fs.writeFileSync(dest, JSON.stringify(content), 'utf8');
       restored++;
@@ -76,7 +89,12 @@ function exportAuthToEnvString() {
       const raw = fs.readFileSync(fullPath, 'utf8');
       try { data[file] = JSON.parse(raw); } catch { data[file] = raw; }
     }
-    return Buffer.from(JSON.stringify(data)).toString('base64');
+    // GZIP compress before base64 — reduces 832KB → ~160KB (under Render's 500KiB limit)
+    const json = Buffer.from(JSON.stringify(data), 'utf8');
+    const compressed = zlib.gzipSync(json, { level: 9 });
+    const encoded = compressed.toString('base64');
+    log.info(`🗜️  Auth export: ${json.length} bytes → ${compressed.length} bytes compressed (${encoded.length} base64 chars)`);
+    return encoded;
   } catch (err) {
     log.error('Failed to export auth:', err.message);
     return null;
