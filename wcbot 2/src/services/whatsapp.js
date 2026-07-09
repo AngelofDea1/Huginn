@@ -213,15 +213,7 @@ async function connectToWhatsApp() {
         // Check if any of the mentioned JIDs match one of our known self-JIDs
         const botMentioned = mentionedJids.some(j => selfJids.has(j));
 
-        let from = msg.key.remoteJid;
-        // Normalize LID format to s.whatsapp.net phone JID so users see replies in their main PNs thread
-        if (from.endsWith('@lid')) {
-          const resolved = await getNormalizedJid(from);
-          if (resolved) {
-            from = resolved;
-          }
-        }
-
+        const from = msg.key.remoteJid;
         log.info(`Incoming message from ${from}: ${text}`);
         await routeCommand(from, text, { mentionedJids, botJid, botMentioned });
       } catch (err) {
@@ -229,25 +221,6 @@ async function connectToWhatsApp() {
       }
     }
   });
-}
-
-/**
- * Resolves a LID JID to a phone number JID using onWhatsApp query.
- */
-export async function getNormalizedJid(jid) {
-  if (!jid) return null;
-  if (jid.endsWith('@lid') && sock) {
-    try {
-      const info = await sock.onWhatsApp(jid);
-      if (info && info[0] && info[0].jid) {
-        log.info(`Resolved LID ${jid} to phone JID ${info[0].jid}`);
-        return info[0].jid;
-      }
-    } catch (err) {
-      log.warn(`Could not resolve LID ${jid}:`, err.message);
-    }
-  }
-  return jid;
 }
 
 // ── Public: called once at startup ──────────────────────────────────────────
@@ -274,13 +247,6 @@ export async function sendMessage(to, text) {
   if (!sock) throw new Error('WhatsApp socket not initialised yet');
   try {
     let jid = to;
-    // Normalize LID to phone JID in send as well
-    if (jid.endsWith('@lid')) {
-      const resolved = await getNormalizedJid(jid);
-      if (resolved) {
-        jid = resolved;
-      }
-    }
     // If no domain suffix, assume individual chat
     if (!jid.includes('@')) {
       jid = `${to}@s.whatsapp.net`;
