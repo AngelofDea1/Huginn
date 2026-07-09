@@ -72,7 +72,13 @@ export function Navigation() {
 
         </div>
 
-        {/* ── Mobile popover ─────────────────────────────────────── */}
+        {/* ── Mobile popover and Backdrop overlay ─────────────────── */}
+        {mobileOpen && (
+          <div
+            className="mobile-menu-backdrop mobile-only"
+            onClick={() => setMobileOpen(false)}
+          />
+        )}
         <div
           className="mobile-menu-popover mobile-only"
           style={{
@@ -196,12 +202,24 @@ export function Navigation() {
           transition: transform 0.25s, opacity 0.25s;
           display: block;
         }
+        .mobile-menu-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.4);
+          backdrop-filter: blur(4px);
+          -webkit-backdrop-filter: blur(4px);
+          z-index: 997;
+          width: 100vw;
+          height: 100vh;
+          left: -10px;
+          top: -10px;
+        }
         .mobile-menu-popover {
           position: absolute;
           top: 58px;
           left: 0;
           right: 0;
-          background: rgba(13,13,26,0.92);
+          background: rgba(13,13,26,0.95);
           backdrop-filter: blur(20px);
           -webkit-backdrop-filter: blur(20px);
           border-radius: 20px;
@@ -219,7 +237,7 @@ export function Navigation() {
         }
         .mobile-menu-link {
           display: block;
-          padding: 12px 18px;
+          padding: 14px 20px; /* At least 48px vertical touch target height */
           color: #8c8ca8;
           text-decoration: none;
           font-family: var(--font-sans), sans-serif;
@@ -235,7 +253,7 @@ export function Navigation() {
           .pill-nav { width: 100%; justify-content: space-between; }
           .desktop-only { display: none; }
           .mobile-only  { display: flex; }
-          .mobile-menu-button { display: flex; }
+          .mobile-menu-button { display: flex; width: 48px; height: 48px; } /* Ensures 48px touch target */
         }
       `}</style>
     </>

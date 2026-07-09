@@ -226,7 +226,7 @@ export default function LiveChatPage() {
             </p>
           </div>
 
-          <div className="grid lg:grid-cols-[260px_1fr] gap-5 items-start">
+          <div className="grid lg:grid-cols-[280px_1fr] gap-4 items-start">
 
             {/* ── Left: Fixtures ─────────────────────────────────────────── */}
             <div className="bg-card border border-border rounded-2xl overflow-hidden">
@@ -243,13 +243,15 @@ export default function LiveChatPage() {
               </div>
 
               {fixtures.length === 0 && !loadingScores && (
-                <div className="px-5 py-8 text-center">
-                  <p className="text-xs text-muted-foreground mb-1">No matches right now</p>
-                  <p className="text-[10px] text-muted-foreground/60">Updates every 30 seconds</p>
+                <div className="px-5 py-12 text-center flex flex-col items-center gap-3">
+                  <span className="text-4xl">⚽</span>
+                  <p className="text-sm font-medium text-foreground">No matches right now</p>
+                  <p className="text-xs text-muted-foreground">World Cup fixtures will appear here live</p>
+                  <p className="text-[10px] text-muted-foreground/60">Auto-refreshes every 30 seconds</p>
                 </div>
               )}
 
-              <div className="overflow-y-auto" style={{ maxHeight: 480 }}>
+              <div className="overflow-y-auto" style={{ maxHeight: 560 }}>
                 {groupOrder.map((label) => (
                   <div key={label}>
                     {/* Date group header */}
@@ -306,7 +308,7 @@ export default function LiveChatPage() {
             {/* ── Right: Chat ───────────────────────────────────────────── */}
             <div
               className="bg-card border border-border rounded-2xl overflow-hidden flex flex-col"
-              style={{ minHeight: 560 }}
+              style={{ minHeight: 600 }}
             >
               {/* Chat header — Huginn identity + clear history */}
               <div className="px-5 py-4 border-b border-border flex items-center gap-3">
@@ -333,8 +335,8 @@ export default function LiveChatPage() {
 
               {/* Messages */}
               <div
-                className="flex-1 p-5 space-y-3 overflow-y-auto"
-                style={{ maxHeight: 400 }}
+                className="flex-1 p-4 space-y-3 overflow-y-auto"
+                style={{ minHeight: 340, maxHeight: 520 }}
               >
                 {messages.map((m, i) => (
                   <div
@@ -374,13 +376,13 @@ export default function LiveChatPage() {
               </div>
 
               {/* Quick commands */}
-              <div className="px-5 py-3 border-t border-border bg-secondary/20 flex gap-2 flex-wrap">
+              <div className="px-4 py-3 border-t border-border bg-secondary/20 flex gap-2 overflow-x-auto scrollbar-hide">
                 {quickCmds.map((c) => (
                   <button
                     key={c}
                     onClick={() => send(c)}
                     disabled={sending}
-                    className="text-xs font-mono text-primary bg-primary/10 border border-primary/20 px-3 py-1 rounded-full hover:bg-primary/20 transition-colors disabled:opacity-40"
+                    className="text-xs font-mono text-primary bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full hover:bg-primary/20 transition-colors disabled:opacity-40 whitespace-nowrap shrink-0 min-h-[36px]"
                   >
                     {c}
                   </button>
@@ -401,7 +403,7 @@ export default function LiveChatPage() {
                 <button
                   onClick={() => send(input)}
                   disabled={sending || !input.trim()}
-                  className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shrink-0 hover:opacity-90 transition-opacity disabled:opacity-30"
+                  className="w-11 h-11 rounded-full bg-primary flex items-center justify-center shrink-0 hover:opacity-90 transition-opacity disabled:opacity-30 active:scale-95"
                   aria-label="Send"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-primary-foreground">

@@ -111,6 +111,9 @@ export default function CommandsPage() {
             <h1 className="text-4xl lg:text-6xl font-semibold tracking-tight mb-4">
               Commands &amp; Alerts
             </h1>
+            <p className="text-base text-muted-foreground max-w-xl mx-auto leading-relaxed">
+              Everything you can send to Huginn — and everything it sends back, automatically.
+            </p>
           </div>
 
           {/* ── Manual commands ──────────────────────────────── */}
@@ -153,15 +156,15 @@ export default function CommandsPage() {
             </div>
             
             <Tabs defaultValue="hype" className="w-full">
-              <TabsList className="h-auto p-1 bg-card border border-border rounded-xl w-full grid grid-cols-4 mb-8">
+              <TabsList className="h-auto p-1 bg-card border border-border rounded-xl w-full grid grid-cols-2 sm:grid-cols-4 gap-1 mb-8">
                 {vibes.map((v) => (
                   <TabsTrigger
                     key={v.id}
                     value={v.id}
-                    className="flex flex-col gap-1 py-3 px-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm h-auto"
+                    className="flex flex-col gap-1 py-3 px-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm h-auto min-h-[60px]"
                   >
                     <code className="text-xs font-mono text-primary">{v.cmd}</code>
-                    <span className="text-xs font-semibold hidden sm:block">{v.name}</span>
+                    <span className="text-xs font-semibold">{v.name}</span>
                   </TabsTrigger>
                 ))}
               </TabsList>

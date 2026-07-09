@@ -67,9 +67,9 @@ export default function FeaturesPage() {
               </h2>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-px bg-border rounded-2xl overflow-hidden">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {steps.map((s) => (
-                <div key={s.num} className="bg-card p-8 flex flex-col justify-between">
+                <div key={s.num} className="bg-card border border-border rounded-2xl p-8 flex flex-col justify-between hover:border-primary/30 transition-colors">
                   <div>
                     <span className="font-mono text-xs text-primary mb-4 block tracking-widest">{s.num}</span>
                     <h3 className="text-lg font-semibold mb-3">{s.title}</h3>
