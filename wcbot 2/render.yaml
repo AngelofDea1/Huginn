@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: huginn
+    runtime: node
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 20.11.0
