@@ -115,25 +115,23 @@ export function PushNotifications() {
   return (
     <>
       <style>{`
-        @keyframes slideUp {
-          from { opacity: 0; transform: translateY(16px); }
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateY(-16px); }
           to   { opacity: 1; transform: translateY(0); }
         }
         .push-banner {
           position: fixed;
-          bottom: 20px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: min(420px, calc(100vw - 24px));
-          animation: slideUp 0.35s cubic-bezier(0.16,1,0.3,1) both;
+          top: 20px;
+          right: 20px;
+          width: min(400px, calc(100vw - 40px));
+          animation: slideIn 0.35s cubic-bezier(0.16,1,0.3,1) both;
         }
         @media (max-width: 768px) {
           .push-banner {
-            bottom: 16px;
-            left: 12px;
+            top: 12px;
             right: 12px;
+            left: 12px;
             width: auto;
-            transform: none;
           }
         }
       `}</style>

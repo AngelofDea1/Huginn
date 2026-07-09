@@ -80,11 +80,10 @@ const vibes = [
 function AlertBubble({ card }: { card: typeof alertCards[0] }) {
   return (
     <div className="flex flex-col h-full rounded-2xl overflow-hidden border border-border bg-card transition-all duration-300 hover:border-primary/30">
-      <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-secondary/30">
+      <div className="flex items-center px-5 py-3.5 border-b border-border bg-secondary/20">
         <span className="text-xs font-mono font-bold tracking-widest text-primary">
           {card.tag}
         </span>
-        <span className="text-xs text-muted-foreground">{card.badge}</span>
       </div>
       <div className="flex-1 p-5">
         <div className="rounded-xl p-4 border border-border bg-background">
@@ -99,6 +98,8 @@ function AlertBubble({ card }: { card: typeof alertCards[0] }) {
 }
 
 export default function CommandsPage() {
+  const [vibeIndex, setVibeIndex] = useState(0);
+
   return (
     <main className="relative min-h-screen overflow-x-hidden">
       <Navigation />
@@ -149,51 +150,88 @@ export default function CommandsPage() {
             </div>
           </div>
 
-          {/* ── Commentary Voice Vibes (Interactive) ────────── */}
+          {/* ── Commentary Voice Vibes (Interactive Carousel Slider) ── */}
           <div className="mb-24">
             <div className="flex items-center justify-between border-b border-border pb-4 mb-8">
               <h2 className="text-lg font-semibold tracking-tight">Commentary Voice</h2>
             </div>
             
-            <Tabs defaultValue="hype" className="w-full">
-              <TabsList className="h-auto p-1 bg-card border border-border rounded-xl w-full grid grid-cols-2 sm:grid-cols-4 gap-1 mb-8">
-                {vibes.map((v) => (
-                  <TabsTrigger
-                    key={v.id}
-                    value={v.id}
-                    className="flex flex-col gap-1 py-3 px-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm h-auto min-h-[60px]"
-                  >
-                    <code className="text-xs font-mono text-primary">{v.cmd}</code>
-                    <span className="text-xs font-semibold">{v.name}</span>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
+            <div className="grid lg:grid-cols-[300px_1fr] gap-8 items-stretch">
+              {/* Left Carousel Controller Card (matching drawing) */}
+              <div className="bg-card border border-border rounded-2xl p-6 flex flex-col justify-between items-center text-center min-h-[220px]">
+                <span className="text-[10px] font-mono font-bold tracking-widest text-muted-foreground uppercase mb-4">
+                  Voice Command
+                </span>
+                
+                <code className="text-sm text-primary bg-primary/10 border border-primary/20 px-4 py-2 rounded-xl font-mono font-bold tracking-wide my-4 select-all">
+                  {vibes[vibeIndex].cmd}
+                </code>
 
-              {vibes.map((v) => (
-                <TabsContent key={v.id} value={v.id}>
-                  <div className="grid lg:grid-cols-2 gap-6 items-center">
-                    <div>
-                      <h3 className="text-2xl font-semibold mb-3">{v.name}</h3>
-                      <p className="text-muted-foreground leading-relaxed">{v.desc}</p>
-                    </div>
-
-                    <div className="bg-card border border-border rounded-2xl overflow-hidden">
-                      <div className="px-4 py-3 border-b border-border bg-secondary/30 flex items-center gap-2">
-                        <span className="text-xs font-mono text-muted-foreground font-semibold">
-                          {v.name.toUpperCase()} PREVIEW
-                        </span>
-                      </div>
-                      <div className="p-5">
-                        <p className="text-sm leading-relaxed whitespace-pre-line text-foreground">
-                          {v.preview}
-                        </p>
-                      </div>
-                    </div>
+                <div className="flex flex-col gap-4 items-center w-full mt-auto">
+                  {/* Left & Right chevron buttons */}
+                  <div className="flex items-center gap-6">
+                    <button
+                      onClick={() => setVibeIndex((i) => (i - 1 + vibes.length) % vibes.length)}
+                      className="w-10 h-10 rounded-full border border-border hover:border-primary/40 hover:bg-secondary/40 flex items-center justify-center transition-all active:scale-95 cursor-pointer"
+                      aria-label="Previous vibe"
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M15 18l-6-6 6-6" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => setVibeIndex((i) => (i + 1) % vibes.length)}
+                      className="w-10 h-10 rounded-full border border-border hover:border-primary/40 hover:bg-secondary/40 flex items-center justify-center transition-all active:scale-95 cursor-pointer"
+                      aria-label="Next vibe"
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9 18l6-6-6-6" />
+                      </svg>
+                    </button>
                   </div>
-                </TabsContent>
-              ))}
-            </Tabs>
+
+                  {/* Pagination dots (e.g. ● ○ ○ ○) */}
+                  <div className="flex items-center gap-2">
+                    {vibes.map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setVibeIndex(idx)}
+                        className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                          idx === vibeIndex ? "bg-primary w-4" : "bg-border hover:bg-muted-foreground/40"
+                        }`}
+                        aria-label={`Go to slide ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Content Details & Preview Box */}
+              <div className="bg-card border border-border rounded-2xl p-6 lg:p-8 flex flex-col justify-between">
+                <div className="mb-6">
+                  <span className="text-xs font-mono font-bold tracking-widest text-primary uppercase mb-1.5 block">
+                    Vibe Profile
+                  </span>
+                  <h3 className="text-2xl font-semibold mb-3">{vibes[vibeIndex].name}</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed max-w-2xl">{vibes[vibeIndex].desc}</p>
+                </div>
+
+                <div className="border border-border bg-background/50 rounded-xl overflow-hidden mt-auto">
+                  <div className="px-4 py-2.5 border-b border-border bg-secondary/20">
+                    <span className="text-[10px] font-mono font-bold text-muted-foreground tracking-widest uppercase">
+                      Preview Message
+                    </span>
+                  </div>
+                  <div className="p-4 lg:p-5">
+                    <p className="text-sm leading-relaxed whitespace-pre-line text-foreground">
+                      {vibes[vibeIndex].preview}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
+
 
           {/* ── Real-Time Alerts (No duplicate list below it) ── */}
           <div className="mb-24">
