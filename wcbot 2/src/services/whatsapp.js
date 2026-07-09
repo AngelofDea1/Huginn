@@ -129,9 +129,19 @@ async function connectToWhatsApp() {
 
   // Handle incoming messages
   sock.ev.on('messages.upsert', async ({ messages }) => {
-    // Derive the bot's own JID once (used for @mention detection in groups)
-    const botNumber = (process.env.WA_NUMBER || '').replace(/[^0-9]/g, '');
-    const botJid = botNumber ? `${botNumber}@s.whatsapp.net` : null;
+    // Derive the bot's own JIDs (Baileys may give us @lid or @s.whatsapp.net)
+    // sock.user.id is the authoritative connected JID e.g. "2349026755711:10@s.whatsapp.net"
+    const rawBotJid = sock.user?.id || '';
+    // Normalise: strip the device suffix (:10) so we match mentions cleanly
+    const botJidNorm = rawBotJid.replace(/:[0-9]+@/, '@');  // e.g. "234...@s.whatsapp.net"
+    const botNumber  = (process.env.WA_NUMBER || '').replace(/[^0-9]/g, '');
+    // Build a set of all possible self-JID variants to check mentions against
+    const selfJids = new Set([
+      botJidNorm,
+      botNumber ? `${botNumber}@s.whatsapp.net` : null,
+      botNumber ? `${botNumber}@lid` : null,
+    ].filter(Boolean));
+    const botJid = botJidNorm || (botNumber ? `${botNumber}@s.whatsapp.net` : null);
 
     for (const msg of messages) {
       try {
@@ -148,10 +158,12 @@ async function connectToWhatsApp() {
 
         // Collect any @mentioned JIDs from the message
         const mentionedJids = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+        // Check if any of the mentioned JIDs match one of our known self-JIDs
+        const botMentioned = mentionedJids.some(j => selfJids.has(j));
 
         const from = msg.key.remoteJid;
         log.info(`Incoming message from ${from}: ${text}`);
-        await routeCommand(from, text, { mentionedJids, botJid });
+        await routeCommand(from, text, { mentionedJids, botJid, botMentioned });
       } catch (err) {
         log.error('Error handling message:', err.message);
       }
@@ -183,6 +195,7 @@ export async function sendMessage(to, text) {
   if (!sock) throw new Error('WhatsApp socket not initialised yet');
   try {
     let jid = to;
+    // If no domain suffix, assume individual chat
     if (!jid.includes('@')) {
       jid = `${to}@s.whatsapp.net`;
     }
@@ -190,6 +203,13 @@ export async function sendMessage(to, text) {
     log.info(`✉ Sent to ${jid}: ${text.slice(0, 60)}...`);
   } catch (err) {
     log.error(`✗ Failed to send to ${to}:`, err.message);
+    // If the socket closed mid-send, trigger a reconnect and don't re-throw
+    // (re-throwing would crash the message handler loop)
+    if (err.message?.includes('Connection Closed') || err.message?.includes('closed')) {
+      log.warn('Socket closed mid-send — scheduling reconnect in 3s...');
+      setTimeout(connectToWhatsApp, 3000);
+      return; // Don't propagate — message handler stays alive
+    }
     throw err;
   }
 }

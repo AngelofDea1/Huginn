@@ -40,14 +40,13 @@ export async function handleWebhook(req, res) {
 
 //  Command router
 export async function routeCommand(from, text, meta = {}) {
-  const { mentionedJids = [], botJid = null } = meta;
+  const { mentionedJids = [], botJid = null, botMentioned = false } = meta;
 
   // Group chat guard:
   // In group chats (@g.us), only respond if:
   //   1. Message starts with /  (explicit command), OR
   //   2. Huginn's number was @mentioned in the message
   const isGroupChat = from.endsWith('@g.us');
-  const botMentioned = botJid && mentionedJids.includes(botJid);
 
   if (isGroupChat && !text.trim().startsWith('/') && !botMentioned) return;
 
@@ -55,7 +54,7 @@ export async function routeCommand(from, text, meta = {}) {
   // command routing still works (e.g. "@2349026755711 /follow Nigeria" → "/follow Nigeria")
   let cleanText = text;
   if (botMentioned && botJid) {
-    const botNumber = botJid.replace('@s.whatsapp.net', '');
+    const botNumber = botJid.replace(/@.*/, '');
     // Remove @PHONENUMBER from anywhere in the string, then trim
     cleanText = text.replace(new RegExp(`@${botNumber}\\s*`, 'g'), '').trim();
     // If nothing remains after stripping the mention, send help
