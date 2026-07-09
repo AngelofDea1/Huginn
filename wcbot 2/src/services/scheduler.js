@@ -35,7 +35,7 @@ export async function schedulePreMatchBulletins() {
         kickoffTime: new Date(match.kickoff_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
         odds: formatOdds(odds),
         stage: match.stage || 'World Cup 2026',
-        vibe: groups[0]?.vibe || 'hype',
+        vibe: groups[0]?.style || 'hype',
       });
 
       await notifyMatchGroups(groups, msg);
