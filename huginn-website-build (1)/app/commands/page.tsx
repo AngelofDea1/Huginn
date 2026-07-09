@@ -19,8 +19,10 @@ const manualCommands = [
   { cmd: "/vibe tactical", desc: "Switch to calm, data-driven analysis. xG, formations, and odds movements explained clearly." },
   { cmd: "/vibe funny", desc: "Switch to light-hearted banter mode. Football is entertainment after all." },
   { cmd: "/vibe balanced", desc: "The default. Friendly, informative, and never annoying." },
-  { cmd: "/vibe", desc: "Check the current commentary vibe configuration for your chat." }
+  { cmd: "/vibe", desc: "Check the current commentary vibe configuration for your chat." },
+  { cmd: "/help", desc: "Lost or need a quick refresher? Send this command straight to the chat at any time." }
 ];
+
 
 
 const alertCards = [
@@ -141,31 +143,19 @@ export default function CommandsPage() {
               ))}
             </div>
 
-            {/* Styled /help card */}
-            <div className="bg-gradient-to-r from-primary/5 via-transparent to-transparent border border-primary/20 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-primary/45 transition-all duration-300">
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-mono font-bold text-primary"> GETTING HELP</span>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Lost or need a quick refresher? Send this command straight to the chat at any time.
-                </p>
-              </div>
-              <code className="text-sm text-primary bg-primary/15 border border-primary/30 px-4 py-2.5 rounded-xl font-mono font-bold tracking-wide shrink-0 w-fit">
-                /help
-              </code>
-            </div>
           </div>
 
-          {/* ── Commentary Vibe Style (Interactive Carousel Slider) ── */}
+          {/* ── Commentary Style (Interactive Carousel Slider) ── */}
           <div className="mb-24">
             <div className="flex items-center justify-between border-b border-border pb-4 mb-8">
-              <h2 className="text-lg font-semibold tracking-tight">Commentary Vibe</h2>
+              <h2 className="text-lg font-semibold tracking-tight">Commentary Style</h2>
             </div>
 
             <div className="grid lg:grid-cols-[300px_1fr] gap-8 items-stretch">
               {/* Left Carousel Controller Card (matching drawing) */}
               <div className="bg-card border border-border rounded-2xl p-6 flex flex-col justify-center items-center text-center gap-5">
                 <span className="text-[10px] font-mono font-bold tracking-widest text-muted-foreground uppercase">
-                  Vibe Command
+                  Style Command
                 </span>
 
                 <code className="text-sm text-primary bg-primary/10 border border-primary/20 px-4 py-2 rounded-xl font-mono font-bold tracking-wide select-all">
@@ -215,8 +205,9 @@ export default function CommandsPage() {
               <div className="bg-card border border-border rounded-2xl p-6 lg:p-8 flex flex-col justify-between">
                 <div className="mb-6">
                   <span className="text-xs font-mono font-bold tracking-widest text-primary uppercase mb-1.5 block">
-                    Vibe Profile
+                    Style Profile
                   </span>
+
                   <h3 className="text-2xl font-semibold mb-3">{vibes[vibeIndex].name}</h3>
                   <p className="text-muted-foreground text-sm leading-relaxed max-w-2xl">{vibes[vibeIndex].desc}</p>
                 </div>
@@ -261,17 +252,18 @@ export default function CommandsPage() {
             <div className="flex gap-4 flex-wrap shrink-0">
               <Link
                 href="/live-chat"
-                className="inline-flex items-center justify-center h-11 px-6 text-sm font-semibold border border-white/10 hover:border-white/20 bg-white/[0.03] backdrop-blur-md text-foreground transition-all duration-300 hover:bg-white/[0.08] hover:text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] rounded-xl"
+                className="inline-flex items-center justify-center h-11 px-6 text-sm font-semibold border border-white/10 hover:border-white/20 bg-white/[0.03] backdrop-blur-md text-foreground hover:bg-white/[0.1] hover:text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
               >
                 Live Chat in Browser
               </Link>
               <a
                 href="/api/join"
-                className="inline-flex items-center justify-center bg-primary hover:bg-primary/95 text-primary-foreground px-6 h-11 text-sm font-bold group rounded-xl border border-primary/20 shadow-[0_4px_0_#00a852] active:translate-y-[3px] active:shadow-[0_1px_0_#00a852] transition-all cursor-pointer"
+                className="inline-flex items-center justify-center bg-primary hover:bg-primary/95 text-primary-foreground px-6 h-11 text-sm font-bold group rounded-xl border border-primary/20 shadow-[0_4px_0_#00a852] active:translate-y-[3px] active:shadow-[0_1px_0_#00a852] hover:scale-[1.02] transition-all cursor-pointer"
               >
                 Chat on WhatsApp
                 <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-0.5" />
               </a>
+
 
             </div>
 

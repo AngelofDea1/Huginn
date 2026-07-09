@@ -56,12 +56,12 @@ export function HeroSection() {
           {/* Glassy Button */}
           <Button 
             size="lg" 
-            variant="outline" 
-            className="h-11 px-6 text-sm font-semibold border border-white/10 hover:border-white/20 bg-white/[0.03] backdrop-blur-md text-foreground transition-all duration-300 hover:bg-white/[0.08] hover:text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] rounded-xl"
+            className="h-11 px-6 text-sm font-semibold border border-white/10 hover:border-white/20 bg-white/[0.03] backdrop-blur-md text-foreground transition-all duration-300 hover:bg-white/[0.1] hover:text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] rounded-xl hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
             asChild
           >
             <a href="/live-chat">Live Chat</a>
           </Button>
+
 
           {/* Press/Tactile Button */}
           <Button 
