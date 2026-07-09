@@ -1,11 +1,11 @@
 import { searchMatch, getFixtureSchedule } from '../services/txline.js';
 import { sendMessage } from '../services/whatsapp.js';
 import {
-  registerGroup, getGroup, setGroupVibe,
+  registerGroup, getGroup, setGroupStyle,
   followMatch, unfollowMatch, initMatchState, isFirstContact, markContacted
 } from '../utils/store.js';
 import { log } from '../utils/logger.js';
-import { VIBES, generatePlayerStats } from '../services/ai.js';
+import { STYLES, generatePlayerStats } from '../services/ai.js';
 
 //  Webhook verification (Meta calls this once when you set up the webhook)
 export function verifyWebhook(req, res) {
@@ -41,6 +41,11 @@ export async function handleWebhook(req, res) {
 //  Command router
 export async function routeCommand(from, text) {
   const lower = text.toLowerCase().trim();
+
+  // Group chat guard: only respond to messages that start with / in group chats
+  const isGroupChat = from.endsWith('@g.us');
+  if (isGroupChat && !lower.startsWith('/')) return;
+
   const isNew = isFirstContact(from);
 
   registerGroup(from);
@@ -55,23 +60,23 @@ export async function routeCommand(from, text) {
 
   if (lower.startsWith('/follow'))                              return handleFollow(from, text);
   if (lower.startsWith('/unfollow'))                            return handleUnfollow(from, text);
-  if (lower.startsWith('/vibe'))                                return handleVibe(from, text);
+  if (lower.startsWith('/style'))                               return handleStyle(from, text);
   if (lower === '/help' || lower === '/start' || lower === 'hi' || lower === 'hello') return handleHelp(from);
   if (lower === '/status')                                      return handleStatus(from);
   if (lower === '/schedule' || lower === '/fixtures' || lower === '/upcoming') return handleSchedule(from);
   if (lower === '/live')                                        return handleLive(from);
-  if (lower.startsWith('/stats'))                              return handleStats(from, text);
+  if (lower.startsWith('/stats'))                               return handleStats(from, text);
   if (lower.startsWith('/sweepstake')) {
     const { handleSweepstakeCommand } = await import('./sweepstake.js');
     return handleSweepstakeCommand(from, text);
   }
 
-  // Catch-all: AI Football Oracle
+  // Catch-all: AI Football Oracle (only in direct/private chats; group chats are blocked above)
   try {
     const { answerFootballQuestion } = await import('../services/ai.js');
     const { getLiveMatches, getUpcomingMatches } = await import('../services/txline.js');
     const group = getGroup(from);
-    const vibe = group?.vibe || 'hype';
+    const style = group?.style || 'hype';
 
     const [live, upcoming] = await Promise.all([getLiveMatches(), getUpcomingMatches(12)]);
     let ctx = '';
@@ -85,7 +90,7 @@ export async function routeCommand(from, text) {
       }).join('\n');
     }
 
-    const reply = await answerFootballQuestion(text, ctx, vibe);
+    const reply = await answerFootballQuestion(text, ctx, style);
     return sendMessage(from, reply);
   } catch (err) {
     log.error('AI oracle error:', err.message);
@@ -101,7 +106,7 @@ async function sendWelcome(from) {
     `/follow <team> · live alerts for any match\n` +
     `/live · matches happening right now\n` +
     `/schedule · upcoming fixtures\n` +
-    `/vibe <mode> · hype, tactical, funny, balanced\n\n` +
+    `/style <mode> · hype, tactical, funny, balanced\n\n` +
     `Want the whole group in on it?\n` +
     `Open any WhatsApp group, tap the group name, *Add participants*, search for me, done. Everyone gets the alerts from that point.\n\n` +
     `Or just ask me anything about the tournament.`
@@ -117,7 +122,7 @@ async function handleHelp(from) {
     `/schedule · upcoming fixtures\n` +
     `/stats <player> · career stats, style, injury history\n` +
     `/status · what you're currently tracking\n` +
-    `/vibe <mode> · hype, tactical, funny, balanced\n\n` +
+    `/style <mode> · hype, tactical, funny, balanced\n\n` +
     `You can also ask me anything directly.`
   );
 }
@@ -175,24 +180,24 @@ async function handleUnfollow(from, text) {
   return sendMessage(from, `Unfollowed *${matches[0].home_team?.name} vs ${matches[0].away_team?.name}*.`);
 }
 
-// /vibe <mode>
-async function handleVibe(from, text) {
-  const mode = text.replace(/\/vibe\s*/i, '').trim().toLowerCase();
-  const valid = Object.keys(VIBES);
+// /style <mode>
+async function handleStyle(from, text) {
+  const mode = text.replace(/\/style\s*/i, '').trim().toLowerCase();
+  const valid = Object.keys(STYLES);
 
   if (!valid.includes(mode)) {
     return sendMessage(from,
-      `Pick a vibe:\n\n` +
-      `*/vibe hype* · full African pundit energy\n` +
-      `*/vibe tactical* · calm analyst, stats and formations\n` +
-      `*/vibe funny* · banter and dry wit\n` +
-      `*/vibe balanced* · clean factual coverage`
+      `Pick a commentary style:\n\n` +
+      `*/style hype* · full pundit energy\n` +
+      `*/style tactical* · calm analyst, stats and formations\n` +
+      `*/style funny* · banter and dry wit\n` +
+      `*/style balanced* · clean factual coverage`
     );
   }
 
-  setGroupVibe(from, mode);
+  setGroupStyle(from, mode);
   const labels = { hype: 'Hype', tactical: 'Tactical', funny: 'Banter', balanced: 'Balanced' };
-  return sendMessage(from, `Vibe set to *${labels[mode]}*.\n\nAll future alerts will use this style.`);
+  return sendMessage(from, `Commentary style set to *${labels[mode]}*.\n\nAll future alerts will use this style.`);
 }
 
 // /status
@@ -204,8 +209,8 @@ async function handleStatus(from) {
   const count = group.followedMatchIds.size;
   return sendMessage(from,
     `Following *${count} match${count > 1 ? 'es' : ''}*.\n\n` +
-    `Current vibe: *${group.vibe}*\n\n` +
-    `Type /vibe to change your commentary style.`
+    `Current style: *${group.style || 'hype'}*\n\n` +
+    `Type /style to change your commentary style.`
   );
 }
 

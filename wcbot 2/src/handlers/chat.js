@@ -7,11 +7,11 @@
 
 import { getLiveMatches, getUpcomingMatches, searchMatch, getFixtureSchedule } from '../services/txline.js';
 import {
-  registerGroup, getGroup, setGroupVibe,
+  registerGroup, getGroup, setGroupStyle,
   followMatch, unfollowMatch, initMatchState
 } from '../utils/store.js';
 import { log } from '../utils/logger.js';
-import { VIBES } from '../services/ai.js';
+import { STYLES } from '../services/ai.js';
 
 // Each web session gets a unique "session ID" as their group identifier
 // so their follows/vibes are tracked independently of WhatsApp users
@@ -73,8 +73,8 @@ async function routeWebCommand(sessionId, text) {
   if (lower.startsWith('/unfollow') || lower.startsWith('unfollow')) {
     return handleUnfollow(sessionId, text);
   }
-  if (lower.startsWith('/vibe') || lower.startsWith('vibe')) {
-    return handleVibe(sessionId, text);
+  if (lower.startsWith('/style') || lower.startsWith('style')) {
+    return handleStyle(sessionId, text);
   }
   if (lower === '/status' || lower === 'status') {
     return handleStatus(sessionId);
@@ -94,7 +94,7 @@ async function routeWebCommand(sessionId, text) {
     const { answerFootballQuestion } = await import('../services/ai.js');
     const { getLiveMatches, getUpcomingMatches } = await import('../services/txline.js');
     const group = getGroup(sessionId);
-    const vibe = group?.vibe || 'hype';
+    const style = group?.style || 'hype';
 
     const [live, upcoming] = await Promise.all([getLiveMatches(), getUpcomingMatches(12)]);
     let matchContext = '';
@@ -105,7 +105,7 @@ async function routeWebCommand(sessionId, text) {
       matchContext += 'Upcoming Matches:\n' + upcoming.map(m => `• ${m.home_team?.name} vs ${m.away_team?.name} (kickoff: ${new Date(m.kickoff_time).toLocaleTimeString()})`).join('\n') + '\n';
     }
 
-    return await answerFootballQuestion(text, matchContext, vibe);
+    return await answerFootballQuestion(text, matchContext, style);
   } catch (err) {
     return `⚽ Hit a minor tactical issue. Type /help to see commands!`;
   }
@@ -146,23 +146,23 @@ async function handleUnfollow(sessionId, text) {
   return `❓ Which match? E.g. /unfollow Nigeria`;
 }
 
-async function handleVibe(sessionId, text) {
-  const mode = text.replace(/\/?(vibe)\s*/i, '').trim().toLowerCase();
-  const valid = Object.keys(VIBES);
+async function handleStyle(sessionId, text) {
+  const mode = text.replace(/\/?(style)\s*/i, '').trim().toLowerCase();
+  const valid = Object.keys(STYLES);
 
   if (!valid.includes(mode)) {
     return (
-      `🎙️ Pick a vibe:\n\n` +
-      `*/vibe hype* - Over-the-top African pundit energy 🔥\n` +
-      `*/vibe tactical* - Calm analyst, stats & formations 📊\n` +
-      `*/vibe funny* - Pure banter and roasts 😂\n` +
-      `*/vibe balanced* - Friendly match coverage ⚽`
+      `🎙️ Pick a commentary style:\n\n` +
+      `*/style hype* - Full pundit energy 🔥\n` +
+      `*/style tactical* - Calm analyst, stats & formations 📊\n` +
+      `*/style funny* - Pure banter and dry wit 😂\n` +
+      `*/style balanced* - Friendly match coverage ⚽`
     );
   }
 
-  setGroupVibe(sessionId, mode);
-  const vibeNames = { hype: '🔥 HYPE FC', tactical: '📊 The Analyst', funny: '😂 Banter FC', balanced: '⚽ Match Day' };
-  return `✅ Vibe set to *${vibeNames[mode]}*!\n\nAll future alerts will come in this style.`;
+  setGroupStyle(sessionId, mode);
+  const styleNames = { hype: '🔥 Hype', tactical: '📊 Tactical', funny: '😂 Banter', balanced: '⚽ Balanced' };
+  return `✅ Commentary style set to *${styleNames[mode]}*!\n\nAll future alerts will come in this style.`;
 }
 
 async function handleStatus(sessionId) {
@@ -174,8 +174,8 @@ async function handleStatus(sessionId) {
   return (
     `📋 *Your Status*\n\n` +
     `Following: ${count} match${count > 1 ? 'es' : ''}\n` +
-    `Vibe: ${group.vibe}\n\n` +
-    `Type /vibe to change your commentary style.`
+    `Style: ${group.style || 'hype'}\n\n` +
+    `Type /style to change your commentary style.`
   );
 }
 
@@ -249,11 +249,11 @@ async function handleStats(sessionId, text) {
   }
 
   const group = getGroup(sessionId);
-  const vibe = group?.vibe || 'hype';
+  const style = group?.style || 'hype';
 
   try {
     const { generatePlayerStats } = await import('../services/ai.js');
-    return await generatePlayerStats(player, vibe);
+    return await generatePlayerStats(player, style);
   } catch (err) {
     return `⚽ Couldn't pull stats for ${player} right now.\n\nTry again in a moment!`;
   }
@@ -265,7 +265,7 @@ function helpText() {
     `*Commands:*\n` +
     `*/follow <team>* — Get live alerts for a match\n` +
     `*/unfollow <team>* — Stop following a match\n` +
-    `*/vibe <mode>* — Change commentary style\n` +
+    `*/style <mode>* — Change commentary style\n` +
     `*/live* — See live matches\n` +
     `*/schedule* — See upcoming tournament fixtures\n` +
     `*/stats <player>* — Career profile, playing style, injury history\n` +

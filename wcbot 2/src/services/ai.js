@@ -27,7 +27,7 @@ ANALYTICAL TAKES:
 - When sharing predictions, tactical analysis, or opinions, sound smart and logical.
 - Personify your voice. Talk as Huginn (e.g. use "My take is," "I think," "Looking at this," "My view here is") so it sounds like a real human pundit sharing their personal analysis. Never say "As an AI..." or "My AI model...".`;
 
-export const VIBES = {
+export const STYLES = {
   hype: `You are Huginn, an energetic and enthusiastic football pundit.
 Write like a friend who gets excited about every game, but keep your English standard and correct.
 Use punchy expressions of excitement (e.g. "What a match!", "Incredible goal!") without using Pidgin slang or broken English.
@@ -153,7 +153,7 @@ Be honest that your stats are from training data and may not include goals score
 Keep it to 5–8 sentences max. Sound like a pundit, not a Wikipedia article.
 `.trim();
 
-  const systemPrompt = (VIBES[vibe] || VIBES.hype) +
+  const systemPrompt = (STYLES[vibe] || STYLES.hype) +
     `\n\nYou are a knowledgeable football pundit with deep knowledge of players' careers, stats, styles, and history up to early 2024. For current tournament stats you acknowledge you are working from pre-tournament knowledge.`;
 
   try {
@@ -194,7 +194,7 @@ answer directly and conversationally. if it's about a current match, use that co
 no all-caps. use line breaks between thoughts if needed. 2-4 sentences max unless the question genuinely needs more.
 `.trim();
 
-  const systemPrompt = (VIBES[vibe] || VIBES.hype) +
+  const systemPrompt = (STYLES[vibe] || STYLES.hype) +
     `\n\nyou also have deep football knowledge: past world cups, current stars, stats, tactics, rules, and betting odds. answer any question directly. sound like a person, not a system.`;
 
   try {
@@ -226,8 +226,8 @@ no all-caps. use line breaks between thoughts if needed. 2-4 sentences max unles
 }
 
 // ── Core Groq call ────────────────────────────────────────────────────────────
-async function callGroq(userPrompt, vibe = 'hype') {
-  const systemPrompt = VIBES[vibe] || VIBES.hype;
+async function callGroq(userPrompt, style = 'hype') {
+  const systemPrompt = STYLES[style] || STYLES.hype;
 
   try {
     const { data } = await axios.post(

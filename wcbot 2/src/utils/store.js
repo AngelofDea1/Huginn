@@ -29,7 +29,7 @@ export function registerGroup(groupId, name = 'your group') {
   if (!groups.has(groupId)) {
     groups.set(groupId, {
       name,
-      vibe: 'hype',           // default personality
+      style: 'hype',           // default commentary style
       followedMatchIds: new Set(),
     });
   }
@@ -44,9 +44,9 @@ export function getAllGroups() {
   return [...groups.values()].map((g, i) => ({ ...g, id: [...groups.keys()][i] }));
 }
 
-export function setGroupVibe(groupId, vibe) {
+export function setGroupStyle(groupId, style) {
   const group = groups.get(groupId);
-  if (group) group.vibe = vibe;
+  if (group) group.style = style;
 }
 
 export function followMatch(groupId, matchId) {
