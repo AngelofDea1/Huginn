@@ -7,6 +7,8 @@ import makeWASocket, {
 import { Boom } from '@hapi/boom';
 import qrcode from 'qrcode-terminal';
 import pino from 'pino';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 import fs from 'fs';
 import path from 'path';
 import zlib from 'zlib';
@@ -42,6 +44,19 @@ function restoreAuthFromEnv() {
   // Fall back to env var (local dev / previous Render setup)
   if (!encoded) {
     encoded = process.env.WA_AUTH_DATA;
+  }
+
+  // Fall back to src/session_data.txt inside the project folder
+  if (!encoded) {
+    const localSessionPath = path.join(dirname(fileURLToPath(import.meta.url)), '..', 'session_data.txt');
+    if (fs.existsSync(localSessionPath)) {
+      try {
+        encoded = fs.readFileSync(localSessionPath, 'utf8').trim();
+        log.info('🔑 Reading auth from src/session_data.txt inside repository.');
+      } catch (err) {
+        log.warn('⚠️  Could not read local session file:', err.message);
+      }
+    }
   }
 
   if (!encoded) return; // first-time setup, no data yet
