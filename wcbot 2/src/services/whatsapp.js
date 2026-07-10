@@ -239,6 +239,11 @@ async function connectToWhatsApp() {
         if (from.endsWith('@lid')) {
           replyCtx[from] = msg;
           
+          log.info(`🔍 Debug Message Keys: ${Object.keys(msg).join(', ')}`);
+          log.info(`🔍 Debug msg.key Keys: ${Object.keys(msg.key || {}).join(', ')}`);
+          log.info(`🔍 Debug remoteJid: ${msg.key?.remoteJid}, participant: ${msg.key?.participant}, participantAlt: ${msg.key?.participantAlt}`);
+          log.info(`🔍 Debug pushName: ${msg.pushName}, verifiedBizName: ${msg.verifiedBizName}`);
+          
           // Check other fields in Baileys message object that may contain the s.whatsapp.net phone JID
           const altJid = msg.key.participant || msg.participant || msg.key.remoteJidAlt || 
                          msg.message?.extendedTextMessage?.contextInfo?.participant;
