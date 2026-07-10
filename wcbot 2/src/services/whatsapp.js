@@ -250,24 +250,7 @@ async function connectToWhatsApp() {
         // Check if any of the mentioned JIDs match one of our known self-JIDs
         const botMentioned = mentionedJids.some(j => selfJids.has(j));
 
-        let from = msg.key.remoteJid || '';
-
-        // For @lid JIDs: store the message for quoted-reply (the only reliable way to
-        // reach @lid users). Also log the resolved phone number for debugging.
-        if (from.endsWith('@lid')) {
-          replyCtx[from] = msg;
-
-          // Log the resolved phone JID for visibility, but keep `from` as @lid
-          // so sendMessage() uses the quoted-reply path (direct @s.whatsapp.net sends
-          // are silently dropped by WhatsApp when the user's identity is @lid).
-          const resolvedJid = msg.key.senderPn || msg.key.participant || msg.participant ||
-                              msg.key.remoteJidAlt ||
-                              messageContent.extendedTextMessage?.contextInfo?.participant;
-          if (resolvedJid) {
-            log.info(`🎯 @lid ${from} → resolved phone ${resolvedJid} (will reply via quoted @lid)`);
-          }
-          // ✅ Do NOT overwrite `from` — keep as @lid so sendMessage uses quoted reply
-        }
+        const from = msg.key.remoteJid || '';
 
         log.info(`Incoming message from ${from}: ${text}`);
         await routeCommand(from, text, { mentionedJids, botJid, botMentioned });
@@ -326,18 +309,7 @@ export async function sendMessage(to, text) {
       jid = `${to}@s.whatsapp.net`;
     }
 
-    if (jid.endsWith('@lid')) {
-      const original = replyCtx[jid];
-      if (original) {
-        log.info(`📨 Replying to @lid ${jid} via quoted context (Signal session reuse)`);
-        await sock.sendMessage(jid, { text }, { quoted: original });
-      } else {
-        log.warn(`⚠️  No reply context for ${jid} — sending direct (may not deliver)`);
-        await sock.sendMessage(jid, { text });
-      }
-    } else {
-      await sock.sendMessage(jid, { text });
-    }
+    await sock.sendMessage(jid, { text });
     log.info(`✉ Sent to ${jid}: ${text.slice(0, 60)}...`);
   } catch (err) {
     log.error(`✗ Failed to send to ${to}:`, err.message);
