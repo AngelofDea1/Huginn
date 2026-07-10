@@ -276,7 +276,7 @@ async function handleStats(from, text) {
   }
 
   const group = getGroup(from);
-  const vibe = group?.vibe || 'hype';
+  const vibe = group?.style || 'hype';
 
   try {
     const reply = await generatePlayerStats(player, vibe);

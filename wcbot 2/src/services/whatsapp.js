@@ -158,8 +158,11 @@ async function connectToWhatsApp() {
         // Wipe stale credentials so next startup shows QR immediately
         try { fs.rmSync(AUTH_DIR, { recursive: true, force: true }); } catch {}
       } else {
-        log.warn(`WhatsApp disconnected (code ${statusCode}). Reconnecting in 5s...`);
-        setTimeout(connectToWhatsApp, 5000);
+        // Code 440 = another device/session took over. Use a longer backoff so we
+        // don't fight in a tight loop — give the other instance time to settle first.
+        const backoff = statusCode === 440 ? 15000 : 5000;
+        log.warn(`WhatsApp disconnected (code ${statusCode}). Reconnecting in ${backoff / 1000}s...`);
+        setTimeout(connectToWhatsApp, backoff);
       }
     }
 
