@@ -19,6 +19,7 @@ import { routeCommand } from '../handlers/webhook.js';
 const AUTH_DIR = '.baileys_auth';
 
 // ── State ────────────────────────────────────────────────────────────────────
+const lidToPhone = {};   // LID JID  →  phone JID  (e.g. "12345@lid" → "447700@s.whatsapp.net")
 export let activeQr = null;   // set while waiting for scan, null when connected
 let sock = null;              // active Baileys socket
 
@@ -136,6 +137,29 @@ async function connectToWhatsApp() {
   // Persist credentials to disk whenever they update
   sock.ev.on('creds.update', saveCreds);
 
+  // Build LID → phone JID map from contact sync events.
+  // WhatsApp sends these on connect and whenever a new contact messages us.
+  // This is the most reliable way to resolve @lid JIDs to sendable phone JIDs.
+  sock.ev.on('contacts.upsert', (contacts) => {
+    for (const contact of contacts) {
+      // contact.id  = phone JID  (e.g. "447700900123@s.whatsapp.net")
+      // contact.lid = LID JID    (e.g. "152454293377181@lid")
+      if (contact.lid && contact.id && contact.lid !== contact.id) {
+        lidToPhone[contact.lid] = contact.id;
+        log.info(`📒 Mapped LID ${contact.lid} → ${contact.id}`);
+      }
+    }
+  });
+
+  // Also capture LID from incoming messages directly via message context
+  sock.ev.on('contacts.update', (updates) => {
+    for (const update of updates) {
+      if (update.lid && update.id && update.lid !== update.id) {
+        lidToPhone[update.lid] = update.id;
+      }
+    }
+  });
+
   // Handle connection lifecycle
   sock.ev.on('connection.update', (update) => {
     const { connection, lastDisconnect, qr } = update;
@@ -227,9 +251,19 @@ async function connectToWhatsApp() {
         const botMentioned = mentionedJids.some(j => selfJids.has(j));
 
         let from = msg.key.remoteJid;
-        // Normalize LID format to s.whatsapp.net phone JID so users see replies in their main PNs thread
+        // Normalize LID format to s.whatsapp.net phone JID so users see replies in their main PNs thread.
+        // Also eagerly populate the lidToPhone map from any phone JID embedded in the message context.
         if (from.endsWith('@lid')) {
+          // Some Baileys versions surface the phone JID in msg.key.participant (group DMs) or
+          // in the sender field of a message envelope — check all available sources.
+          const phoneFromCtx = msg.key?.participant ||
+            msg.message?.extendedTextMessage?.contextInfo?.participant;
+          if (phoneFromCtx && phoneFromCtx.endsWith('@s.whatsapp.net') && !lidToPhone[from]) {
+            lidToPhone[from] = phoneFromCtx;
+            log.info(`📒 LID map (msg ctx): ${from} → ${phoneFromCtx}`);
+          }
           const resolved = await getNormalizedJid(from);
+
           if (resolved) {
             from = resolved;
           }
@@ -249,19 +283,31 @@ async function connectToWhatsApp() {
  */
 export async function getNormalizedJid(jid) {
   if (!jid) return null;
-  if (jid.endsWith('@lid') && sock) {
-    try {
-      const info = await sock.onWhatsApp(jid);
-      if (info && info[0] && info[0].jid) {
-        log.info(`Resolved LID ${jid} to phone JID ${info[0].jid}`);
-        return info[0].jid;
-      }
-    } catch (err) {
-      log.warn(`Could not resolve LID ${jid}:`, err.message);
+  if (jid.endsWith('@lid')) {
+    // 1. Check the contact map built from contacts.upsert — instant, no network call
+    if (lidToPhone[jid]) {
+      log.info(`📒 LID ${jid} → ${lidToPhone[jid]} (from contact map)`);
+      return lidToPhone[jid];
     }
+    // 2. Fallback: query WhatsApp servers for this LID's phone JID
+    if (sock) {
+      try {
+        const info = await sock.onWhatsApp(jid);
+        if (info && info[0] && info[0].jid) {
+          log.info(`Resolved LID ${jid} → ${info[0].jid} (via onWhatsApp)`);
+          lidToPhone[jid] = info[0].jid; // cache for future sends
+          return info[0].jid;
+        }
+      } catch (err) {
+        log.warn(`Could not resolve LID ${jid}:`, err.message);
+      }
+    }
+    // 3. Last resort: log it clearly so we can see in Render logs
+    log.warn(`⚠️  Could not resolve LID ${jid} — replying directly to @lid (may not deliver)`);
   }
   return jid;
 }
+
 
 // ── Public: called once at startup ──────────────────────────────────────────
 export function initializeWhatsApp() {
