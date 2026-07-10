@@ -175,7 +175,7 @@ async function connectToWhatsApp() {
 
     if (connection === 'open') {
       activeQr = null;
-      log.info('✅ WhatsApp Client is ready and connected!');
+      log.info(`✅ WhatsApp Client is ready and connected! Logged in as: ${sock.user?.id || 'unknown'}`);
 
       // Export and log the auth data so the user can save it as WA_AUTH_DATA
       const encoded = exportAuthToEnvString();
