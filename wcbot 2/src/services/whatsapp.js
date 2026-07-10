@@ -21,6 +21,7 @@ import { routeCommand } from '../handlers/webhook.js';
 const AUTH_DIR = '.baileys_auth';
 
 // ── State ────────────────────────────────────────────────────────────────────
+const replyCtx = {};          // LID JID → last incoming msg object (for quoted-reply routing)
 export let activeQr = null;   // set while waiting for scan, null when connected
 let sock = null;              // active Baileys socket
 
@@ -233,6 +234,10 @@ async function connectToWhatsApp() {
         const botMentioned = mentionedJids.some(j => selfJids.has(j));
 
         const from = msg.key.remoteJid;
+        if (from && from.endsWith('@lid')) {
+          replyCtx[from] = msg;
+        }
+
         log.info(`Incoming message from ${from}: ${text}`);
         await routeCommand(from, text, { mentionedJids, botJid, botMentioned });
       } catch (err) {
@@ -289,7 +294,19 @@ export async function sendMessage(to, text) {
     if (!jid.includes('@')) {
       jid = `${to}@s.whatsapp.net`;
     }
-    await sock.sendMessage(jid, { text });
+
+    if (jid.endsWith('@lid')) {
+      const original = replyCtx[jid];
+      if (original) {
+        log.info(`📨 Replying to @lid ${jid} via quoted context (Signal session reuse)`);
+        await sock.sendMessage(jid, { text }, { quoted: original });
+      } else {
+        log.warn(`⚠️  No reply context for ${jid} — sending direct (may not deliver)`);
+        await sock.sendMessage(jid, { text });
+      }
+    } else {
+      await sock.sendMessage(jid, { text });
+    }
     log.info(`✉ Sent to ${jid}: ${text.slice(0, 60)}...`);
   } catch (err) {
     log.error(`✗ Failed to send to ${to}:`, err.message);
