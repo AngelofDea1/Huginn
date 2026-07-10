@@ -19,7 +19,8 @@ import { routeCommand } from '../handlers/webhook.js';
 const AUTH_DIR = '.baileys_auth';
 
 // ── State ────────────────────────────────────────────────────────────────────
-const lidToPhone = {};   // LID JID  →  phone JID  (e.g. "12345@lid" → "447700@s.whatsapp.net")
+const lidToPhone  = {};   // LID JID  →  phone JID  (e.g. "12345@lid" → "447700@s.whatsapp.net")
+const replyCtx    = {};   // LID JID  →  last incoming msg object  (for quoted-reply routing)
 export let activeQr = null;   // set while waiting for scan, null when connected
 let sock = null;              // active Baileys socket
 
@@ -254,6 +255,9 @@ async function connectToWhatsApp() {
         // Normalize LID format to s.whatsapp.net phone JID so users see replies in their main PNs thread.
         // Also eagerly populate the lidToPhone map from any phone JID embedded in the message context.
         if (from.endsWith('@lid')) {
+          // Store the original msg so sendMessage can use it as quoted context if LID can't be resolved
+          replyCtx[from] = msg;
+
           // Some Baileys versions surface the phone JID in msg.key.participant (group DMs) or
           // in the sender field of a message envelope — check all available sources.
           const phoneFromCtx = msg.key?.participant ||
@@ -355,7 +359,7 @@ export async function sendMessage(to, text) {
     // Normalize LID to phone JID in send as well
     if (jid.endsWith('@lid')) {
       const resolved = await getNormalizedJid(jid);
-      if (resolved) {
+      if (resolved && !resolved.endsWith('@lid')) {
         jid = resolved;
       }
     }
@@ -363,7 +367,23 @@ export async function sendMessage(to, text) {
     if (!jid.includes('@')) {
       jid = `${to}@s.whatsapp.net`;
     }
-    await sock.sendMessage(jid, { text });
+
+    if (jid.endsWith('@lid')) {
+      // LID couldn't be resolved to a phone JID.
+      // Use the stored original incoming message as quoted context so Baileys
+      // reuses the Signal session that was established when we received their message.
+      // This is the most reliable way to reply to @lid users on a fresh session.
+      const original = replyCtx[jid];
+      if (original) {
+        log.info(`📨 Replying to @lid ${jid} via quoted context (Signal session reuse)`);
+        await sock.sendMessage(jid, { text }, { quoted: original });
+      } else {
+        log.warn(`⚠️  No reply context for ${jid} — sending direct (may not deliver)`);
+        await sock.sendMessage(jid, { text });
+      }
+    } else {
+      await sock.sendMessage(jid, { text });
+    }
     log.info(`✉ Sent to ${jid}: ${text.slice(0, 60)}...`);
   } catch (err) {
     log.error(`✗ Failed to send to ${to}:`, err.message);
