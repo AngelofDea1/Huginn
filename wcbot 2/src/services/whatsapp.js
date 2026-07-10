@@ -251,19 +251,22 @@ async function connectToWhatsApp() {
         const botMentioned = mentionedJids.some(j => selfJids.has(j));
 
         let from = msg.key.remoteJid || '';
-        
-        // Eagerly resolve @lid to standard phone number JID from message details
+
+        // For @lid JIDs: store the message for quoted-reply (the only reliable way to
+        // reach @lid users). Also log the resolved phone number for debugging.
         if (from.endsWith('@lid')) {
           replyCtx[from] = msg;
-          
-          // Baileys surfaces the standard phone JID in msg.key.senderPn
-          const altJid = msg.key.senderPn || msg.key.participant || msg.participant || msg.key.remoteJidAlt || 
-                         messageContent.extendedTextMessage?.contextInfo?.participant;
-          
-          if (altJid && altJid.endsWith('@s.whatsapp.net')) {
-            log.info(`🎯 Resolved JID via msg metadata: ${from} → ${altJid}`);
-            from = altJid;
+
+          // Log the resolved phone JID for visibility, but keep `from` as @lid
+          // so sendMessage() uses the quoted-reply path (direct @s.whatsapp.net sends
+          // are silently dropped by WhatsApp when the user's identity is @lid).
+          const resolvedJid = msg.key.senderPn || msg.key.participant || msg.participant ||
+                              msg.key.remoteJidAlt ||
+                              messageContent.extendedTextMessage?.contextInfo?.participant;
+          if (resolvedJid) {
+            log.info(`🎯 @lid ${from} → resolved phone ${resolvedJid} (will reply via quoted @lid)`);
           }
+          // ✅ Do NOT overwrite `from` — keep as @lid so sendMessage uses quoted reply
         }
 
         log.info(`Incoming message from ${from}: ${text}`);
