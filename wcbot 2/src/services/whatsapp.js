@@ -1,17 +1,19 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import zlib from 'zlib';
+import { Boom } from '@hapi/boom';
+import pino from 'pino';
+import qrcode from 'qrcode-terminal';
+import { dirname } from 'path';
+
 import makeWASocket, {
   DisconnectReason,
   useMultiFileAuthState,
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore
 } from '@whiskeysockets/baileys';
-import { Boom } from '@hapi/boom';
-import qrcode from 'qrcode-terminal';
-import pino from 'pino';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import fs from 'fs';
-import path from 'path';
-import zlib from 'zlib';
+
 import { log } from '../utils/logger.js';
 import { routeCommand } from '../handlers/webhook.js';
 
@@ -19,8 +21,6 @@ import { routeCommand } from '../handlers/webhook.js';
 const AUTH_DIR = '.baileys_auth';
 
 // ── State ────────────────────────────────────────────────────────────────────
-const lidToPhone  = {};   // LID JID  →  phone JID  (e.g. "12345@lid" → "447700@s.whatsapp.net")
-const replyCtx    = {};   // LID JID  →  last incoming msg object  (for quoted-reply routing)
 export let activeQr = null;   // set while waiting for scan, null when connected
 let sock = null;              // active Baileys socket
 
@@ -30,67 +30,71 @@ let sock = null;              // active Baileys socket
 //   b) WA_AUTH_DATA environment variable           (fallback)
 // ─────────────────────────────────────────────────────────────────────────────
 function restoreAuthFromEnv() {
-  // Try Secret File first (bypasses Linux ARG_MAX / "argument list too long")
-  const SECRET_FILE = '/etc/secrets/wa_auth';
-  let encoded = null;
+  let source = null;
+  let compressedBase64 = null;
 
-  if (fs.existsSync(SECRET_FILE)) {
+  // 1. Try Render Secret File first (if mounted)
+  const secretPath = '/etc/secrets/wa_auth';
+  if (fs.existsSync(secretPath)) {
     try {
-      encoded = fs.readFileSync(SECRET_FILE, 'utf8').trim();
-      log.info('🔑 Reading auth from Render Secret File.');
+      compressedBase64 = fs.readFileSync(secretPath, 'utf8').trim();
+      source = 'secret file (/etc/secrets/wa_auth)';
     } catch (err) {
-      log.warn('⚠️  Could not read secret file:', err.message);
+      log.warn('Could not read Render secret file:', err.message);
     }
   }
 
-  // Fall back to env var (local dev / previous Render setup)
-  if (!encoded) {
-    encoded = process.env.WA_AUTH_DATA;
-  }
-
-  // Fall back to src/session_data.txt inside the project folder
-  if (!encoded) {
-    const localSessionPath = path.join(dirname(fileURLToPath(import.meta.url)), '..', 'session_data.txt');
-    if (fs.existsSync(localSessionPath)) {
-      try {
-        encoded = fs.readFileSync(localSessionPath, 'utf8').trim();
-        log.info('🔑 Reading auth from src/session_data.txt inside repository.');
-      } catch (err) {
-        log.warn('⚠️  Could not read local session file:', err.message);
+  // 2. Fall back to repository session_data.txt
+  if (!compressedBase64) {
+    try {
+      const localSessionPath = path.join(dirname(fileURLToPath(import.meta.url)), '..', 'session_data.txt');
+      if (fs.existsSync(localSessionPath)) {
+        compressedBase64 = fs.readFileSync(localSessionPath, 'utf8').trim();
+        if (compressedBase64) {
+          source = 'src/session_data.txt inside repository';
+        }
       }
+    } catch (err) {
+      log.warn('Could not read local session_data.txt:', err.message);
     }
   }
 
-  if (!encoded) return; // first-time setup, no data yet
+  // 3. Fall back to environment variable
+  if (!compressedBase64 && process.env.WA_AUTH_DATA) {
+    compressedBase64 = process.env.WA_AUTH_DATA.trim();
+    source = 'environment variable WA_AUTH_DATA';
+  }
+
+  if (!compressedBase64) {
+    log.info('ℹ️ No existing session data found. Starting fresh (needs QR scan).');
+    return;
+  }
+
+  log.info(`🔑 Reading auth from ${source}...`);
 
   try {
-    // Auto-detect: gzipped base64 starts with 'H4sI' (magic bytes 1f 8b in base64)
-    // Plain JSON base64 starts with 'eyJ' ({")
-    let json;
-    if (encoded.startsWith('H4sI')) {
-      // Compressed — decompress first
-      const compressed = Buffer.from(encoded, 'base64');
-      const decompressed = zlib.gunzipSync(compressed);
-      json = JSON.parse(decompressed.toString('utf8'));
-      log.info('🗜️  Decompressed gzipped auth data.');
-    } else {
-      // Plain base64 JSON (legacy)
-      json = JSON.parse(Buffer.from(encoded, 'base64').toString('utf8'));
+    const compressed = Buffer.from(compressedBase64, 'base64');
+    const json = zlib.gunzipSync(compressed).toString('utf8');
+    log.info('🗜️  Decompressed gzipped auth data.');
+    
+    const data = JSON.parse(json);
+
+    if (!fs.existsSync(AUTH_DIR)) {
+      fs.mkdirSync(AUTH_DIR, { recursive: true });
     }
 
-    if (!fs.existsSync(AUTH_DIR)) fs.mkdirSync(AUTH_DIR, { recursive: true });
-    let restored = 0;
-    for (const [filename, content] of Object.entries(json)) {
-      const dest = path.join(AUTH_DIR, filename);
-      fs.writeFileSync(dest, JSON.stringify(content), 'utf8');
-      restored++;
+    let restoredCount = 0;
+    for (const [file, content] of Object.entries(data)) {
+      const fullPath = path.join(AUTH_DIR, file);
+      const raw = typeof content === 'object' ? JSON.stringify(content, null, 2) : String(content);
+      fs.writeFileSync(fullPath, raw, 'utf8');
+      restoredCount++;
     }
-    log.info(`✅ Restored ${restored} auth file(s) from session data.`);
+    log.info(`✅ Restored ${restoredCount} auth file(s) from session data.`);
   } catch (err) {
-    log.warn('⚠️  Could not restore auth:', err.message);
+    log.error('❌ Failed to restore auth files from env/secret:', err.message);
   }
 }
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 // STEP 2: After a successful connection, encode auth files to base64 and log
@@ -137,29 +141,6 @@ async function connectToWhatsApp() {
 
   // Persist credentials to disk whenever they update
   sock.ev.on('creds.update', saveCreds);
-
-  // Build LID → phone JID map from contact sync events.
-  // WhatsApp sends these on connect and whenever a new contact messages us.
-  // This is the most reliable way to resolve @lid JIDs to sendable phone JIDs.
-  sock.ev.on('contacts.upsert', (contacts) => {
-    for (const contact of contacts) {
-      // contact.id  = phone JID  (e.g. "447700900123@s.whatsapp.net")
-      // contact.lid = LID JID    (e.g. "152454293377181@lid")
-      if (contact.lid && contact.id && contact.lid !== contact.id) {
-        lidToPhone[contact.lid] = contact.id;
-        log.info(`📒 Mapped LID ${contact.lid} → ${contact.id}`);
-      }
-    }
-  });
-
-  // Also capture LID from incoming messages directly via message context
-  sock.ev.on('contacts.update', (updates) => {
-    for (const update of updates) {
-      if (update.lid && update.id && update.lid !== update.id) {
-        lidToPhone[update.lid] = update.id;
-      }
-    }
-  });
 
   // Handle connection lifecycle
   sock.ev.on('connection.update', (update) => {
@@ -251,28 +232,7 @@ async function connectToWhatsApp() {
         // Check if any of the mentioned JIDs match one of our known self-JIDs
         const botMentioned = mentionedJids.some(j => selfJids.has(j));
 
-        let from = msg.key.remoteJid;
-        // Normalize LID format to s.whatsapp.net phone JID so users see replies in their main PNs thread.
-        // Also eagerly populate the lidToPhone map from any phone JID embedded in the message context.
-        if (from.endsWith('@lid')) {
-          // Store the original msg so sendMessage can use it as quoted context if LID can't be resolved
-          replyCtx[from] = msg;
-
-          // Some Baileys versions surface the phone JID in msg.key.participant (group DMs) or
-          // in the sender field of a message envelope — check all available sources.
-          const phoneFromCtx = msg.key?.participant ||
-            msg.message?.extendedTextMessage?.contextInfo?.participant;
-          if (phoneFromCtx && phoneFromCtx.endsWith('@s.whatsapp.net') && !lidToPhone[from]) {
-            lidToPhone[from] = phoneFromCtx;
-            log.info(`📒 LID map (msg ctx): ${from} → ${phoneFromCtx}`);
-          }
-          const resolved = await getNormalizedJid(from);
-
-          if (resolved) {
-            from = resolved;
-          }
-        }
-
+        const from = msg.key.remoteJid;
         log.info(`Incoming message from ${from}: ${text}`);
         await routeCommand(from, text, { mentionedJids, botJid, botMentioned });
       } catch (err) {
@@ -281,37 +241,6 @@ async function connectToWhatsApp() {
     }
   });
 }
-
-/**
- * Resolves a LID JID to a phone number JID using onWhatsApp query.
- */
-export async function getNormalizedJid(jid) {
-  if (!jid) return null;
-  if (jid.endsWith('@lid')) {
-    // 1. Check the contact map built from contacts.upsert — instant, no network call
-    if (lidToPhone[jid]) {
-      log.info(`📒 LID ${jid} → ${lidToPhone[jid]} (from contact map)`);
-      return lidToPhone[jid];
-    }
-    // 2. Fallback: query WhatsApp servers for this LID's phone JID
-    if (sock) {
-      try {
-        const info = await sock.onWhatsApp(jid);
-        if (info && info[0] && info[0].jid) {
-          log.info(`Resolved LID ${jid} → ${info[0].jid} (via onWhatsApp)`);
-          lidToPhone[jid] = info[0].jid; // cache for future sends
-          return info[0].jid;
-        }
-      } catch (err) {
-        log.warn(`Could not resolve LID ${jid}:`, err.message);
-      }
-    }
-    // 3. Last resort: log it clearly so we can see in Render logs
-    log.warn(`⚠️  Could not resolve LID ${jid} — replying directly to @lid (may not deliver)`);
-  }
-  return jid;
-}
-
 
 // ── Public: called once at startup ──────────────────────────────────────────
 export function initializeWhatsApp() {
@@ -356,34 +285,11 @@ export async function sendMessage(to, text) {
   if (!sock) throw new Error('WhatsApp socket not initialised yet');
   try {
     let jid = to;
-    // Normalize LID to phone JID in send as well
-    if (jid.endsWith('@lid')) {
-      const resolved = await getNormalizedJid(jid);
-      if (resolved && !resolved.endsWith('@lid')) {
-        jid = resolved;
-      }
-    }
     // If no domain suffix, assume individual chat
     if (!jid.includes('@')) {
       jid = `${to}@s.whatsapp.net`;
     }
-
-    if (jid.endsWith('@lid')) {
-      // LID couldn't be resolved to a phone JID.
-      // Use the stored original incoming message as quoted context so Baileys
-      // reuses the Signal session that was established when we received their message.
-      // This is the most reliable way to reply to @lid users on a fresh session.
-      const original = replyCtx[jid];
-      if (original) {
-        log.info(`📨 Replying to @lid ${jid} via quoted context (Signal session reuse)`);
-        await sock.sendMessage(jid, { text }, { quoted: original });
-      } else {
-        log.warn(`⚠️  No reply context for ${jid} — sending direct (may not deliver)`);
-        await sock.sendMessage(jid, { text });
-      }
-    } else {
-      await sock.sendMessage(jid, { text });
-    }
+    await sock.sendMessage(jid, { text });
     log.info(`✉ Sent to ${jid}: ${text.slice(0, 60)}...`);
   } catch (err) {
     log.error(`✗ Failed to send to ${to}:`, err.message);
