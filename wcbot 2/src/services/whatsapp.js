@@ -220,16 +220,29 @@ async function connectToWhatsApp() {
         if (msg.key.fromMe) continue;
         if (msg.key.remoteJid === 'status@broadcast') continue;
 
+        // Unpack ephemeral/viewOnce message wrappers to get to the actual message content
+        const messageContent = msg.message?.ephemeralMessage?.message || 
+                               msg.message?.viewOnceMessage?.message || 
+                               msg.message?.viewOnceMessageV2?.message || 
+                               msg.message;
+
+        if (!messageContent) {
+          log.warn('⚠️ Received message with empty or missing message content. Skipping.');
+          continue;
+        }
+
         const text = (
-          msg.message?.conversation ||
-          msg.message?.extendedTextMessage?.text ||
+          messageContent.conversation ||
+          messageContent.extendedTextMessage?.text ||
+          messageContent.imageMessage?.caption ||
+          messageContent.videoMessage?.caption ||
           ''
         ).trim();
 
         if (!text) continue;
 
         // Collect any @mentioned JIDs from the message
-        const mentionedJids = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+        const mentionedJids = messageContent.extendedTextMessage?.contextInfo?.mentionedJid || [];
         // Check if any of the mentioned JIDs match one of our known self-JIDs
         const botMentioned = mentionedJids.some(j => selfJids.has(j));
 
@@ -241,7 +254,7 @@ async function connectToWhatsApp() {
           
           // Baileys surfaces the standard phone JID in msg.key.senderPn
           const altJid = msg.key.senderPn || msg.key.participant || msg.participant || msg.key.remoteJidAlt || 
-                         msg.message?.extendedTextMessage?.contextInfo?.participant;
+                         messageContent.extendedTextMessage?.contextInfo?.participant;
           
           if (altJid && altJid.endsWith('@s.whatsapp.net')) {
             log.info(`🎯 Resolved JID via msg metadata: ${from} → ${altJid}`);
