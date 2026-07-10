@@ -14,12 +14,12 @@ const manualCommands = [
   { cmd: "/schedule", desc: "View the full list of upcoming fixtures and kickoff times for the remainder of the tournament." },
   { cmd: "/stats [player]", desc: "Get a full player profile containing career goals, assists, playing style, known injury history, and what to expect from them at this World Cup. Powered by AI." },
 
-  { cmd: "/status", desc: "See which teams you are currently following and which commentary vibe is active." },
-  { cmd: "/vibe hype", desc: "Switch to high-energy, dramatic commentary. Every goal feels like a final." },
-  { cmd: "/vibe tactical", desc: "Switch to calm, data-driven analysis. xG, formations, and odds movements explained clearly." },
-  { cmd: "/vibe funny", desc: "Switch to light-hearted banter mode. Football is entertainment after all." },
-  { cmd: "/vibe balanced", desc: "The default. Friendly, informative, and never annoying." },
-  { cmd: "/vibe", desc: "Check the current commentary vibe configuration for your chat." },
+  { cmd: "/status", desc: "See which teams you are currently following and which commentary style is active." },
+  { cmd: "/style hype", desc: "Switch to high-energy, dramatic commentary. Every goal feels like a final." },
+  { cmd: "/style tactical", desc: "Switch to calm, data-driven analysis. xG, formations, and odds movements explained clearly." },
+  { cmd: "/style funny", desc: "Switch to light-hearted banter mode. Football is entertainment after all." },
+  { cmd: "/style balanced", desc: "The default. Friendly, informative, and never annoying." },
+  { cmd: "/style", desc: "Check the current commentary style configuration for your chat." },
   { cmd: "/help", desc: "Lost or need a quick refresher? Send this command straight to the chat at any time." }
 ];
 
@@ -55,31 +55,31 @@ const alertCards = [
 const vibes = [
   {
     id: "hype",
-    cmd: "/vibe hype",
+    cmd: "/style hype",
     name: "Hype FC",
     desc: "Every goal treated like a cup final. Loud, dramatic, and relentless. Made for groups where the match is all that exists.",
-    preview: "⚽ GOOOAL!! Vinícius EXPLODES past the keeper!! Brazil are ALIVE!! 2–1 and the crowd goes absolutely mental!! Odds PLUMMETING: Brazil now 1.44 favourites!! This. Is. FOOTBALL!! 🔥🔥🔥",
+    preview: "⚽ GOOOAL!! Vinícius EXPLODES past the keeper!! Brazil are ALIVE!! 2\u20131 and the crowd goes absolutely mental!! Odds PLUMMETING: Brazil now 1.44 favourites!! This. Is. FOOTBALL!! 🔥🔥🔥",
   },
   {
     id: "tactical",
-    cmd: "/vibe tactical",
+    cmd: "/style tactical",
     name: "The Analyst",
     desc: "xG, formation shifts, and market movements explained cleanly. Built for groups that read the numbers, not just the scoreline.",
-    preview: "GOAL · Vinícius Jr (67')\nBrazil 2–1. xG at time of goal: 1.82 vs 0.94.\n\nBrazil operating in a 4-3-3 transition shape. This goal exploited the half-space between Germany's left CB and LB. Odds adjusted: Brazil win 1.44 (from 2.10). A significant market movement.",
+    preview: "GOAL \u00b7 Vinícius Jr (67')\nBrazil 2\u20131. xG at time of goal: 1.82 vs 0.94.\n\nBrazil operating in a 4-3-3 transition shape. This goal exploited the half-space between Germany's left CB and LB. Odds adjusted: Brazil win 1.44 (from 2.10). A significant market movement.",
   },
   {
     id: "funny",
-    cmd: "/vibe funny",
+    cmd: "/style funny",
     name: "Banter FC",
     desc: "Nothing is presented straight. Works best in groups where the banter lasts longer than the match does.",
-    preview: "lads lads lads. Vinícius just nutmegged the entire German defensive line and casually rolled it in like he was parking a car. 2–1. Germany's odds are now longer than their injury list. The raven has spoken 🦅",
+    preview: "lads lads lads. Vinícius just nutmegged the entire German defensive line and casually rolled it in like he was parking a car. 2\u20131. Germany's odds are now longer than their injury list. The raven has spoken 🦅",
   },
   {
     id: "balanced",
-    cmd: "/vibe balanced",
+    cmd: "/style balanced",
     name: "Match Day",
     desc: "Factual and easy to read. Covers every event without editorialising. The default mode that works in any group.",
-    preview: "GOAL · Vinícius Jr (67')\nBrazil 2–1 Germany.\n\nOdds updated: Brazil win 1.44 · Draw 4.10 · Germany 7.20.\n\nBrazil lead for the first time in the match.",
+    preview: "GOAL \u00b7 Vinícius Jr (67')\nBrazil 2\u20131 Germany.\n\nOdds updated: Brazil win 1.44 \u00b7 Draw 4.10 \u00b7 Germany 7.20.\n\nBrazil lead for the first time in the match.",
   },
 
 ];

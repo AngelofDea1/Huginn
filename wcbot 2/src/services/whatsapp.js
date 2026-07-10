@@ -175,6 +175,16 @@ async function connectToWhatsApp() {
         log.info('   and set it as the WA_AUTH_DATA environment variable in Render');
         log.info('   to survive restarts without ever scanning a QR again.');
         log.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+        // Auto-save fresh session back to session_data.txt so the next deploy
+        // starts with up-to-date credentials without needing another QR scan.
+        try {
+          const localSessionPath = path.join(dirname(fileURLToPath(import.meta.url)), '..', 'session_data.txt');
+          fs.writeFileSync(localSessionPath, encoded, 'utf8');
+          log.info('💾 session_data.txt updated with fresh credentials.');
+        } catch (writeErr) {
+          log.warn('Could not auto-save session_data.txt:', writeErr.message);
+        }
       }
     }
   });
@@ -258,6 +268,25 @@ export function initializeWhatsApp() {
   connectToWhatsApp().catch(err => {
     log.error('Failed to initialize WhatsApp Client:', err.message);
   });
+}
+
+// ── Public: wipe session and force a fresh QR scan ──────────────────────────
+// Called by POST /api/relink when the bot is "connected" but silent.
+export async function forceRelink() {
+  // 1. Close existing socket gracefully
+  if (sock) {
+    try { sock.ws?.close(); } catch {}
+    sock = null;
+  }
+  // 2. Wipe stored credentials
+  const AUTH_DIR_PATH = path.join(dirname(fileURLToPath(import.meta.url)), '..', '..', '.baileys_auth');
+  try { fs.rmSync(AUTH_DIR_PATH, { recursive: true, force: true }); } catch {}
+  // Also wipe the local session_data.txt so it doesn't restore stale creds
+  const localSessionPath = path.join(dirname(fileURLToPath(import.meta.url)), '..', 'session_data.txt');
+  try { fs.writeFileSync(localSessionPath, '', 'utf8'); } catch {}
+  log.warn('🗑️  Stale session wiped. Starting fresh connection — QR will appear at /qr');
+  // 3. Reconnect with no credentials — Baileys will generate a new QR
+  await connectToWhatsApp();
 }
 
 // ── Public: export auth state as base64 (used by /api/wa-auth-export) ───────

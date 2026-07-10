@@ -1,9 +1,10 @@
 import 'dotenv/config';
 import express from 'express';
 import cron from 'node-cron';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { initializeWhatsApp, activeQr, getAuthExport } from './services/whatsapp.js';
+import { initializeWhatsApp, activeQr, getAuthExport, forceRelink } from './services/whatsapp.js';
 import { pollMatches } from './services/matchPoller.js';
 import { schedulePreMatchBulletins } from './services/scheduler.js';
 import { log, logBuffer } from './utils/logger.js';
@@ -235,6 +236,24 @@ app.get('/api/wa-auth-export', (_, res) => {
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 app.get('/health', (_, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
+
+// ─── QR status (polled by the /qr page) ───────────────────────────────────────
+app.get('/api/qr-status', (_, res) => {
+  res.json({ needsScan: !!activeQr, qr: activeQr });
+});
+
+// ─── Force relink: wipe session and show a fresh QR ───────────────────────────
+// Hit POST /api/relink to clear stale credentials and trigger a new QR scan.
+// Useful when the bot is "connected" but silently not receiving messages.
+app.post('/api/relink', async (req, res) => {
+  try {
+    log.warn('🔄 /api/relink called — wiping session and forcing fresh QR...');
+    await forceRelink();
+    res.json({ status: 'ok', message: 'Session wiped. Scan the new QR at /qr within 60 seconds.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ─── Debug logs endpoint ──────────────────────────────────────────────────────
 app.get('/api/logs', (_, res) => {
