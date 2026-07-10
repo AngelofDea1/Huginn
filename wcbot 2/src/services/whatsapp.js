@@ -250,7 +250,18 @@ async function connectToWhatsApp() {
         // Check if any of the mentioned JIDs match one of our known self-JIDs
         const botMentioned = mentionedJids.some(j => selfJids.has(j));
 
-        const from = msg.key.remoteJid || '';
+        let from = msg.key.remoteJid || '';
+
+        // If the sender has a LID JID, eagerly map it to their standard phone JID
+        // so that the entire bot communication uses s.whatsapp.net instead of LID
+        if (from.endsWith('@lid')) {
+          const phoneJid = msg.key.senderPn || msg.key.participant || msg.participant || msg.key.remoteJidAlt ||
+                           messageContent.extendedTextMessage?.contextInfo?.participant;
+          if (phoneJid && phoneJid.endsWith('@s.whatsapp.net')) {
+            log.info(`🎯 Resolving JID: ${from} -> ${phoneJid}`);
+            from = phoneJid;
+          }
+        }
 
         log.info(`Incoming message from ${from}: ${text}`);
         await routeCommand(from, text, { mentionedJids, botJid, botMentioned });
