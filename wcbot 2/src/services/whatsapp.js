@@ -233,9 +233,20 @@ async function connectToWhatsApp() {
         // Check if any of the mentioned JIDs match one of our known self-JIDs
         const botMentioned = mentionedJids.some(j => selfJids.has(j));
 
-        const from = msg.key.remoteJid;
-        if (from && from.endsWith('@lid')) {
+        let from = msg.key.remoteJid || '';
+        
+        // Eagerly resolve @lid to standard phone number JID from message details
+        if (from.endsWith('@lid')) {
           replyCtx[from] = msg;
+          
+          // Check other fields in Baileys message object that may contain the s.whatsapp.net phone JID
+          const altJid = msg.key.participant || msg.participant || msg.key.remoteJidAlt || 
+                         msg.message?.extendedTextMessage?.contextInfo?.participant;
+          
+          if (altJid && altJid.endsWith('@s.whatsapp.net')) {
+            log.info(`🎯 Resolved JID via msg metadata: ${from} → ${altJid}`);
+            from = altJid;
+          }
         }
 
         log.info(`Incoming message from ${from}: ${text}`);
