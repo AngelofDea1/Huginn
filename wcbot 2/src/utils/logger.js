@@ -5,7 +5,7 @@ export const logBuffer = [];
 function pushLog(level, ...args) {
   const line = `[${ts()}] ${level}: ${args.map(x => typeof x === 'object' ? JSON.stringify(x) : String(x)).join(' ')}`;
   logBuffer.push(line);
-  if (logBuffer.length > 100) {
+  if (logBuffer.length > 2000) {
     logBuffer.shift();
   }
 }
