@@ -200,7 +200,11 @@ async function connectToWhatsApp() {
   });
 
   // Handle incoming messages
-  sock.ev.on('messages.upsert', async ({ messages }) => {
+  sock.ev.on('messages.upsert', async ({ messages, type }) => {
+    // Only process new incoming messages — ignore history syncs on startup
+    if (type !== 'notify') return;
+    log.info(`📨 messages.upsert fired — ${messages.length} message(s)`);
+
     // Derive the bot's own JIDs (Baileys may give us @lid or @s.whatsapp.net)
     // sock.user.id is the authoritative connected JID e.g. "2349026755711:10@s.whatsapp.net"
     const rawBotJid = sock.user?.id || '';
