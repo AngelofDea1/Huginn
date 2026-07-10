@@ -161,9 +161,11 @@ async function connectToWhatsApp() {
       const loggedOut = statusCode === DisconnectReason.loggedOut;
 
       if (loggedOut) {
-        log.warn('WhatsApp logged out (explicit logout). Clearing auth & waiting for re-scan.');
+        log.warn('WhatsApp logged out (explicit logout). Clearing auth & starting fresh connection for re-scan.');
         // Wipe stale credentials so next startup shows QR immediately
         try { fs.rmSync(AUTH_DIR, { recursive: true, force: true }); } catch {}
+        // Trigger reconnect immediately to generate new QR code
+        setTimeout(connectToWhatsApp, 1000);
       } else {
         // Code 440 = another device/session took over. Use a longer backoff so we
         // don't fight in a tight loop — give the other instance time to settle first.
