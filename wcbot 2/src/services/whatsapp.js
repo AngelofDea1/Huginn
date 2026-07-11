@@ -223,52 +223,61 @@ async function connectToWhatsApp() {
 
     for (const msg of messages) {
       try {
-        if (msg.key.fromMe) continue;
-        if (msg.key.remoteJid === 'status@broadcast') continue;
+        // ── DEBUG: log every message so nothing is invisible ─────────────────
+        log.info(`🔍 RAW MSG key=${JSON.stringify(msg.key)} msgKeys=${Object.keys(msg.message||{}).join(',')}`);
 
-        // Unpack ephemeral/viewOnce message wrappers to get to the actual message content
-        const messageContent = msg.message?.ephemeralMessage?.message || 
-                               msg.message?.viewOnceMessage?.message || 
-                               msg.message?.viewOnceMessageV2?.message || 
+        if (msg.key.fromMe) { log.info('⏭ skipped: fromMe'); continue; }
+        if (msg.key.remoteJid === 'status@broadcast') { log.info('⏭ skipped: status broadcast'); continue; }
+
+        // Unpack ephemeral/viewOnce message wrappers
+        const messageContent = msg.message?.ephemeralMessage?.message ||
+                               msg.message?.viewOnceMessage?.message ||
+                               msg.message?.viewOnceMessageV2?.message ||
                                msg.message;
 
         if (!messageContent) {
-          log.warn('⚠️ Received message with empty or missing message content. Skipping.');
+          log.warn('⚠️ empty messageContent — skipping');
           continue;
         }
 
+        // Extract text from all known message types
         const text = (
           messageContent.conversation ||
           messageContent.extendedTextMessage?.text ||
           messageContent.imageMessage?.caption ||
           messageContent.videoMessage?.caption ||
+          messageContent.buttonsResponseMessage?.selectedDisplayText ||
+          messageContent.listResponseMessage?.title ||
+          messageContent.templateButtonReplyMessage?.selectedDisplayText ||
           ''
         ).trim();
 
-        if (!text) continue;
+        log.info(`🔍 Extracted text="${text}" contentKeys=${Object.keys(messageContent).join(',')}`);
 
-        // Collect any @mentioned JIDs from the message
+        if (!text) { log.warn('⚠️ no text in message — skipping'); continue; }
+
+        // Collect any @mentioned JIDs
         const mentionedJids = messageContent.extendedTextMessage?.contextInfo?.mentionedJid || [];
-        // Check if any of the mentioned JIDs match one of our known self-JIDs
         const botMentioned = mentionedJids.some(j => selfJids.has(j));
 
         let from = msg.key.remoteJid || '';
 
-        // If the sender has a LID JID, eagerly map it to their standard phone JID
-        // so that the entire bot communication uses s.whatsapp.net instead of LID
+        // Resolve @lid JID to standard phone JID
         if (from.endsWith('@lid')) {
           const phoneJid = msg.key.senderPn || msg.key.participant || msg.participant || msg.key.remoteJidAlt ||
                            messageContent.extendedTextMessage?.contextInfo?.participant;
           if (phoneJid && phoneJid.endsWith('@s.whatsapp.net')) {
             log.info(`🎯 Resolving JID: ${from} -> ${phoneJid}`);
             from = phoneJid;
+          } else {
+            log.warn(`⚠️ @lid JID ${from} could not be resolved to @s.whatsapp.net — senderPn=${msg.key.senderPn} participant=${msg.key.participant}`);
           }
         }
 
         log.info(`Incoming message from ${from}: ${text}`);
         await routeCommand(from, text, { mentionedJids, botJid, botMentioned });
       } catch (err) {
-        log.error('Error handling message:', err.message);
+        log.error('Error handling message:', err.message, err.stack);
       }
     }
   });
