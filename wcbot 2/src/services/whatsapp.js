@@ -22,6 +22,7 @@ const AUTH_DIR = '.baileys_auth';
 
 // ── State ────────────────────────────────────────────────────────────────────
 const replyCtx = {};          // LID JID → last incoming msg object (for quoted-reply routing)
+const lidToPhoneMap = new Map(); // Global map to resolve LID JIDs to standard phone JIDs to avoid silent delivery drops
 export let activeQr = null;   // set while waiting for scan, null when connected
 let sock = null;              // active Baileys socket
 
@@ -229,6 +230,16 @@ async function connectToWhatsApp() {
         if (msg.key.fromMe) { log.info('⏭ skipped: fromMe'); continue; }
         if (msg.key.remoteJid === 'status@broadcast') { log.info('⏭ skipped: status broadcast'); continue; }
 
+        // Save LID -> Phone mapping if available in metadata
+        const from = msg.key.remoteJid || '';
+        if (from.endsWith('@lid') && msg.key.senderPn) {
+          lidToPhoneMap.set(from, msg.key.senderPn);
+          log.info(`Mapped JID: ${from} -> ${msg.key.senderPn}`);
+        }
+
+        // Save message context for fallback quoted reply routing
+        replyCtx[from] = msg;
+
         // Unpack ephemeral/viewOnce message wrappers
         const messageContent = msg.message?.ephemeralMessage?.message ||
                                msg.message?.viewOnceMessage?.message ||
@@ -259,11 +270,6 @@ async function connectToWhatsApp() {
         // Collect any @mentioned JIDs
         const mentionedJids = messageContent.extendedTextMessage?.contextInfo?.mentionedJid || [];
         const botMentioned = mentionedJids.some(j => selfJids.has(j));
-
-        // ALWAYS reply to the exact JID the message came from.
-        // For @lid accounts WhatsApp requires the reply go back to the @lid JID —
-        // sending to @s.whatsapp.net is silently dropped by WhatsApp servers.
-        const from = msg.key.remoteJid || '';
 
         // Derive a human-readable display JID for logs only
         const displayJid = msg.key.senderPn || from;
@@ -320,12 +326,28 @@ export async function sendMessage(to, text) {
   if (!sock) throw new Error('WhatsApp socket not initialised yet');
   try {
     let jid = to;
+    let quoted = null;
+
+    // Resolve LID to Phone JID if mapped to ensure delivery
+    if (jid.endsWith('@lid')) {
+      if (lidToPhoneMap.has(jid)) {
+        const resolved = lidToPhoneMap.get(jid);
+        log.info(`Resolving LID output: ${jid} -> ${resolved}`);
+        jid = resolved;
+      } else if (replyCtx[jid]) {
+        // Fallback: If we don't have the phone number, reply to their message directly.
+        // Quoting their message forces WhatsApp to deliver the message to the LID.
+        log.info(`Using quoted fallback to deliver message to LID: ${jid}`);
+        quoted = replyCtx[jid];
+      }
+    }
+
     // If no domain suffix, assume individual chat
     if (!jid.includes('@')) {
       jid = `${to}@s.whatsapp.net`;
     }
 
-    await sock.sendMessage(jid, { text });
+    await sock.sendMessage(jid, { text }, { quoted });
     log.info(`✉ Sent to ${jid}: ${text.slice(0, 60)}...`);
   } catch (err) {
     log.error(`✗ Failed to send to ${to}:`, err.message);
