@@ -1,19 +1,16 @@
 /**
  * store.js - simple in-memory store
  *
- * In production you'd swap this for Supabase/Redis.
- * For the hackathon, this works perfectly.
- *
  * Structure:
- *   groups: Map<groupId, { vibe, followedMatchIds: Set, name }>
- *   matchState: Map<matchId, { lastEventId, homeScore, awayScore, status, odds, sentHT, sentFT, sentPreMatch }>
+ *   groups:     Map<groupId, { style, followedMatchIds: Set, name }>
+ *   matchState: Map<matchId, { seenEventIds: Set, homeScore, awayScore, status, odds, sentKO, sentHT, sentFT, sentPreMatch }>
  */
 
-const groups = new Map();
+const groups     = new Map();
 const matchState = new Map();
-const contacted = new Set(); // Track JIDs that have been welcomed
+const contacted  = new Set(); // JIDs that have already received the welcome message
 
-//  First-contact helpers 
+// ── First-contact helpers ──────────────────────────────────────────────────────
 
 export function isFirstContact(jid) {
   return !contacted.has(jid);
@@ -23,13 +20,13 @@ export function markContacted(jid) {
   contacted.add(jid);
 }
 
-//  Group helpers 
+// ── Group helpers ──────────────────────────────────────────────────────────────
 
 export function registerGroup(groupId, name = 'your group') {
   if (!groups.has(groupId)) {
     groups.set(groupId, {
       name,
-      style: 'hype',           // default commentary style
+      style: 'hype',
       followedMatchIds: new Set(),
     });
   }
@@ -69,24 +66,49 @@ export function getGroupsFollowingMatch(matchId) {
   return result;
 }
 
-//  Match state helpers 
+// ── Match state helpers ────────────────────────────────────────────────────────
 
 export function getMatchState(matchId) {
   return matchState.get(String(matchId)) || null;
 }
 
 export function initMatchState(matchId, data) {
+  // Only initialise if no state exists yet — never overwrite existing state
+  if (matchState.has(String(matchId))) return;
   matchState.set(String(matchId), {
-    lastEventId: null,
-    homeScore: 0,
-    awayScore: 0,
-    status: 'pre',
-    odds: null,
-    sentHT: false,
-    sentFT: false,
-    sentPreMatch: false,
+    seenEventIds:  new Set(),   // all event IDs we have already alerted on
+    homeScore:     0,
+    awayScore:     0,
+    status:        'pre',
+    odds:          null,
+    sentKO:        false,
+    sentHT:        false,
+    sentFT:        false,
+    sentPreMatch:  false,
     ...data,
   });
+}
+
+/**
+ * Call this when someone follows a match that is already in progress.
+ * Seeds seenEventIds with every current event so we only alert on FUTURE ones.
+ */
+export function seedMatchEvents(matchId, currentEvents = []) {
+  const state = matchState.get(String(matchId));
+  if (!state) return;
+  for (const e of currentEvents) {
+    state.seenEventIds.add(e.id);
+  }
+}
+
+export function markEventSeen(matchId, eventId) {
+  const state = matchState.get(String(matchId));
+  if (state) state.seenEventIds.add(eventId);
+}
+
+export function hasSeenEvent(matchId, eventId) {
+  const state = matchState.get(String(matchId));
+  return state ? state.seenEventIds.has(eventId) : false;
 }
 
 export function updateMatchState(matchId, updates) {

@@ -1,8 +1,9 @@
-import { searchMatch, getFixtureSchedule } from '../services/txline.js';
+import { searchMatch, getFixtureSchedule, getMatchDetail, getLiveMatches, getUpcomingMatches } from '../services/txline.js';
 import { sendMessage } from '../services/whatsapp.js';
 import {
   registerGroup, getGroup, setGroupStyle,
-  followMatch, unfollowMatch, initMatchState, isFirstContact, markContacted
+  followMatch, unfollowMatch, initMatchState, seedMatchEvents,
+  isFirstContact, markContacted
 } from '../utils/store.js';
 import { log } from '../utils/logger.js';
 import { STYLES, generatePlayerStats } from '../services/ai.js';
@@ -169,7 +170,28 @@ async function handleFollow(from, text) {
 
   const m = matches[0];
   followMatch(from, m.id);
-  initMatchState(m.id, {});
+
+  // Init match state (store guards against overwriting existing state)
+  initMatchState(m.id, {
+    homeScore: m.home_score ?? 0,
+    awayScore: m.away_score ?? 0,
+    status:    m.status,
+  });
+
+  // If the match is already live, seed all existing events so we don't
+  // replay every goal that happened before the user followed
+  const isLive = m.status === 'LIVE' || m.status === 'HT';
+  if (isLive) {
+    try {
+      const detail = await getMatchDetail(String(m.id));
+      if (detail?.events?.length) {
+        seedMatchEvents(String(m.id), detail.events);
+        log.info(`[follow] Seeded ${detail.events.length} existing events for match ${m.id}`);
+      }
+    } catch (e) {
+      log.warn(`[follow] Could not seed events for match ${m.id}:`, e.message);
+    }
+  }
 
   const kickoffDate = new Date(m.kickoff_time);
   const kickoff = kickoffDate.toLocaleString('en-GB', {
@@ -177,10 +199,14 @@ async function handleFollow(from, text) {
     hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
   });
 
+  const liveNote = isLive
+    ? `\n\nThe match is already underway — you'll get alerts from this point on.`
+    : `\n\nGoal alerts, red cards, and half/full-time summaries will come through automatically.`;
+
   return sendMessage(from,
     `Following *${m.home_team?.name} vs ${m.away_team?.name}*\n\n` +
-    `Kick-off: ${kickoff}\n\n` +
-    `Goal alerts, red cards, and half/full-time summaries will come through automatically.`
+    `Kick-off: ${kickoff}` +
+    liveNote
   );
 }
 
@@ -233,11 +259,9 @@ async function handleStatus(from) {
 // /live
 async function handleLive(from) {
   try {
-    const { getLiveMatches, getUpcomingMatches } = await import('../services/txline.js');
     const live = await getLiveMatches();
 
     if (!live.length) {
-      // Show upcoming as fallback
       const upcoming = await getUpcomingMatches(6);
       if (upcoming.length) {
         const lines = upcoming.slice(0, 5).map(m => {
