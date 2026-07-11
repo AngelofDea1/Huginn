@@ -260,21 +260,15 @@ async function connectToWhatsApp() {
         const mentionedJids = messageContent.extendedTextMessage?.contextInfo?.mentionedJid || [];
         const botMentioned = mentionedJids.some(j => selfJids.has(j));
 
-        let from = msg.key.remoteJid || '';
+        // ALWAYS reply to the exact JID the message came from.
+        // For @lid accounts WhatsApp requires the reply go back to the @lid JID —
+        // sending to @s.whatsapp.net is silently dropped by WhatsApp servers.
+        const from = msg.key.remoteJid || '';
 
-        // Resolve @lid JID to standard phone JID
-        if (from.endsWith('@lid')) {
-          const phoneJid = msg.key.senderPn || msg.key.participant || msg.participant || msg.key.remoteJidAlt ||
-                           messageContent.extendedTextMessage?.contextInfo?.participant;
-          if (phoneJid && phoneJid.endsWith('@s.whatsapp.net')) {
-            log.info(`🎯 Resolving JID: ${from} -> ${phoneJid}`);
-            from = phoneJid;
-          } else {
-            log.warn(`⚠️ @lid JID ${from} could not be resolved to @s.whatsapp.net — senderPn=${msg.key.senderPn} participant=${msg.key.participant}`);
-          }
-        }
+        // Derive a human-readable display JID for logs only
+        const displayJid = msg.key.senderPn || from;
+        log.info(`Incoming message from ${displayJid} (jid=${from}): ${text}`);
 
-        log.info(`Incoming message from ${from}: ${text}`);
         await routeCommand(from, text, { mentionedJids, botJid, botMentioned });
       } catch (err) {
         log.error('Error handling message:', err.message, err.stack);
