@@ -22,3 +22,6 @@ services:
         sync: false
       - key: WA_AUTH_DATA
         sync: false
+      - key: BOT_PHONE_NUMBER
+        sync: false
+
