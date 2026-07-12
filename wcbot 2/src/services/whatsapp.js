@@ -228,14 +228,17 @@ async function connectToWhatsApp() {
         if (msg.key.remoteJid === 'status@broadcast') { log.info('⏭ skipped: status broadcast'); continue; }
 
         // ── REPLY TARGET ─────────────────────────────────────────────────────
-        // from = msg.key.remoteJid exactly as Baileys delivers it.
-        // DO NOT resolve or transform remoteJid before sending — WhatsApp accepts
-        // @lid format directly. Resolving to @s.whatsapp.net causes WhatsApp to
-        // silently drop the message. See implementation notes, 2026-07-12.
-        const from = msg.key.remoteJid;
+        // WhatsApp silently drops messages sent to @lid JIDs even with a fresh
+        // session (confirmed by testing 2026-07-12). Use senderPn (@s.whatsapp.net)
+        // for 1:1 chats when available — it's the real phone JID and delivers.
+        // Groups use remoteJid (@g.us) which is always correct for group sends.
+        const isGroup = msg.key.remoteJid.endsWith('@g.us');
+        const from = (!isGroup && msg.key.senderPn)
+          ? msg.key.senderPn          // 1:1 chat → use real phone JID (e.g. 2347...@s.whatsapp.net)
+          : msg.key.remoteJid;        // group or no senderPn → use remoteJid as-is
 
-        // For logging/analytics/display ONLY — never used on the send path.
-        const displayJid = msg.key.senderPn || from;
+        // For logging only
+        const displayJid = msg.key.senderPn || msg.key.remoteJid;
 
         // Unpack ephemeral/viewOnce message wrappers
         const messageContent = msg.message?.ephemeralMessage?.message ||
