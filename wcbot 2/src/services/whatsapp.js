@@ -187,16 +187,13 @@ async function connect() {
         if (msg.key.fromMe)                              continue;
         if (msg.key.remoteJid === 'status@broadcast')   continue;
 
-        // ── Choose reply target ─────────────────────────────────────────────
-        // @lid JIDs are silently dropped even with a fresh session (tested 2026-07-12).
-        // Use senderPn (the real @s.whatsapp.net JID) for 1:1 chats.
-        // Groups always use remoteJid (@g.us).
-        const isGroup  = msg.key.remoteJid.endsWith('@g.us');
-        const replyJid = isGroup
-          ? msg.key.remoteJid
-          : (msg.key.senderPn || msg.key.remoteJid);
+        // ── REPLY TARGET ─────────────────────────────────────────────────────
+        // Always use msg.key.remoteJid exactly as received (the raw @lid or @g.us JID)
+        // with zero transformations, resolutions, or substitutions.
+        const replyJid = msg.key.remoteJid;
 
-        log.info(`📨 from=${replyJid} raw=${msg.key.remoteJid}`);
+        log.info(`📨 raw from remoteJid=${msg.key.remoteJid}`);
+
 
         // ── Extract text ────────────────────────────────────────────────────
         const mc = msg.message?.ephemeralMessage?.message
@@ -274,9 +271,11 @@ export async function forceRelink() {
 export async function sendMessage(to, text) {
   if (!sock) throw new Error('Socket not ready');
   const jid = to.includes('@') ? to : `${to}@s.whatsapp.net`;
+  log.info(`✉ Sending to RAW jid: ${jid}`);
   await sock.sendMessage(jid, { text });
   log.info(`✉ → ${jid}: ${text.slice(0, 80).replace(/\n/g, ' ')}…`);
 }
+
 
 export async function broadcast(recipients, text) {
   const results = await Promise.allSettled(recipients.map(id => sendMessage(id, text)));
