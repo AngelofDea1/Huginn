@@ -325,29 +325,15 @@ export function getAuthExport() {
 export async function sendMessage(to, text) {
   if (!sock) throw new Error('WhatsApp socket not initialised yet');
   try {
+    // Always reply to the exact JID the message came from.
+    // @lid JIDs must stay as @lid — resolving to @s.whatsapp.net is silently
+    // dropped by WhatsApp servers. Groups stay as @g.us.
     let jid = to;
-    let quoted = null;
-
-    // Resolve LID to Phone JID if mapped to ensure delivery
-    if (jid.endsWith('@lid')) {
-      if (lidToPhoneMap.has(jid)) {
-        const resolved = lidToPhoneMap.get(jid);
-        log.info(`Resolving LID output: ${jid} -> ${resolved}`);
-        jid = resolved;
-      } else if (replyCtx[jid]) {
-        // Fallback: If we don't have the phone number, reply to their message directly.
-        // Quoting their message forces WhatsApp to deliver the message to the LID.
-        log.info(`Using quoted fallback to deliver message to LID: ${jid}`);
-        quoted = replyCtx[jid];
-      }
-    }
-
-    // If no domain suffix, assume individual chat
     if (!jid.includes('@')) {
       jid = `${to}@s.whatsapp.net`;
     }
 
-    await sock.sendMessage(jid, { text }, { quoted });
+    await sock.sendMessage(jid, { text });
     log.info(`✉ Sent to ${jid}: ${text.slice(0, 60)}...`);
   } catch (err) {
     log.error(`✗ Failed to send to ${to}:`, err.message);
