@@ -21,8 +21,6 @@ import { routeCommand } from '../handlers/webhook.js';
 const AUTH_DIR = '.baileys_auth';
 
 // ── State ────────────────────────────────────────────────────────────────────
-const replyCtx = {};          // LID JID → last incoming msg object (for quoted-reply routing)
-const lidToPhoneMap = new Map(); // Global map to resolve LID JIDs to standard phone JIDs to avoid silent delivery drops
 export let activeQr = null;   // set while waiting for scan, null when connected
 let sock = null;              // active Baileys socket
 
@@ -224,21 +222,20 @@ async function connectToWhatsApp() {
 
     for (const msg of messages) {
       try {
-        // ── DEBUG: log every message so nothing is invisible ─────────────────
         log.info(`🔍 RAW MSG key=${JSON.stringify(msg.key)} msgKeys=${Object.keys(msg.message||{}).join(',')}`);
 
         if (msg.key.fromMe) { log.info('⏭ skipped: fromMe'); continue; }
         if (msg.key.remoteJid === 'status@broadcast') { log.info('⏭ skipped: status broadcast'); continue; }
 
-        // Save LID -> Phone mapping if available in metadata
-        const from = msg.key.remoteJid || '';
-        if (from.endsWith('@lid') && msg.key.senderPn) {
-          lidToPhoneMap.set(from, msg.key.senderPn);
-          log.info(`Mapped JID: ${from} -> ${msg.key.senderPn}`);
-        }
+        // ── REPLY TARGET ─────────────────────────────────────────────────────
+        // from = msg.key.remoteJid exactly as Baileys delivers it.
+        // DO NOT resolve or transform remoteJid before sending — WhatsApp accepts
+        // @lid format directly. Resolving to @s.whatsapp.net causes WhatsApp to
+        // silently drop the message. See implementation notes, 2026-07-12.
+        const from = msg.key.remoteJid;
 
-        // Save message context for fallback quoted reply routing
-        replyCtx[from] = msg;
+        // For logging/analytics/display ONLY — never used on the send path.
+        const displayJid = msg.key.senderPn || from;
 
         // Unpack ephemeral/viewOnce message wrappers
         const messageContent = msg.message?.ephemeralMessage?.message ||
@@ -271,10 +268,10 @@ async function connectToWhatsApp() {
         const mentionedJids = messageContent.extendedTextMessage?.contextInfo?.mentionedJid || [];
         const botMentioned = mentionedJids.some(j => selfJids.has(j));
 
-        // Derive a human-readable display JID for logs only
-        const displayJid = msg.key.senderPn || from;
         log.info(`Incoming message from ${displayJid} (jid=${from}): ${text}`);
 
+        // Pass from (= msg.key.remoteJid, untouched) to routeCommand.
+        // Every downstream sendMessage call will use this exact value.
         await routeCommand(from, text, { mentionedJids, botJid, botMentioned });
       } catch (err) {
         log.error('Error handling message:', err.message, err.stack);
@@ -318,19 +315,36 @@ export function getAuthExport() {
 }
 
 /**
- * Send a plain-text message to a JID or bare phone number.
- * Individual chats: PHONENUMBER@s.whatsapp.net
- * Groups:          GROUPID@g.us
+ * Send a plain-text message to a WhatsApp JID.
+ *
+ * IMPLEMENTATION NOTE — JID DELIVERY RULES (2026-07-12):
+ *   WhatsApp accepts @lid JIDs directly on the send path.
+ *   Any transformation of the incoming JID (resolving @lid → @s.whatsapp.net,
+ *   sock.onWhatsApp() lookups, regex replacements, etc.) causes WhatsApp to
+ *   silently drop the outbound message with no error.
+ *
+ *   Rule: `to` must always be msg.key.remoteJid EXACTLY as received.
+ *   The only permitted transformation is appending @s.whatsapp.net to a bare
+ *   phone number (digits only, no @ suffix) for proactive / non-reply sends.
  */
 export async function sendMessage(to, text) {
   if (!sock) throw new Error('WhatsApp socket not initialised yet');
   try {
-    // Always reply to the exact JID the message came from.
-    // @lid JIDs must stay as @lid — resolving to @s.whatsapp.net is silently
-    // dropped by WhatsApp servers. Groups stay as @g.us.
     let jid = to;
+
+    // Only append a domain if `to` is a bare number with no @ at all.
+    // @lid, @s.whatsapp.net, and @g.us are passed through unchanged.
     if (!jid.includes('@')) {
       jid = `${to}@s.whatsapp.net`;
+    }
+
+    // DO NOT resolve or transform remoteJid before sending — WhatsApp accepts
+    // @lid format directly. Resolving to @s.whatsapp.net causes WhatsApp to
+    // silently drop the message. See implementation notes, 2026-07-12.
+    if (jid !== to && to.includes('@')) {
+      // to already had an @ but we somehow changed it — log a warning so
+      // this regression is immediately visible in logs during future refactors.
+      log.warn(`⚠️ JID TRANSFORMED on send path: original="${to}" sending="${jid}" — this may cause silent delivery failure`);
     }
 
     await sock.sendMessage(jid, { text });
@@ -350,6 +364,7 @@ export async function sendMessage(to, text) {
 
 /**
  * Broadcast a message to multiple recipients.
+ * Each `id` in recipients must be a raw JID (msg.key.remoteJid) — untransformed.
  */
 export async function broadcast(recipients, text) {
   const results = await Promise.allSettled(
@@ -362,6 +377,7 @@ export async function broadcast(recipients, text) {
 
 /**
  * Send to all groups following a specific match.
+ * Group IDs in the store are saved as msg.key.remoteJid — untransformed.
  */
 export async function notifyMatchGroups(groups, text) {
   return broadcast(groups.map(g => g.id), text);
