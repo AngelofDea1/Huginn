@@ -105,29 +105,11 @@ async function connect() {
       keys:  makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' })),
     },
     logger:               pino({ level: 'silent' }),
-    printQRInTerminal:    false,
+    printQRInTerminal:    true,
     keepAliveIntervalMs:  25_000,
   });
 
   sock.ev.on('creds.update', saveCreds);
-
-  // Request pairing code if not registered and phone number environment variable is configured
-  const rawPhone = process.env.BOT_PHONE_NUMBER || process.env.WA_NUMBER;
-  if (rawPhone && !state.creds.registered) {
-    const cleanPhone = rawPhone.replace(/\D/g, '');
-    log.info(`Pairing code requested for phone number: ${cleanPhone}`);
-    // Wait briefly for the connection socket to initialize fully before requesting
-    setTimeout(async () => {
-      try {
-        const code = await sock.requestPairingCode(cleanPhone);
-        log.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        log.info(`🔑 PAIRING CODE: ${code}`);
-        log.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      } catch (err) {
-        log.error('Failed to request pairing code:', err.message);
-      }
-    }, 3000);
-  }
 
 
   // ── Connection state ──────────────────────────────────────────────────────
