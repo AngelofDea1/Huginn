@@ -2,11 +2,6 @@
  * whatsapp.js — Huginn WhatsApp layer (Baileys).
  *
  * Kept deliberately simple. One socket, one reconnect loop, one send function.
- *
- * JID DELIVERY RULE (confirmed 2026-07-12):
- *   WhatsApp silently drops outbound messages addressed to @lid JIDs.
- *   For 1:1 replies, use msg.key.senderPn (@s.whatsapp.net) when available.
- *   For group replies, use msg.key.remoteJid (@g.us) unchanged.
  */
 import fs   from 'fs';
 import path from 'path';
@@ -191,6 +186,7 @@ async function connect() {
         // Always use msg.key.remoteJid exactly as received (the raw @lid or @g.us JID)
         // with zero transformations, resolutions, or substitutions.
         const replyJid = msg.key.remoteJid;
+        const isGroup  = replyJid.endsWith('@g.us');
 
         log.info(`📨 raw from remoteJid=${msg.key.remoteJid}`);
 
