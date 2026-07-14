@@ -160,6 +160,18 @@ async function processMatch(match, groups) {
           pushSubs
         );
         updateMatchState(matchId, { sentPreMatch: true });
+        // Persist so this never fires again after a restart
+        await persistMatchScore(matchId, {
+          homeScore:    currentHome,
+          awayScore:    currentAway,
+          homeRedCards: 0,
+          awayRedCards: 0,
+          status:       currentStatus,
+          sentPreMatch: true,
+          sentKO:       state.sentKO   || false,
+          sentHT:       state.sentHT   || false,
+          sentFT:       state.sentFT   || false,
+        });
       }
     }
   }
@@ -176,6 +188,18 @@ async function processMatch(match, groups) {
     log.info(`Poller sending Kick-off push to ${pushSubs.length} subscribers.`);
     await sendPushNotification('Kick-off!', `${homeTeam} vs ${awayTeam} is underway.`, '/', pushSubs);
     updateMatchState(matchId, { sentKO: true, status: currentStatus });
+    // Persist so this never fires again after a restart
+    await persistMatchScore(matchId, {
+      homeScore:    currentHome,
+      awayScore:    currentAway,
+      homeRedCards: 0,
+      awayRedCards: 0,
+      status:       currentStatus,
+      sentPreMatch: state.sentPreMatch || false,
+      sentKO:       true,
+      sentHT:       state.sentHT      || false,
+      sentFT:       state.sentFT      || false,
+    });
   } else if (currentStatus !== state.status) {
     updateMatchState(matchId, { status: currentStatus });
   }
@@ -448,10 +472,11 @@ async function handleEvent(event, { match, homeTeam, awayTeam, detail, oddsStr, 
   } catch (err) {
     log.error(`AI alert failed for event ${event.id}:`, err.message);
     // Fallback plain-text alert so the user is still notified
+    const minLabel = event.minute ? `${event.minute}'` : '';
     if (event.type === 'goal' || event.type === 'own_goal') {
-      msg = `⚽ *GOAL!* ${homeTeam} ${homeScore}–${awayScore} ${awayTeam} (${event.minute}')`;
+      msg = `⚽ *GOAL!* ${homeTeam} ${homeScore}–${awayScore} ${awayTeam}${minLabel ? ` (${minLabel})` : ''}`;
     } else if (event.type === 'red_card') {
-      msg = `🟥 *Red card!* ${event.player} sent off (${event.minute}')`;
+      msg = `🟥 *Red card!* ${event.player || 'A player'} sent off${minLabel ? ` (${minLabel})` : ''}`;
     }
   }
 

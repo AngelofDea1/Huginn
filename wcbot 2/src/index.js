@@ -327,11 +327,6 @@ app.get('/api/wa-auth-export', (_, res) => {
 // ─── Health check ─────────────────────────────────────────────────────────────
 app.get('/health', (_, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
 
-// ─── QR status (polled by the /qr page) ───────────────────────────────────────
-app.get('/api/qr-status', (_, res) => {
-  res.json({ needsScan: !!activeQr, qr: activeQr });
-});
-
 // ─── Force relink: wipe session and show a fresh QR ───────────────────────────
 // Hit POST /api/relink to clear stale credentials and trigger a new QR scan.
 // Useful when the bot is "connected" but silently not receiving messages.

@@ -122,25 +122,17 @@ export function initMatchState(matchId, data) {
 
 /**
  * Call this when someone follows a match that is already in progress.
- * Seeds seenEventIds with every current event so we only alert on FUTURE ones.
+ * Score-based dedup is now used (not event IDs), so this is a safe no-op.
+ * Kept for API compatibility with webhook.js.
  */
 export function seedMatchEvents(matchId, currentEvents = []) {
-  const state = matchState.get(String(matchId));
-  if (!state) return;
-  for (const e of currentEvents) {
-    state.seenEventIds.add(e.id);
-  }
+  // No-op: baseline seeding is handled by Redis persistMatchScore in matchPoller.js
 }
 
-export function markEventSeen(matchId, eventId) {
-  const state = matchState.get(String(matchId));
-  if (state) state.seenEventIds.add(eventId);
-}
+// Kept for API compatibility — score-based dedup replaced event-ID dedup
+export function markEventSeen(matchId, eventId) {}
 
-export function hasSeenEvent(matchId, eventId) {
-  const state = matchState.get(String(matchId));
-  return state ? state.seenEventIds.has(eventId) : false;
-}
+export function hasSeenEvent(matchId, eventId) { return false; }
 
 export function updateMatchState(matchId, updates) {
   const current = matchState.get(String(matchId)) || {};
