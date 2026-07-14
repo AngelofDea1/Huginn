@@ -351,6 +351,17 @@ async function processMatch(match, groups) {
       log.error('HT report failed:', err.message);
     }
     updateMatchState(matchId, { sentHT: true });
+    await persistMatchScore(matchId, {
+      homeScore:    currentHome,
+      awayScore:    currentAway,
+      homeRedCards: currentHomeRed,
+      awayRedCards: currentAwayRed,
+      status:       currentStatus,
+      sentPreMatch: state.sentPreMatch || false,
+      sentKO:       state.sentKO       || false,
+      sentHT:       true,
+      sentFT:       state.sentFT       || false,
+    });
   }
 
   // ── Full-time report ──────────────────────────────────────────────────────────
@@ -379,6 +390,17 @@ async function processMatch(match, groups) {
       log.error('FT report failed:', err.message);
     }
     updateMatchState(matchId, { sentFT: true });
+    await persistMatchScore(matchId, {
+      homeScore:    currentHome,
+      awayScore:    currentAway,
+      homeRedCards: currentHomeRed,
+      awayRedCards: currentAwayRed,
+      status:       currentStatus,
+      sentPreMatch: state.sentPreMatch || false,
+      sentKO:       state.sentKO       || false,
+      sentHT:       state.sentHT       || false,
+      sentFT:       true,
+    });
   }
 
   // ── Odds shift alert ──────────────────────────────────────────────────────────
