@@ -359,9 +359,23 @@ async function processMatch(match, groups) {
   }
 
   // ── Odds shift alert ──────────────────────────────────────────────────────────
+  // Rate-limited to max once every 15 minutes per match, and only for plausible odds (<= 10.0)
+  // to avoid high-volatility underdog drift spam in the final minutes.
   if (odds && state.odds) {
     const shift = detectOddsShift(state.odds, odds);
-    if (shift.shifted) {
+    const nowMs = Date.now();
+    const lastOddsAlertTime = state.lastOddsAlertTime || 0;
+    const timeSinceLastAlert = nowMs - lastOddsAlertTime;
+
+    const fromVal = Number(shift.from);
+    const toVal = Number(shift.to);
+
+    if (
+      shift.shifted &&
+      fromVal <= 10.0 &&
+      toVal <= 10.0 &&
+      timeSinceLastAlert >= 15 * 60 * 1000
+    ) {
       log.event(`Odds shift: ${homeTeam} vs ${awayTeam} — ${shift.field} ${shift.from}→${shift.to}`);
       try {
         const msg = await generateOddsShiftAlert({
@@ -371,6 +385,20 @@ async function processMatch(match, groups) {
         });
         await notifyMatchGroups(groups, msg);
         log.info(`Poller sending Odds Shift push to ${pushSubs.length} subscribers.`);
+        // Update both in-memory and Redis state
+        updateMatchState(matchId, { lastOddsAlertTime: nowMs });
+        await persistMatchScore(matchId, {
+          homeScore:    currentHome,
+          awayScore:    currentAway,
+          homeRedCards: currentHomeRed,
+          awayRedCards: currentAwayRed,
+          status:       currentStatus,
+          sentPreMatch: state.sentPreMatch || false,
+          sentKO:       state.sentKO       || false,
+          sentHT:       state.sentHT       || false,
+          sentFT:       state.sentFT       || false,
+          lastOddsAlertTime: nowMs,
+        });
         await sendPushNotification('Odds Shift', `${homeTeam} vs ${awayTeam}: ${shift.field} ${shift.from}→${shift.to}`, '/', pushSubs);
       } catch (err) {
         log.error('Odds shift alert failed:', err.message);
