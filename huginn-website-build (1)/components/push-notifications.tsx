@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 
 /**
- * PushNotifications — ambient bottom-banner (shown once, auto-dismissed)
- * EnableNotificationsButton — reusable button for embedding on any page
+ * PushNotifications — ambient top-right banner (shown once, auto-dismissed)
+ * EnableNotificationsButton — reusable button with full iOS install guide
+ * IOSInstallBanner — persistent top banner for iOS users in Safari (not standalone)
  *
  * iOS: push requires the site added to Home Screen as a PWA first.
  * Android Chrome: works directly from the browser.
@@ -34,7 +35,8 @@ async function doSubscribe(setState: (s: State) => void, onDone?: () => void) {
       applicationServerKey: urlBase64ToUint8Array(key),
     });
 
-    const sessionId = typeof window !== "undefined" ? localStorage.getItem("huginn_session_v1") || "" : "";
+    const sessionId =
+      typeof window !== "undefined" ? localStorage.getItem("huginn_session_v1") || "" : "";
 
     await fetch("/api/push/subscribe", {
       method: "POST",
@@ -75,7 +77,260 @@ async function handleEnable(setState: (s: State) => void, setVisible?: (v: boole
 }
 
 /* ─────────────────────────────────────────────────────────────────
+   iOS Install Guide Modal — full-screen step-by-step walkthrough
+   Shown when iOS user clicks "Enable notifications"
+───────────────────────────────────────────────────────────────── */
+function IOSGuideModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 999999,
+        background: "rgba(0,0,0,0.85)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+        display: "flex",
+        alignItems: "flex-end",
+        justifyContent: "center",
+        padding: "0 0 env(safe-area-inset-bottom, 0)",
+      }}
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "#0f0f1a",
+          border: "1px solid rgba(255,255,255,0.1)",
+          borderRadius: "24px 24px 0 0",
+          padding: "28px 24px 36px",
+          width: "100%",
+          maxWidth: 480,
+          boxShadow: "0 -20px 60px rgba(0,0,0,0.8)",
+          animation: "slideUp 0.35s cubic-bezier(0.16,1,0.3,1) both",
+        }}
+      >
+        <style>{`
+          @keyframes slideUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to   { opacity: 1; transform: translateY(0); }
+          }
+        `}</style>
+
+        {/* Handle bar */}
+        <div style={{ width: 40, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.15)", margin: "0 auto 24px" }} />
+
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: 12,
+            background: "linear-gradient(135deg, #00e676 0%, #00bcd4 100%)",
+            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+          }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "#f0f0f8", lineHeight: 1.2 }}>Enable alerts on iPhone</div>
+            <div style={{ fontSize: 12, color: "#6060a0", marginTop: 2 }}>Takes 30 seconds — Apple requires this</div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{ marginLeft: "auto", background: "transparent", border: "none", color: "#5050a0", fontSize: 22, cursor: "pointer", lineHeight: 1, padding: "4px 8px" }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Steps */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {[
+            {
+              num: "1",
+              icon: (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <rect x="3" y="3" width="18" height="18" rx="4" stroke="#00e676" strokeWidth="2"/>
+                  <path d="M12 8v8M8 12h8" stroke="#00e676" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              ),
+              title: "Tap the Share button",
+              desc: "The square with an arrow pointing up — at the bottom of Safari",
+            },
+            {
+              num: "2",
+              icon: (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="#00e676" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <polyline points="9,22 9,12 15,12 15,22" stroke="#00e676" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              ),
+              title: 'Tap "Add to Home Screen"',
+              desc: "Scroll down in the share menu until you see it",
+            },
+            {
+              num: "3",
+              icon: (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M20 6L9 17l-5-5" stroke="#00e676" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              ),
+              title: 'Tap "Add" to confirm',
+              desc: "Huginn will appear as an icon on your home screen",
+            },
+            {
+              num: "4",
+              icon: (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="9" stroke="#00e676" strokeWidth="2"/>
+                  <path d="M12 8v4l3 3" stroke="#00e676" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              ),
+              title: "Open Huginn from Home Screen",
+              desc: "Then come back to this page and tap Enable",
+            },
+          ].map((step, i) => (
+            <div key={i} style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: 10,
+                background: "rgba(0,230,118,0.08)",
+                border: "1px solid rgba(0,230,118,0.2)",
+                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+              }}>
+                {step.icon}
+              </div>
+              <div style={{ paddingTop: 2 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#f0f0f8", marginBottom: 2 }}>{step.title}</div>
+                <div style={{ fontSize: 11.5, color: "#5858a0", lineHeight: 1.5 }}>{step.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer note */}
+        <div style={{
+          marginTop: 22,
+          padding: "12px 14px",
+          background: "rgba(255,255,255,0.03)",
+          borderRadius: 10,
+          border: "1px solid rgba(255,255,255,0.05)",
+          fontSize: 11,
+          color: "#4040a0",
+          lineHeight: 1.5,
+        }}>
+          🔒 This is an <strong style={{ color: "#6060c0" }}>Apple requirement</strong> — iPhones only support push notifications from apps installed on the Home Screen. It is not a Huginn limitation.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   iOS Install Banner — persistent top banner for iOS Safari users
+   Shown on every page until dismissed or installed as PWA
+───────────────────────────────────────────────────────────────── */
+export function IOSInstallBanner() {
+  const [show, setShow] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isStandalone = (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+    const dismissed = localStorage.getItem("huginn_ios_banner_dismissed");
+    if (isIOS && !isStandalone && !dismissed) {
+      setShow(true);
+    }
+  }, []);
+
+  if (!show) return null;
+
+  return (
+    <>
+      {showGuide && <IOSGuideModal onClose={() => setShowGuide(false)} />}
+      <style>{`
+        @keyframes iosBannerIn {
+          from { opacity: 0; transform: translateY(-12px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .ios-banner {
+          animation: iosBannerIn 0.3s cubic-bezier(0.16,1,0.3,1) both;
+        }
+      `}</style>
+      <div
+        className="ios-banner"
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 9999,
+          background: "linear-gradient(90deg, #0a0a16 0%, #0d0d1f 100%)",
+          borderBottom: "1px solid rgba(0,230,118,0.2)",
+          padding: "10px 16px",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+        }}
+      >
+        {/* Raven icon */}
+        <div style={{
+          width: 30, height: 30, borderRadius: 8,
+          background: "rgba(0,230,118,0.1)",
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="#00e676" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="#00e676" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#f0f0f8", lineHeight: 1.2 }}>
+            Add Huginn to your Home Screen
+          </div>
+          <div style={{ fontSize: 10.5, color: "#5858a0", marginTop: 1 }}>
+            Required on iPhone to get goal alerts
+          </div>
+        </div>
+
+        <button
+          onClick={() => setShowGuide(true)}
+          style={{
+            background: "#00e676",
+            color: "#000",
+            border: "none",
+            borderRadius: 8,
+            padding: "6px 12px",
+            fontSize: 11.5,
+            fontWeight: 700,
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+            flexShrink: 0,
+          }}
+        >
+          How to
+        </button>
+
+        <button
+          onClick={() => {
+            localStorage.setItem("huginn_ios_banner_dismissed", "1");
+            setShow(false);
+          }}
+          aria-label="Dismiss"
+          style={{ background: "transparent", border: "none", color: "#4040a0", fontSize: 18, cursor: "pointer", padding: "2px 6px", flexShrink: 0 }}
+        >
+          ✕
+        </button>
+      </div>
+    </>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────
    Ambient bottom banner (fires once per user, 4s after first visit)
+   Not shown on iOS Safari — the IOSInstallBanner handles that case
 ───────────────────────────────────────────────────────────────── */
 export function PushNotifications() {
   const [state, setState] = useState<State>("idle");
@@ -83,6 +338,10 @@ export function PushNotifications() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+
+    // Don't show the generic banner on iOS — use IOSInstallBanner instead
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    if (isIOS) return;
 
     const stored = localStorage.getItem("huginn_push");
     if (stored) return;
@@ -189,6 +448,7 @@ export function PushNotifications() {
 export function EnableNotificationsButton() {
   const [state, setState] = useState<State>("idle");
   const [isIOS, setIsIOS] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
   const [showIOSGuide, setShowIOSGuide] = useState(false);
   const [supported, setSupported] = useState(true);
 
@@ -196,7 +456,9 @@ export function EnableNotificationsButton() {
     if (typeof window === "undefined") return;
 
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const standalone = (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
     setIsIOS(ios);
+    setIsStandalone(standalone);
 
     const stored = localStorage.getItem("huginn_push");
     if (stored === "subscribed") setState("subscribed");
@@ -211,52 +473,49 @@ export function EnableNotificationsButton() {
     navigator.serviceWorker.register("/sw.js").catch(() => {});
   }, []);
 
-  // iOS standalone detection
-  const isStandalone = typeof window !== "undefined" && (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
-
   if (!supported) return null;
 
   // Already subscribed
   if (state === "subscribed") {
     return (
-      <div className="text-xs text-emerald-400 font-mono">
-        Notifications on
+      <div style={{ fontSize: 11, color: "#00e676", fontFamily: "monospace" }}>
+        ✓ Notifications on
       </div>
     );
   }
 
-  // iOS but not installed as PWA
+  // iOS but not installed as PWA — show guide trigger
   if (isIOS && !isStandalone) {
     return (
-      <div className="mt-2">
+      <>
+        {showIOSGuide && <IOSGuideModal onClose={() => setShowIOSGuide(false)} />}
         <button
-          onClick={() => setShowIOSGuide((v) => !v)}
-          className="text-xs text-primary border border-primary/30 bg-primary/10 rounded-lg px-3 py-1.5 font-semibold hover:bg-primary/20 transition-colors"
+          onClick={() => setShowIOSGuide(true)}
+          style={{
+            fontSize: 12,
+            color: "#00e676",
+            border: "1px solid rgba(0,230,118,0.3)",
+            background: "rgba(0,230,118,0.08)",
+            borderRadius: 8,
+            padding: "6px 12px",
+            fontWeight: 600,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+          }}
         >
-          Enable notifications on iPhone
+          <span>📲</span> How to get alerts on iPhone
         </button>
-        {showIOSGuide && (
-          <div className="mt-3 p-4 rounded-2xl border border-border bg-card text-xs text-muted-foreground leading-relaxed space-y-2">
-            <p className="font-semibold text-foreground">How to get alerts on iPhone</p>
-            <ol className="list-decimal list-inside space-y-1.5">
-              <li>Tap the <strong>Share</strong> button at the bottom of Safari (the square with an arrow pointing up)</li>
-              <li>Scroll down and tap <strong>Add to Home Screen</strong></li>
-              <li>Tap <strong>Add</strong> in the top right</li>
-              <li>Open Huginn from your Home Screen</li>
-              <li>Come back here and tap Enable notifications</li>
-            </ol>
-            <p className="text-[10px] text-muted-foreground/70 pt-1">iPhone requires the app to be on your Home Screen before push notifications work. This is an Apple requirement.</p>
-          </div>
-        )}
-      </div>
+      </>
     );
   }
 
   // Denied at OS level
   if (state === "denied" || (typeof Notification !== "undefined" && Notification.permission === "denied")) {
     return (
-      <div className="text-xs text-muted-foreground leading-relaxed">
-        Notifications blocked in your browser settings. Go to <strong>Settings &gt; Site permissions</strong> and allow notifications for this site, then reload.
+      <div style={{ fontSize: 11, color: "#5858a0", lineHeight: 1.5 }}>
+        Notifications blocked. Go to <strong>Settings › Site permissions</strong> and allow notifications for this site, then reload.
       </div>
     );
   }
@@ -266,7 +525,18 @@ export function EnableNotificationsButton() {
     <button
       onClick={() => handleEnable(setState)}
       disabled={state === "requesting"}
-      className="text-xs font-semibold bg-primary text-primary-foreground rounded-lg px-3 py-1.5 hover:opacity-90 transition-opacity disabled:opacity-50"
+      style={{
+        fontSize: 12,
+        fontWeight: 600,
+        background: "#00e676",
+        color: "#000",
+        border: "none",
+        borderRadius: 8,
+        padding: "6px 14px",
+        cursor: state === "requesting" ? "wait" : "pointer",
+        opacity: state === "requesting" ? 0.6 : 1,
+        transition: "opacity 0.2s",
+      }}
     >
       {state === "requesting" ? "Requesting…" : "Enable match alerts"}
     </button>

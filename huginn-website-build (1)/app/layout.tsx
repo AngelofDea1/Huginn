@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   },
 }
 
-import { PushNotifications } from "@/components/push-notifications"
+import { PushNotifications, IOSInstallBanner } from "@/components/push-notifications"
 
 export default function RootLayout({
   children,
@@ -37,6 +37,7 @@ export default function RootLayout({
       </head>
       <body className={`font-sans antialiased ${GeistPixelLine.variable}`}>
         {children}
+        <IOSInstallBanner />
         <PushNotifications />
         <Analytics />
       </body>
