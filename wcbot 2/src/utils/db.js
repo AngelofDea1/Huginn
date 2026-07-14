@@ -268,3 +268,28 @@ export async function hasBeenWelcomed(jid) {
   }
 }
 
+
+// ─── Match Score Persistence ──────────────────────────────────────────────────
+// Persists the last ALERTED score state to Redis so goals scored during a
+// server restart are never silently dropped (missed goal bug).
+
+const matchScoreKey = (matchId) => `matchscore:${matchId}`;
+
+export async function persistMatchScore(matchId, scores) {
+  try {
+    await redis.set(matchScoreKey(String(matchId)), scores);
+  } catch (err) {
+    log.error(`Failed to persist match score for ${matchId}:`, err.message);
+  }
+}
+
+export async function getPersistedMatchScore(matchId) {
+  try {
+    const raw = await redis.get(matchScoreKey(String(matchId)));
+    if (!raw) return null;
+    return typeof raw === 'string' ? JSON.parse(raw) : raw;
+  } catch (err) {
+    log.error(`Failed to get persisted match score for ${matchId}:`, err.message);
+    return null;
+  }
+}

@@ -23,4 +23,6 @@ export {
   getAllPersistedGroups,
   markWelcomed,
   hasBeenWelcomed,
+  persistMatchScore,
+  getPersistedMatchScore,
 } from './db.js';

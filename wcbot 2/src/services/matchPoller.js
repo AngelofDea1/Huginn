@@ -12,6 +12,9 @@ import {
   getMatchState, initMatchState, updateMatchState,
   getGroupsFollowingMatch
 } from '../utils/store.js';
+import {
+  persistMatchScore, getPersistedMatchScore
+} from '../utils/subscriptionStore.js';
 import { log } from '../utils/logger.js';
 import { sendPushNotification } from './pushNotify.js';
 import { getSubscribersForTeams } from '../utils/subscriptionStore.js';
@@ -59,7 +62,6 @@ async function processMatch(match, groups) {
     log.warn(`Could not fetch detail for match ${matchId}: ${err.message}`);
     return;
   }
-
   const events        = detail?.events || [];
   const homeTeam      = match.home_team?.name || 'Home';
   const awayTeam      = match.away_team?.name || 'Away';
@@ -71,24 +73,59 @@ async function processMatch(match, groups) {
 
   log.info(`[${matchId}] ${homeTeam} ${currentHome}-${currentAway} ${awayTeam} | ${currentStatus} ${minute}'`);
 
-  // ─── FIRST-POLL BASELINE ─────────────────────────────────────────────────────
-  // On the very first poll we record the current state as the baseline.
-  // This means we NEVER alert on goals/cards that happened before we started
-  // watching — even after a server restart when all in-memory state is wiped.
+  // ─── BASELINE SEEDING (Redis-backed, restart-safe) ───────────────────────────
+  //
+  // On the VERY FIRST poll for a match (seeded=false), we try to load the last
+  // KNOWN-ALERTED score from Redis. This handles three scenarios correctly:
+  //
+  //  1. Brand-new follow (no Redis key):
+  //       → Use current API score as baseline, persist it, mark seeded=true.
+  //       → No alert: goals before the follow are not the user's concern.
+  //
+  //  2. Server restart (Redis key exists with score e.g. 0-1):
+  //       → Load Redis baseline (0-1). If API now says 0-2 → goal was scored
+  //         during the restart → ALERT. If still 0-1 → no change → no alert.
+  //
+  //  3. Normal running (seeded=true): skip this block entirely.
   // ─────────────────────────────────────────────────────────────────────────────
   if (!state.seeded) {
-    const initHomeRed = events.filter(e => e.type === 'red_card' && e.team === 'home').length;
-    const initAwayRed = events.filter(e => e.type === 'red_card' && e.team === 'away').length;
-    updateMatchState(matchId, {
-      seeded:       true,
-      homeScore:    currentHome,
-      awayScore:    currentAway,
-      homeRedCards: initHomeRed,
-      awayRedCards: initAwayRed,
-      status:       currentStatus,
-    });
-    log.info(`[${matchId}] Baseline seeded: ${homeTeam} ${currentHome}–${currentAway} ${awayTeam} | red cards: ${initHomeRed}/${initAwayRed}`);
-    return; // Do NOT send any alerts on the first load — this is all historical
+    const persisted = await getPersistedMatchScore(matchId);
+
+    if (persisted) {
+      // Restart scenario: use persisted score so goals during restart are caught
+      log.info(`[${matchId}] Loaded persisted baseline from Redis: ${homeTeam} ${persisted.homeScore}-${persisted.awayScore} ${awayTeam}`);
+      updateMatchState(matchId, {
+        seeded:       true,
+        homeScore:    persisted.homeScore,
+        awayScore:    persisted.awayScore,
+        homeRedCards: persisted.homeRedCards || 0,
+        awayRedCards: persisted.awayRedCards || 0,
+        status:       persisted.status || currentStatus,
+      });
+    } else {
+      // Brand-new follow: set current score as baseline, persist it immediately
+      const initHomeRed = events.filter(e => e.type === 'red_card' && e.team === 'home').length;
+      const initAwayRed = events.filter(e => e.type === 'red_card' && e.team === 'away').length;
+      updateMatchState(matchId, {
+        seeded:       true,
+        homeScore:    currentHome,
+        awayScore:    currentAway,
+        homeRedCards: initHomeRed,
+        awayRedCards: initAwayRed,
+        status:       currentStatus,
+      });
+      await persistMatchScore(matchId, {
+        homeScore:    currentHome,
+        awayScore:    currentAway,
+        homeRedCards: initHomeRed,
+        awayRedCards: initAwayRed,
+        status:       currentStatus,
+      });
+      log.info(`[${matchId}] New baseline set: ${homeTeam} ${currentHome}-${currentAway} ${awayTeam}`);
+      return; // Don't alert on first-ever follow — these are all pre-existing events
+    }
+    // Refresh state reference after update
+    state = getMatchState(matchId);
   }
 
   // ─── PUSH SUBSCRIBERS ────────────────────────────────────────────────────────
@@ -247,11 +284,20 @@ async function processMatch(match, groups) {
   }
 
   // ── Persist latest scores + red card counts ───────────────────────────────────
+  // Both in-memory (fast) and Redis (restart-safe)
   updateMatchState(matchId, {
     homeScore:    currentHome,
     awayScore:    currentAway,
     homeRedCards: currentHomeRed,
     awayRedCards: currentAwayRed,
+  });
+  // Persist to Redis so any goals already alerted survive a server restart
+  await persistMatchScore(matchId, {
+    homeScore:    currentHome,
+    awayScore:    currentAway,
+    homeRedCards: currentHomeRed,
+    awayRedCards: currentAwayRed,
+    status:       currentStatus,
   });
 
   // ── Half-time report ──────────────────────────────────────────────────────────
