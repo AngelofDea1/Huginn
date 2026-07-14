@@ -11,12 +11,12 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: '/raven-logo.jpeg',
+        url: '/raven-logo-v2.jpeg',
         type: 'image/jpeg',
       },
     ],
-    apple: '/raven-logo.jpeg',
-    shortcut: '/raven-logo.jpeg',
+    apple: '/raven-logo-v2.jpeg',
+    shortcut: '/raven-logo-v2.jpeg',
   },
 }
 

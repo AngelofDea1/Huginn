@@ -12,7 +12,7 @@ export function FooterSection() {
           <div>
           <Link href="/" className="flex items-center gap-2 mb-3">
               <img
-                src="/raven-logo.jpeg"
+                src="/raven-logo-v2.jpeg"
                 alt="Huginn logo"
                 className="w-8 h-8 rounded-full object-cover border border-white/10"
               />

@@ -314,7 +314,7 @@ export default function LiveChatPage() {
               {/* Chat header — Huginn identity + clear history */}
               <div className="px-5 py-4 border-b border-border flex items-center gap-3">
                 <img
-                  src="/raven-logo.jpeg"
+                  src="/raven-logo-v2.jpeg"
                   alt="Huginn"
                   className="w-9 h-9 rounded-full object-cover border border-border"
                 />
