@@ -10,6 +10,7 @@ import { schedulePreMatchBulletins } from './services/scheduler.js';
 import { log, logBuffer } from './utils/logger.js';
 import { handleChatMessage, getLiveMatchesAPI } from './handlers/chat.js';
 import { getVapidPublicKey, subscribeUser, unsubscribeUser, sendPushNotification } from './services/pushNotify.js';
+import { getAllActiveSubscriptions } from './utils/subscriptionStore.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = dirname(__filename);
@@ -188,28 +189,53 @@ app.get('/api/push/key', (_, res) => {
   res.json({ key: getVapidPublicKey() });
 });
 
-app.post('/api/push/subscribe', (req, res) => {
-  const subscription = req.body;
-  if (!subscription || !subscription.endpoint) {
-    return res.status(400).json({ error: 'Invalid subscription object.' });
+app.post('/api/push/subscribe', async (req, res) => {
+  const secret = process.env.PUSH_SEND_SECRET;
+  if (secret) {
+    const auth = req.headers.authorization || '';
+    if (auth !== `Bearer ${secret}`) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
   }
-  subscribeUser(subscription);
-  res.status(201).json({ status: 'subscribed' });
+
+  const { sessionId, subscription } = req.body;
+  if (!sessionId || !subscription || !subscription.endpoint) {
+    return res.status(400).json({ error: 'Invalid subscription object or sessionId.' });
+  }
+  try {
+    await subscribeUser(sessionId, subscription);
+    res.status(201).json({ status: 'subscribed' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.post('/api/push/unsubscribe', (req, res) => {
-  const subscription = req.body;
-  if (!subscription || !subscription.endpoint) {
-    return res.status(400).json({ error: 'Invalid subscription object.' });
+app.post('/api/push/unsubscribe', async (req, res) => {
+  const secret = process.env.PUSH_SEND_SECRET;
+  if (secret) {
+    const auth = req.headers.authorization || '';
+    if (auth !== `Bearer ${secret}`) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
   }
-  unsubscribeUser(subscription);
-  res.json({ status: 'unsubscribed' });
+
+  const { sessionId } = req.body;
+  if (!sessionId) {
+    return res.status(400).json({ error: 'sessionId is required.' });
+  }
+  try {
+    await unsubscribeUser(sessionId);
+    res.json({ status: 'unsubscribed' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/push/test', async (req, res) => {
   try {
-    await sendPushNotification('Goal!', 'MatchPulse Test: GOLAZOOOO! ⚽🔥', '/');
-    res.json({ status: 'sent' });
+    const subs = await getAllActiveSubscriptions();
+    await sendPushNotification('Goal!', 'MatchPulse Test: GOLAZOOOO! ⚽🔥', '/', subs);
+    res.json({ status: 'sent', count: subs.length });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
