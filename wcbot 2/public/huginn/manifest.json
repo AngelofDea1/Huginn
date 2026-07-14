@@ -9,14 +9,15 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/raven-logo.jpeg",
+      "src": "/raven-logo-v2.jpeg",
       "type": "image/jpeg",
       "sizes": "192x192"
     },
     {
-      "src": "/raven-logo.jpeg",
+      "src": "/raven-logo-v2.jpeg",
       "type": "image/jpeg",
       "sizes": "512x512"
     }
   ]
 }
+
