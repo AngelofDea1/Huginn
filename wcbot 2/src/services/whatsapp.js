@@ -46,7 +46,13 @@ function restoreSession() {
 
   // 2. session_data.txt committed in repo
   if (!raw && fs.existsSync(SESSION_TXT)) {
-    try { raw = fs.readFileSync(SESSION_TXT, 'utf8').trim(); } catch {}
+    try {
+      const fileContent = fs.readFileSync(SESSION_TXT, 'utf8').trim();
+      // Only use it if it's not empty and doesn't start with a comment #
+      if (fileContent && !fileContent.startsWith('#')) {
+        raw = fileContent;
+      }
+    } catch {}
   }
 
   // 3. Environment variable
