@@ -292,7 +292,8 @@ export async function getLiveMatches() {
       };
     }));
 
-    return enriched;
+    // Filter out matches that have officially finished (FT)
+    return enriched.filter(m => m.status !== 'FT');
   } catch (err) {
     log.error('getLiveMatches failed:', err.message);
     return [];
