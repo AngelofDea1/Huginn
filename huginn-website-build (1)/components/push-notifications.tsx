@@ -34,10 +34,12 @@ async function doSubscribe(setState: (s: State) => void, onDone?: () => void) {
       applicationServerKey: urlBase64ToUint8Array(key),
     });
 
+    const sessionId = typeof window !== "undefined" ? localStorage.getItem("huginn_session_v1") || "" : "";
+
     await fetch("/api/push/subscribe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(sub),
+      body: JSON.stringify({ subscription: sub, sessionId }),
     });
 
     localStorage.setItem("huginn_push", "subscribed");

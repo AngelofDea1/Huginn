@@ -45,9 +45,17 @@ export function FooterSection() {
           <p className="text-xs text-muted-foreground">
             © 2026 Huginn · World Cup 2026 · Built on TxLINE
           </p>
-          <span className="text-xs text-muted-foreground font-mono">
-            Powered by Llama 3.3 70B · Baileys · Node.js
-          </span>
+          <div className="flex items-center gap-5">
+            <Link href="/privacy" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              Privacy Policy
+            </Link>
+            <Link href="/terms" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              Terms of Service
+            </Link>
+            <span className="text-xs text-muted-foreground font-mono hidden sm:block">
+              Powered by Llama 3.3 70B · Baileys · Node.js
+            </span>
+          </div>
         </div>
       </div>
     </footer>

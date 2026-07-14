@@ -36,6 +36,10 @@ app.get('/commands',    serveNextPage('commands'));
 app.get('/commands/',   serveNextPage('commands'));
 app.get('/live-chat',   serveNextPage('live-chat'));
 app.get('/live-chat/',  serveNextPage('live-chat'));
+app.get('/privacy',     serveNextPage('privacy'));
+app.get('/privacy/',    serveNextPage('privacy'));
+app.get('/terms',       serveNextPage('terms'));
+app.get('/terms/',      serveNextPage('terms'));
 // Root fallback
 app.get('/', (_, res) => res.sendFile(join(frontendDir, 'index.html')));
 
