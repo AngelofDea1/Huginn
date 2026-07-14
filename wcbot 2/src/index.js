@@ -369,10 +369,16 @@ cron.schedule('* * * * *', async () => {
   }
 });
 
+import { loadGroupsFromRedis } from './utils/store.js';
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   log.info(`⚽ WC Companion Bot running on port ${PORT}`);
   log.info(`🌐 Web interface: http://localhost:${PORT}`);
   log.info(`🔄 Polling TxLINE every 5 seconds`);
+  
+  // Hydrate followed matches / group styles from Upstash Redis
+  await loadGroupsFromRedis();
+  
   initializeWhatsApp();
 });

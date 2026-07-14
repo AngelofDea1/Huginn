@@ -22,13 +22,17 @@ export function markContacted(jid) {
 
 // ── Group helpers ──────────────────────────────────────────────────────────────
 
+import { persistGroup, removeGroupFromDb, getAllPersistedGroups } from './subscriptionStore.js';
+
 export function registerGroup(groupId, name = 'your group') {
   if (!groups.has(groupId)) {
-    groups.set(groupId, {
+    const newGroup = {
       name,
       style: 'hype',
       followedMatchIds: new Set(),
-    });
+    };
+    groups.set(groupId, newGroup);
+    persistGroup(groupId, newGroup);
   }
   return groups.get(groupId);
 }
@@ -43,17 +47,26 @@ export function getAllGroups() {
 
 export function setGroupStyle(groupId, style) {
   const group = groups.get(groupId);
-  if (group) group.style = style;
+  if (group) {
+    group.style = style;
+    persistGroup(groupId, group);
+  }
 }
 
 export function followMatch(groupId, matchId) {
   const group = groups.get(groupId);
-  if (group) group.followedMatchIds.add(String(matchId));
+  if (group) {
+    group.followedMatchIds.add(String(matchId));
+    persistGroup(groupId, group);
+  }
 }
 
 export function unfollowMatch(groupId, matchId) {
   const group = groups.get(groupId);
-  if (group) group.followedMatchIds.delete(String(matchId));
+  if (group) {
+    group.followedMatchIds.delete(String(matchId));
+    persistGroup(groupId, group);
+  }
 }
 
 export function getGroupsFollowingMatch(matchId) {
@@ -64,6 +77,22 @@ export function getGroupsFollowingMatch(matchId) {
     }
   }
   return result;
+}
+
+export async function loadGroupsFromRedis() {
+  try {
+    const list = await getAllPersistedGroups();
+    for (const g of list) {
+      groups.set(g.id, {
+        name: g.name,
+        style: g.style,
+        followedMatchIds: g.followedMatchIds
+      });
+    }
+    console.log(`Loaded ${list.length} groups/private chats from Redis.`);
+  } catch (err) {
+    console.error('Failed to load groups from Redis:', err.message);
+  }
 }
 
 // ── Match state helpers ────────────────────────────────────────────────────────
