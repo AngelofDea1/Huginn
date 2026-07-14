@@ -178,11 +178,12 @@ Give a pundit-style player profile for: ${playerName}
 
 Cover these points naturally in your answer (do not use headers or bullet lists — write in flowing sentences with blank lines between thoughts):
 1. Position and club
-2. Key career stats (goals, assists, trophies — use real numbers from your training data)
+2. Key career stats — ONLY use numbers you are highly confident are accurate from your training data. If you are not certain of an exact figure, say "around" or "roughly" instead of inventing it. Never fabricate a stat.
 3. Playing style and strengths
-4. Known injury history (if any notable ones)
+4. Known injury history (only mention if you are certain of notable ones — do not invent)
 5. What to expect from them at World Cup 2026
 
+IMPORTANT: Do NOT invent statistics, goal tallies, cap counts, or trophies you are not confident about. It is better to say "one of the most prolific strikers of his generation" than to state a made-up number with false precision.
 Be honest that your stats are from training data and may not include goals scored in the current tournament.
 Keep it to 5–8 sentences max. Sound like a pundit, not a Wikipedia article.
 `.trim();
@@ -222,7 +223,12 @@ Keep it to 5–8 sentences max. Sound like a pundit, not a Wikipedia article.
 export async function answerFootballQuestion(question, matchContext = '', vibe = 'hype', sessionId = null) {
   const systemPrompt = (STYLES[vibe] || STYLES.hype) +
     `\n\nYou also have deep football knowledge: past world cups, current stars, stats, tactics, rules, and betting odds. Answer any question directly. Sound like a person, not a system.` +
-    `\n\nCRITICAL: Never repeat yourself. If you already gave an opinion on a topic in this conversation, add new detail, a different angle, or a follow-up thought. Do not summarise what you already said.`;
+    `\n\nCRITICAL — ACCURACY RULES (non-negotiable):` +
+    `\n- For any LIVE match question (score, goalscorer, cards, time), ONLY use information from the [current match context] block provided. Do NOT guess or invent any live score, scorer name, or match minute.` +
+    `\n- If the live context block is empty or doesn't answer the question, say clearly: "I don't have live data on that right now — check the score directly."` +
+    `\n- For historical stats (caps, career goals, trophies), only state numbers you are highly confident about. If unsure of an exact figure, say "roughly" or "around" — never invent a precise number.` +
+    `\n- Never confidently state a result, scorer, or event that you are not certain happened.` +
+    `\n- Never repeat yourself. If you already gave an opinion on a topic in this conversation, add new detail, a different angle, or a follow-up thought.`;
 
   // Build messages array with conversation history for context
   const history = sessionId ? getHistory(sessionId) : [];

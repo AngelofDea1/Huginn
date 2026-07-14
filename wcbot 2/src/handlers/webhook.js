@@ -109,7 +109,7 @@ export async function routeCommand(from, text, meta = {}) {
       }).join('\n');
     }
 
-    const reply = await answerFootballQuestion(cleanText, ctx, style);
+    const reply = await answerFootballQuestion(cleanText, ctx, style, from);
     return sendMessage(from, reply);
   } catch (err) {
     log.error('AI oracle error:', err.message);
