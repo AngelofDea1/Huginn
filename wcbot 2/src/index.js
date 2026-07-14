@@ -48,6 +48,65 @@ app.get('/', (_, res) => res.sendFile(join(frontendDir, 'index.html')));
 app.post('/api/chat', handleChatMessage);
 app.get('/api/live', getLiveMatchesAPI);
 
+// ─── Manual pre-match blast (one-shot admin trigger) ──────────────────────────
+app.post('/api/send-prematch', async (req, res) => {
+  try {
+    const { getUpcomingMatches, getMatchOdds, formatOdds } = await import('./services/txline.js');
+    const { notifyMatchGroups } = await import('./services/whatsapp.js');
+    const { getGroupsFollowingMatch, getMatchState, updateMatchState } = await import('./utils/store.js');
+    const { sendPushNotification } = await import('./services/pushNotify.js');
+    const { getSubscribersForTeams } = await import('./utils/subscriptionStore.js');
+
+    const upcoming = await getUpcomingMatches(24);
+    let sent = 0;
+
+    for (const match of upcoming) {
+      const matchId = match.id;
+      const groups  = getGroupsFollowingMatch(matchId);
+      if (!groups.length) continue; // nobody following this match
+
+      const homeTeam = match.home_team?.name || 'Home';
+      const awayTeam = match.away_team?.name || 'Away';
+      const state    = getMatchState(matchId);
+
+      if (state?.sentPreMatch) continue; // already sent for this match
+
+      let oddsStr = '';
+      try {
+        const odds = await getMatchOdds(matchId);
+        oddsStr = formatOdds(odds);
+      } catch {}
+
+      const oddsPreview = oddsStr ? `\n\n📊 Opening odds: ${oddsStr}` : '';
+      const kick = match.kickoff_time
+        ? new Date(match.kickoff_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+        : 'soon';
+
+      const msg = `🔔 *Match day!*\n\n*${homeTeam} vs ${awayTeam}* kicks off at ${kick}.\n\nGoal alerts, red cards, and live commentary will all come through here automatically.${oddsPreview}`;
+
+      await notifyMatchGroups(groups, msg);
+
+      let pushSubs = [];
+      try {
+        const subs = await getSubscribersForTeams([homeTeam, awayTeam]);
+        pushSubs = subs.map(s => s.subscription);
+      } catch {}
+      if (pushSubs.length) {
+        await sendPushNotification('Match day! 🔔', `${homeTeam} vs ${awayTeam} kicks off at ${kick}.`, '/', pushSubs);
+      }
+
+      updateMatchState(matchId, { sentPreMatch: true });
+      sent++;
+    }
+
+    res.json({ ok: true, matchesAlerted: sent });
+  } catch (err) {
+    log.error('send-prematch failed:', err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+
 // ─── WhatsApp QR Scan Page ─────────────────────────────────────────────────────
 // Exposes the active QR code as a clean visual image. Visit /qr on your browser.
 app.get('/qr', (_, res) => {
