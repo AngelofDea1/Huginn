@@ -238,21 +238,50 @@ export async function getLiveMatches() {
 
     // Enrich each live match with real-time scores from the scores endpoint
     const enriched = await Promise.all(live.map(async (m) => {
+      let minute = null;
+      let status = m.status;
+      let homeScore = m.home_score;
+      let awayScore = m.away_score;
+
       try {
         const detail = await getMatchDetail(m.id);
         if (detail) {
-          return {
-            ...m,
-            home_score: detail.home_score,
-            away_score: detail.away_score,
-            minute:     detail.minute,
-            status:     detail.status !== 'NS' ? detail.status : m.status,
-          };
+          homeScore = detail.home_score ?? homeScore;
+          awayScore = detail.away_score ?? awayScore;
+          minute = detail.minute;
+          status = detail.status !== 'NS' ? detail.status : status;
         }
       } catch (e) {
-        // Return base match if enrichment fails
+        // Enrichment failed — keep defaults
       }
-      return m;
+
+      // Calculate elapsed fallback minute if missing
+      if (!minute && status !== 'FT') {
+        if (status === 'HT') {
+          minute = 45;
+        } else {
+          const kick = new Date(m.kickoff_time).getTime();
+          if (!isNaN(kick) && Date.now() >= kick) {
+            const elapsed = Math.floor((Date.now() - kick) / 60000);
+            if (elapsed < 45) {
+              minute = elapsed > 0 ? elapsed : 1;
+            } else if (elapsed >= 45 && elapsed <= 60) {
+              minute = 45; // HT range
+              status = 'HT';
+            } else {
+              minute = Math.min(90, elapsed - 15); // subtract HT interval
+            }
+          }
+        }
+      }
+
+      return {
+        ...m,
+        home_score: homeScore,
+        away_score: awayScore,
+        minute:     minute,
+        status:     status,
+      };
     }));
 
     return enriched;
