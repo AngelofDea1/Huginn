@@ -208,8 +208,8 @@ async function connect() {
         const mentionedJids = mc.extendedTextMessage?.contextInfo?.mentionedJid || [];
         const botMentioned  = mentionedJids.some(j => selfJids.has(j));
 
-        // Group guard: only respond to / commands or @mentions
-        if (isGroup && !text.startsWith('/') && !botMentioned) continue;
+        // Group guard: slash commands only — @mentions no longer trigger the bot
+        if (isGroup && !text.startsWith('/')) continue;
 
         await routeCommand(replyJid, text, {
           mentionedJids,
