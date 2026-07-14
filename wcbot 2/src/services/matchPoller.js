@@ -95,12 +95,17 @@ async function processMatch(match, groups) {
       // Restart scenario: use persisted score so goals during restart are caught
       log.info(`[${matchId}] Loaded persisted baseline from Redis: ${homeTeam} ${persisted.homeScore}-${persisted.awayScore} ${awayTeam}`);
       updateMatchState(matchId, {
-        seeded:       true,
-        homeScore:    persisted.homeScore,
-        awayScore:    persisted.awayScore,
-        homeRedCards: persisted.homeRedCards || 0,
-        awayRedCards: persisted.awayRedCards || 0,
-        status:       persisted.status || currentStatus,
+        seeded:        true,
+        homeScore:     persisted.homeScore,
+        awayScore:     persisted.awayScore,
+        homeRedCards:  persisted.homeRedCards || 0,
+        awayRedCards:  persisted.awayRedCards || 0,
+        status:        persisted.status || currentStatus,
+        // Restore sent-flags so HT/FT/KO/PreMatch are never sent twice after restart
+        sentPreMatch:  persisted.sentPreMatch || false,
+        sentKO:        persisted.sentKO        || false,
+        sentHT:        persisted.sentHT        || false,
+        sentFT:        persisted.sentFT        || false,
       });
     } else {
       // Brand-new follow: set current score as baseline, persist it immediately
@@ -291,13 +296,17 @@ async function processMatch(match, groups) {
     homeRedCards: currentHomeRed,
     awayRedCards: currentAwayRed,
   });
-  // Persist to Redis so any goals already alerted survive a server restart
+  // Persist to Redis: scores + sent-flags so nothing re-fires after restart
   await persistMatchScore(matchId, {
     homeScore:    currentHome,
     awayScore:    currentAway,
     homeRedCards: currentHomeRed,
     awayRedCards: currentAwayRed,
     status:       currentStatus,
+    sentPreMatch: state.sentPreMatch || false,
+    sentKO:       state.sentKO       || false,
+    sentHT:       state.sentHT       || false,
+    sentFT:       state.sentFT       || false,
   });
 
   // ── Half-time report ──────────────────────────────────────────────────────────
@@ -382,8 +391,13 @@ async function handleEvent(event, { match, homeTeam, awayTeam, detail, oddsStr, 
   let msg = null;
   try {
     if (event.type === 'goal' || event.type === 'own_goal') {
+      // scorer: use player name from API if available; otherwise use the scoring team name
+      const scoringTeam = event.team === 'home' ? homeTeam : awayTeam;
+      const scorer = (event.player && !event.player.startsWith('Player #') && event.player !== homeTeam && event.player !== awayTeam)
+        ? event.player
+        : scoringTeam;
       msg = await generateGoalAlert({
-        scorer:   event.player,
+        scorer,
         team:     event.team,
         minute:   event.minute,
         homeTeam, awayTeam, homeScore, awayScore,

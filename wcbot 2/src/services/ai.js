@@ -71,13 +71,20 @@ ${FORMAT_RULES}`,
 
 // ── Goal alert ────────────────────────────────────────────────────────────────
 export async function generateGoalAlert({ scorer, team, minute, homeTeam, awayTeam, homeScore, awayScore, odds, vibe = 'hype' }) {
+  const scoringTeam = team === 'home' ? homeTeam : awayTeam;
+  // If scorer is just the team name (API didn't give us a player), say "goal for X"
+  const scorerLine = (scorer && scorer !== scoringTeam)
+    ? `scorer: ${scorer} (${scoringTeam})`
+    : `goal for: ${scoringTeam}`;
+
   const prompt = `
 match: ${homeTeam} vs ${awayTeam}
-goal: scored by ${scorer || 'unknown'} for ${team} in minute ${minute}
+goal in minute ${minute}
+${scorerLine}
 score now: ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
 current odds: ${odds || 'not available'}
 
-react to this goal for a WhatsApp group chat. be immediate and real. no all-caps. use line breaks between thoughts.
+React to this goal for a WhatsApp group. Start with the score and minute (e.g. "GOAL! 22' — Spain take the lead"). Be immediate, real, pundit-style. No all-caps sentences. Use short line breaks between thoughts. 3-4 sentences max.
 `.trim();
 
   return callGroq(prompt, vibe);
