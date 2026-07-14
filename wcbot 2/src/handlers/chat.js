@@ -106,7 +106,7 @@ async function routeWebCommand(sessionId, text) {
       matchContext += 'Upcoming Matches:\n' + upcoming.map(m => `• ${m.home_team?.name} vs ${m.away_team?.name} (kickoff: ${new Date(m.kickoff_time).toLocaleTimeString()})`).join('\n') + '\n';
     }
 
-    return await answerFootballQuestion(text, matchContext, style);
+    return await answerFootballQuestion(text, matchContext, style, sessionId);
   } catch (err) {
     return `⚽ Hit a minor tactical issue. Type /help to see commands!`;
   }

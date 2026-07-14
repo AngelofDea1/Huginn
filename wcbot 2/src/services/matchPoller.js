@@ -79,6 +79,28 @@ async function processMatch(match, groups) {
 
   log.info(`[${matchId}] ${homeTeam} ${currentHome}-${currentAway} ${awayTeam} | ${currentStatus} ${minute}'`);
 
+  // ── Pre-match bulletin (30 mins before kickoff) ───────────────────────────────
+  if (!state.sentPreMatch && (currentStatus === 'NS' || currentStatus === 'pre' || !currentStatus)) {
+    const kickoffTime = match.kickoff_time ? new Date(match.kickoff_time).getTime() : null;
+    if (kickoffTime) {
+      const minsUntilKickoff = (kickoffTime - Date.now()) / 60000;
+      if (minsUntilKickoff <= 32 && minsUntilKickoff > 0) {
+        log.event(`Pre-match: ${homeTeam} vs ${awayTeam} (${Math.round(minsUntilKickoff)} mins away)`);
+        const oddsPreview = oddsStr ? `\n\n📊 Opening odds: ${oddsStr}` : '';
+        const msg = `🔔 *30-minute warning!*\n\n*${homeTeam} vs ${awayTeam}* kicks off soon.\n\nGet ready for live goal alerts, red cards, and match commentary — all coming directly to this chat.${oddsPreview}`;
+        await notifyMatchGroups(groups, msg);
+        log.info(`Poller sending pre-match push to ${pushSubs.length} subscribers.`);
+        await sendPushNotification(
+          '30 mins to kick-off! 🔔',
+          `${homeTeam} vs ${awayTeam} starts soon.`,
+          '/',
+          pushSubs
+        );
+        updateMatchState(matchId, { sentPreMatch: true });
+      }
+    }
+  }
+
   // ── Kick-off alert ────────────────────────────────────────────────────────────
   if (
     (currentStatus === 'LIVE') &&

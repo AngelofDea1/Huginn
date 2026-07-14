@@ -2,6 +2,28 @@ import axios from 'axios';
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
+// ── Per-session conversation history (in-memory, max 6 turns per session) ────
+// Key: sessionId (JID), Value: Array of {role, content} message objects
+const conversationHistory = new Map();
+const MAX_HISTORY_TURNS = 6; // 6 pairs = 12 messages max
+
+function getHistory(sessionId) {
+  if (!conversationHistory.has(sessionId)) {
+    conversationHistory.set(sessionId, []);
+  }
+  return conversationHistory.get(sessionId);
+}
+
+function addToHistory(sessionId, role, content) {
+  const history = getHistory(sessionId);
+  history.push({ role, content });
+  // Prune to last MAX_HISTORY_TURNS pairs (user + assistant each = 1 pair)
+  const maxMessages = MAX_HISTORY_TURNS * 2;
+  if (history.length > maxMessages) {
+    history.splice(0, history.length - maxMessages);
+  }
+}
+
 // ── Personality system prompts ────────────────────────────────────────────────
 // Formatting rules all vibes must follow:
 // - Proper sentence case: capitalize the first word of every sentence and proper nouns
@@ -185,29 +207,33 @@ Keep it to 5–8 sentences max. Sound like a pundit, not a Wikipedia article.
 }
 
 // ── General football Q&A ──────────────────────────────────────────────────────
-export async function answerFootballQuestion(question, matchContext = '', vibe = 'hype') {
-  const prompt = `
-user: "${question}"
-
-${matchContext ? `current match context:\n${matchContext}\n` : ''}
-answer directly and conversationally. if it's about a current match, use that context.
-no all-caps. use line breaks between thoughts if needed. 2-4 sentences max unless the question genuinely needs more.
-`.trim();
-
+export async function answerFootballQuestion(question, matchContext = '', vibe = 'hype', sessionId = null) {
   const systemPrompt = (STYLES[vibe] || STYLES.hype) +
-    `\n\nyou also have deep football knowledge: past world cups, current stars, stats, tactics, rules, and betting odds. answer any question directly. sound like a person, not a system.`;
+    `\n\nYou also have deep football knowledge: past world cups, current stars, stats, tactics, rules, and betting odds. Answer any question directly. Sound like a person, not a system.` +
+    `\n\nCRITICAL: Never repeat yourself. If you already gave an opinion on a topic in this conversation, add new detail, a different angle, or a follow-up thought. Do not summarise what you already said.`;
+
+  // Build messages array with conversation history for context
+  const history = sessionId ? getHistory(sessionId) : [];
+
+  // Build the current user message with match context inline
+  const userMessage = matchContext
+    ? `${question}\n\n[current match context: ${matchContext}]`
+    : question;
+
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    ...history,
+    { role: 'user', content: userMessage },
+  ];
 
   try {
     const { data } = await axios.post(
       'https://api.groq.com/openai/v1/chat/completions',
       {
         model: 'llama-3.3-70b-versatile',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: prompt },
-        ],
+        messages,
         max_tokens: 300,
-        temperature: 0.75,
+        temperature: 0.8,
       },
       {
         headers: {
@@ -218,7 +244,15 @@ no all-caps. use line breaks between thoughts if needed. 2-4 sentences max unles
     );
 
     const raw = data.choices?.[0]?.message?.content?.trim() || `Let me think about that one.\n\nTry again.`;
-    return ensureSpacing(raw);
+    const reply = ensureSpacing(raw);
+
+    // Save this exchange to conversation history for future context
+    if (sessionId) {
+      addToHistory(sessionId, 'user', userMessage);
+      addToHistory(sessionId, 'assistant', reply);
+    }
+
+    return reply;
   } catch (err) {
     console.error('Groq Oracle Error:', err.response?.data || err.message);
     return `Something went wrong.\n\nTry asking again.`;
