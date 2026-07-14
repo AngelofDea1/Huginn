@@ -42,6 +42,7 @@ async function processMatch(match, groups) {
       homeScore: match.home_score ?? 0,
       awayScore: match.away_score ?? 0,
       status:    match.status,
+      seeded:    false,
     });
     state = getMatchState(matchId);
   }
@@ -61,6 +62,13 @@ async function processMatch(match, groups) {
   const events   = detail?.events || [];
   const homeTeam = match.home_team?.name || 'Home';
   const awayTeam = match.away_team?.name || 'Away';
+
+  // Seed past events on first load to prevent spam alerts for historical goals/cards
+  if (!state.seeded) {
+    seedMatchEvents(matchId, events);
+    updateMatchState(matchId, { seeded: true });
+    state = getMatchState(matchId); // refresh state reference
+  }
 
   // Get active subscriptions for the teams in this match
   let targetSubs = [];
