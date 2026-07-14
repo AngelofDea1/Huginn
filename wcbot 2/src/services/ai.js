@@ -72,19 +72,21 @@ ${FORMAT_RULES}`,
 // ── Goal alert ────────────────────────────────────────────────────────────────
 export async function generateGoalAlert({ scorer, team, minute, homeTeam, awayTeam, homeScore, awayScore, odds, vibe = 'hype' }) {
   const scoringTeam = team === 'home' ? homeTeam : awayTeam;
-  // If scorer is just the team name (API didn't give us a player), say "goal for X"
   const scorerLine = (scorer && scorer !== scoringTeam)
     ? `scorer: ${scorer} (${scoringTeam})`
     : `goal for: ${scoringTeam}`;
 
+  const timeLabel = minute ? `minute ${minute}` : 'unknown minute';
+  const startFormat = minute ? `e.g. "GOAL! ${minute}' — Spain take the lead"` : `e.g. "GOAL! — Spain take the lead"`;
+
   const prompt = `
 match: ${homeTeam} vs ${awayTeam}
-goal in minute ${minute}
+goal in ${timeLabel}
 ${scorerLine}
 score now: ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
 current odds: ${odds || 'not available'}
 
-React to this goal for a WhatsApp group. Start with the score and minute (e.g. "GOAL! 22' — Spain take the lead"). Be immediate, real, pundit-style. No all-caps sentences. Use short line breaks between thoughts. 3-4 sentences max.
+React to this goal for a WhatsApp group. Start with the score and minute if known (${startFormat}). Do not invent or make up a minute if none is specified. Be immediate, real, pundit-style. No all-caps sentences. Use short line breaks between thoughts. 3-4 sentences max.
 `.trim();
 
   return callGroq(prompt, vibe);
@@ -92,13 +94,16 @@ React to this goal for a WhatsApp group. Start with the score and minute (e.g. "
 
 // ── Red card alert ────────────────────────────────────────────────────────────
 export async function generateRedCardAlert({ player, team, minute, homeTeam, awayTeam, homeScore, awayScore, odds, vibe = 'hype' }) {
+  const timeLabel = minute ? `minute ${minute}` : 'unknown minute';
+  const startFormat = minute ? `e.g. "RED CARD! ${minute}' — France down to 10 men"` : `e.g. "RED CARD! — France down to 10 men"`;
+
   const prompt = `
 match: ${homeTeam} vs ${awayTeam}
-red card: ${player || 'a player'} from ${team} in minute ${minute}
+red card: ${player || 'a player'} from ${team} in ${timeLabel}
 score: ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
 odds after: ${odds || 'not available'}
 
-react to this red card for a WhatsApp group chat. explain what it changes. no all-caps. use line breaks between thoughts.
+react to this red card for a WhatsApp group chat. Start with the card and minute if known (${startFormat}). Do not invent or make up a minute if none is specified. Explain what it changes. No all-caps. Use line breaks between thoughts.
 `.trim();
 
   return callGroq(prompt, vibe);

@@ -198,15 +198,14 @@ async function processMatch(match, groups) {
     const homeGoalEvents = events.filter(e => e.type === 'goal' && e.team === 'home');
     for (let i = 0; i < newGoals; i++) {
       const goalNum = state.homeScore + i + 1;
-      // Pick the goal event that corresponds to this increment
       const ev = homeGoalEvents[homeGoalEvents.length - newGoals + i] || {};
-      log.event(`Goal [${matchId}] ${homeTeam} goal #${goalNum} @ ${ev.minute || minute}'`);
+      log.event(`Goal [${matchId}] ${homeTeam} goal #${goalNum} @ ${ev.minute || 'unknown'}'`);
       await handleEvent(
         {
           id:          `home-goal-${goalNum}`,
           type:        'goal',
           team:        'home',
-          minute:      ev.minute || minute,
+          minute:      ev.minute || null,
           player:      ev.player || homeTeam,
           description: ev.description || `${homeTeam} goal`,
         },
@@ -224,13 +223,13 @@ async function processMatch(match, groups) {
     for (let i = 0; i < newGoals; i++) {
       const goalNum = state.awayScore + i + 1;
       const ev = awayGoalEvents[awayGoalEvents.length - newGoals + i] || {};
-      log.event(`Goal [${matchId}] ${awayTeam} goal #${goalNum} @ ${ev.minute || minute}'`);
+      log.event(`Goal [${matchId}] ${awayTeam} goal #${goalNum} @ ${ev.minute || 'unknown'}'`);
       await handleEvent(
         {
           id:          `away-goal-${goalNum}`,
           type:        'goal',
           team:        'away',
-          minute:      ev.minute || minute,
+          minute:      ev.minute || null,
           player:      ev.player || awayTeam,
           description: ev.description || `${awayTeam} goal`,
         },
@@ -253,13 +252,13 @@ async function processMatch(match, groups) {
     const homeRedEvents = events.filter(e => e.type === 'red_card' && e.team === 'home');
     for (let i = 0; i < newCards; i++) {
       const ev = homeRedEvents[prevHomeRed + i] || {};
-      log.event(`Red card [${matchId}] ${homeTeam} #${prevHomeRed + i + 1} @ ${ev.minute || minute}'`);
+      log.event(`Red card [${matchId}] ${homeTeam} #${prevHomeRed + i + 1} @ ${ev.minute || 'unknown'}'`);
       await handleEvent(
         {
           id:          `home-red-${prevHomeRed + i + 1}`,
           type:        'red_card',
           team:        'home',
-          minute:      ev.minute || minute,
+          minute:      ev.minute || null,
           player:      ev.player || 'Player',
           description: ev.description || `${homeTeam} red card`,
         },
@@ -273,13 +272,13 @@ async function processMatch(match, groups) {
     const awayRedEvents = events.filter(e => e.type === 'red_card' && e.team === 'away');
     for (let i = 0; i < newCards; i++) {
       const ev = awayRedEvents[prevAwayRed + i] || {};
-      log.event(`Red card [${matchId}] ${awayTeam} #${prevAwayRed + i + 1} @ ${ev.minute || minute}'`);
+      log.event(`Red card [${matchId}] ${awayTeam} #${prevAwayRed + i + 1} @ ${ev.minute || 'unknown'}'`);
       await handleEvent(
         {
           id:          `away-red-${prevAwayRed + i + 1}`,
           type:        'red_card',
           team:        'away',
-          minute:      ev.minute || minute,
+          minute:      ev.minute || null,
           player:      ev.player || 'Player',
           description: ev.description || `${awayTeam} red card`,
         },
