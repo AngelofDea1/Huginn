@@ -21,4 +21,6 @@ export {
   persistGroup,
   removeGroupFromDb,
   getAllPersistedGroups,
+  markWelcomed,
+  hasBeenWelcomed,
 } from './db.js';

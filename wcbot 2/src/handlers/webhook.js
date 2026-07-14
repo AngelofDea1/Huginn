@@ -2,9 +2,11 @@ import { searchMatch, getFixtureSchedule, getMatchDetail, getLiveMatches, getUpc
 import { sendMessage } from '../services/whatsapp.js';
 import {
   registerGroup, getGroup, setGroupStyle,
-  followMatch, unfollowMatch, initMatchState, seedMatchEvents,
-  isFirstContact, markContacted
+  followMatch, unfollowMatch, initMatchState, seedMatchEvents
 } from '../utils/store.js';
+import {
+  hasBeenWelcomed, markWelcomed
+} from '../utils/subscriptionStore.js';
 import { log } from '../utils/logger.js';
 import { STYLES, generatePlayerStats } from '../services/ai.js';
 
@@ -63,13 +65,13 @@ export async function routeCommand(from, text, meta = {}) {
   }
 
   const lower = cleanText.toLowerCase().trim();
-  const isNew = isFirstContact(from);
+  const alreadyWelcomed = await hasBeenWelcomed(from);
 
   registerGroup(from);
 
   // On first ever message from this contact, send the welcome automatically
-  if (isNew) {
-    markContacted(from);
+  if (!alreadyWelcomed) {
+    await markWelcomed(from);
     await sendWelcome(from);
     // If they also typed a command, still handle it after welcome
     if (lower === 'hi' || lower === 'hello' || lower === '/start' || lower === '/help') return;

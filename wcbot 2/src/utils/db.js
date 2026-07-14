@@ -244,3 +244,27 @@ export async function getAllPersistedGroups() {
   return results;
 }
 
+// ─── First-contact / Welcome Persistence ─────────────────────────────────────
+// Stored in Redis so the welcome message is only EVER sent once,
+// even across server restarts / Render redeployments.
+
+const welcomedKey = (jid) => `welcomed:${jid}`;
+
+export async function markWelcomed(jid) {
+  try {
+    await redis.set(welcomedKey(jid), '1');
+  } catch (err) {
+    log.error(`Failed to mark ${jid} as welcomed:`, err.message);
+  }
+}
+
+export async function hasBeenWelcomed(jid) {
+  try {
+    const val = await redis.get(welcomedKey(jid));
+    return val === '1' || val === 1;
+  } catch (err) {
+    log.error(`Failed to check welcomed status for ${jid}:`, err.message);
+    return false; // fail-safe: send welcome if Redis is down
+  }
+}
+
