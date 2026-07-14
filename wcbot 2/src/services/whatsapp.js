@@ -56,6 +56,13 @@ function restoreSession() {
 
   if (!raw) { log.info('No saved session — will show QR.'); return; }
 
+  log.info(`Attempting to restore session. Data length: ${raw.length} characters.`);
+  if (raw.length > 20) {
+    log.info(`Data starts with: "${raw.slice(0, 15)}..." and ends with: "...${raw.slice(-15)}"`);
+  } else {
+    log.info(`Data value: "${raw}"`);
+  }
+
   try {
     const json = zlib.gunzipSync(Buffer.from(raw, 'base64')).toString('utf8');
     const data = JSON.parse(json);
