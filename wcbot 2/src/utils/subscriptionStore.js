@@ -18,4 +18,7 @@ export {
   unfollowTeam,
   getSubscribersForTeams,
   getAllActiveSubscriptions,
+  persistGroup,
+  removeGroupFromDb,
+  getAllPersistedGroups,
 } from './db.js';

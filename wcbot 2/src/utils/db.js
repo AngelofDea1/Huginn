@@ -188,3 +188,59 @@ export async function getAllActiveSubscriptions() {
   }
   return results;
 }
+
+// ─── WhatsApp Group Persistence ───────────────────────────────────────────────
+
+const groupKey = (groupId) => `wagroup:${groupId}`;
+
+export async function persistGroup(groupId, groupData) {
+  try {
+    // Save to Redis (automatically serializes object structure)
+    await redis.set(groupKey(groupId), {
+      name: groupData.name,
+      style: groupData.style,
+      followedMatchIds: [...groupData.followedMatchIds]
+    });
+  } catch (err) {
+    log.error(`Failed to persist group ${groupId} to Redis:`, err.message);
+  }
+}
+
+export async function removeGroupFromDb(groupId) {
+  try {
+    await redis.del(groupKey(groupId));
+  } catch (err) {
+    log.error(`Failed to delete group ${groupId} from Redis:`, err.message);
+  }
+}
+
+export async function getAllPersistedGroups() {
+  const results = [];
+  let cursor = 0;
+  try {
+    do {
+      const [nextCursor, keys] = await redis.scan(cursor, { match: 'wagroup:*', count: 100 });
+      cursor = Number(nextCursor);
+
+      for (const key of keys) {
+        try {
+          const raw = await redis.get(key);
+          if (raw) {
+            const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+            const groupId = key.replace('wagroup:', '');
+            results.push({
+              id: groupId,
+              name: data.name,
+              style: data.style || 'hype',
+              followedMatchIds: new Set(data.followedMatchIds || [])
+            });
+          }
+        } catch {}
+      }
+    } while (cursor !== 0);
+  } catch (err) {
+    log.error('getAllPersistedGroups scan failed:', err.message);
+  }
+  return results;
+}
+
