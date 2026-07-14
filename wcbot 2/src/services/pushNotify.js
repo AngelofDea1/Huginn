@@ -1,6 +1,6 @@
 import webpush from 'web-push';
 import { log } from '../utils/logger.js';
-import { saveSubscription, removeSubscription, deleteSubscriptionByEndpoint } from '../utils/db.js';
+import { saveSubscription, removeSubscription, deleteSubscriptionByEndpoint } from '../utils/subscriptionStore.js';
 
 let vapidKeys = {
   publicKey: process.env.VAPID_PUBLIC_KEY,

@@ -12,7 +12,7 @@ import {
 } from '../utils/store.js';
 import { log } from '../utils/logger.js';
 import { STYLES } from '../services/ai.js';
-import { followTeam, unfollowTeam } from '../utils/db.js';
+import { followTeam, unfollowTeam } from '../utils/subscriptionStore.js';
 
 // Each web session gets a unique "session ID" as their group identifier
 // so their follows/vibes are tracked independently of WhatsApp users

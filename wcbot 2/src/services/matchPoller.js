@@ -14,6 +14,7 @@ import {
 } from '../utils/store.js';
 import { log } from '../utils/logger.js';
 import { sendPushNotification } from './pushNotify.js';
+import { getSubscribersForTeams } from '../utils/subscriptionStore.js';
 
 /**
  * Called every 5 seconds by cron.
@@ -60,6 +61,16 @@ async function processMatch(match, groups) {
   const events   = detail?.events || [];
   const homeTeam = match.home_team?.name || 'Home';
   const awayTeam = match.away_team?.name || 'Away';
+
+  // Get active subscriptions for the teams in this match
+  let targetSubs = [];
+  try {
+    targetSubs = await getSubscribersForTeams([homeTeam, awayTeam]);
+  } catch (dbErr) {
+    log.error('Failed to get subscribers for teams:', dbErr.message);
+  }
+  const pushSubs = targetSubs.map(s => s.subscription);
+
   const oddsStr  = formatOdds(odds);
   const minute   = detail?.minute || match.minute || '?';
   const currentHome = detail?.home_score ?? match.home_score ?? 0;
@@ -77,7 +88,8 @@ async function processMatch(match, groups) {
     log.event(`Kick-off: ${homeTeam} vs ${awayTeam}`);
     const msg = `⚽ *Kick-off!*\n\n${homeTeam} vs ${awayTeam} is underway.\n\nAll goals, cards, and match updates will come through here automatically.`;
     await notifyMatchGroups(groups, msg);
-    await sendPushNotification('Kick-off!', `${homeTeam} vs ${awayTeam} is underway.`, '/');
+    log.info(`Poller sending Kick-off push to ${pushSubs.length} subscribers.`);
+    await sendPushNotification('Kick-off!', `${homeTeam} vs ${awayTeam} is underway.`, '/', pushSubs);
     updateMatchState(matchId, { sentKO: true, status: currentStatus });
   } else if (currentStatus !== state.status) {
     updateMatchState(matchId, { status: currentStatus });
@@ -89,7 +101,7 @@ async function processMatch(match, groups) {
   for (const event of events) {
     if (hasSeenEvent(matchId, event.id)) continue; // already alerted — skip
     markEventSeen(matchId, event.id);
-    await handleEvent(event, { match, homeTeam, awayTeam, detail, oddsStr, groups });
+    await handleEvent(event, { match, homeTeam, awayTeam, detail, oddsStr, groups, pushSubs });
   }
 
   // ── Score change tracking (no alert — just state update) ─────────────────────
@@ -111,7 +123,8 @@ async function processMatch(match, groups) {
         vibe: groups[0]?.style,
       });
       await notifyMatchGroups(groups, msg);
-      await sendPushNotification('Half-time', `${homeTeam} ${currentHome}-${currentAway} ${awayTeam}`, '/');
+      log.info(`Poller sending HT push to ${pushSubs.length} subscribers.`);
+      await sendPushNotification('Half-time', `${homeTeam} ${currentHome}-${currentAway} ${awayTeam}`, '/', pushSubs);
     } catch (err) {
       log.error('HT report failed:', err.message);
     }
@@ -130,7 +143,8 @@ async function processMatch(match, groups) {
         vibe: groups[0]?.style,
       });
       await notifyMatchGroups(groups, msg);
-      await sendPushNotification('Full-time', `${homeTeam} ${currentHome}-${currentAway} ${awayTeam}`, '/');
+      log.info(`Poller sending FT push to ${pushSubs.length} subscribers.`);
+      await sendPushNotification('Full-time', `${homeTeam} ${currentHome}-${currentAway} ${awayTeam}`, '/', pushSubs);
 
       // Sweepstake points
       try {
@@ -157,7 +171,8 @@ async function processMatch(match, groups) {
           vibe: groups[0]?.style,
         });
         await notifyMatchGroups(groups, msg);
-        await sendPushNotification('Odds Shift', `${homeTeam} vs ${awayTeam}: ${shift.field} ${shift.from}→${shift.to}`, '/');
+        log.info(`Poller sending Odds Shift push to ${pushSubs.length} subscribers.`);
+        await sendPushNotification('Odds Shift', `${homeTeam} vs ${awayTeam}: ${shift.field} ${shift.from}→${shift.to}`, '/', pushSubs);
       } catch (err) {
         log.error('Odds shift alert failed:', err.message);
       }
@@ -167,7 +182,7 @@ async function processMatch(match, groups) {
   updateMatchState(matchId, { odds, status: currentStatus });
 }
 
-async function handleEvent(event, { match, homeTeam, awayTeam, detail, oddsStr, groups }) {
+async function handleEvent(event, { match, homeTeam, awayTeam, detail, oddsStr, groups, pushSubs }) {
   const homeScore = detail?.home_score ?? 0;
   const awayScore = detail?.away_score ?? 0;
   const style     = groups[0]?.style || 'hype';
@@ -185,7 +200,8 @@ async function handleEvent(event, { match, homeTeam, awayTeam, detail, oddsStr, 
         odds: oddsStr,
         vibe: style,
       });
-      await sendPushNotification('GOAL!!! ⚽', `${homeTeam} ${homeScore}–${awayScore} ${awayTeam} (${event.minute}')`, '/');
+      log.info(`Poller sending Goal push to ${pushSubs.length} subscribers.`);
+      await sendPushNotification('GOAL!!! ⚽', `${homeTeam} ${homeScore}–${awayScore} ${awayTeam} (${event.minute}')`, '/', pushSubs);
     } else if (event.type === 'red_card') {
       msg = await generateRedCardAlert({
         player: event.player,
@@ -195,7 +211,8 @@ async function handleEvent(event, { match, homeTeam, awayTeam, detail, oddsStr, 
         odds: oddsStr,
         vibe: style,
       });
-      await sendPushNotification('Red Card! 🟥', `${event.player} sent off in the ${event.minute}'`, '/');
+      log.info(`Poller sending Red Card push to ${pushSubs.length} subscribers.`);
+      await sendPushNotification('Red Card! 🟥', `${event.player} sent off in the ${event.minute}'`, '/', pushSubs);
     }
   } catch (err) {
     log.error(`AI alert failed for event ${event.id}:`, err.message);
