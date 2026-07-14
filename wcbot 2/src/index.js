@@ -11,6 +11,7 @@ import { log, logBuffer } from './utils/logger.js';
 import { handleChatMessage, getLiveMatchesAPI } from './handlers/chat.js';
 import { getVapidPublicKey, subscribeUser, unsubscribeUser, sendPushNotification } from './services/pushNotify.js';
 import { getAllActiveSubscriptions } from './utils/subscriptionStore.js';
+import { loadGroupsFromRedis } from './utils/store.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = dirname(__filename);
@@ -368,8 +369,6 @@ cron.schedule('* * * * *', async () => {
     log.error('Scheduler error:', err.message);
   }
 });
-
-import { loadGroupsFromRedis } from './utils/store.js';
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
