@@ -12,6 +12,7 @@ import {
 } from '../utils/store.js';
 import { log } from '../utils/logger.js';
 import { STYLES } from '../services/ai.js';
+import { followTeam, unfollowTeam } from '../utils/db.js';
 
 // Each web session gets a unique "session ID" as their group identifier
 // so their follows/vibes are tracked independently of WhatsApp users
@@ -128,6 +129,15 @@ async function handleFollow(sessionId, text) {
   followMatch(sessionId, m.id);
   initMatchState(m.id, {});
 
+  // Persist followed teams in Redis push notification store
+  try {
+    if (query) await followTeam(sessionId, query);
+    if (m.home_team?.name) await followTeam(sessionId, m.home_team.name);
+    if (m.away_team?.name) await followTeam(sessionId, m.away_team.name);
+  } catch (err) {
+    log.error('Failed to save followed teams in DB:', err.message);
+  }
+
   const kickoff = new Date(m.kickoff_time).toLocaleString('en-GB', {
     weekday: 'short', hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short'
   });
@@ -140,8 +150,19 @@ async function handleUnfollow(sessionId, text) {
   const matches = query ? await searchMatch(query) : [];
 
   if (matches.length) {
-    unfollowMatch(sessionId, matches[0].id);
-    return `🔕 Unfollowed *${matches[0].home_team?.name} vs ${matches[0].away_team?.name}*`;
+    const m = matches[0];
+    unfollowMatch(sessionId, m.id);
+
+    // Remove followed teams from Redis push notification store
+    try {
+      if (query) await unfollowTeam(sessionId, query);
+      if (m.home_team?.name) await unfollowTeam(sessionId, m.home_team.name);
+      if (m.away_team?.name) await unfollowTeam(sessionId, m.away_team.name);
+    } catch (err) {
+      log.error('Failed to remove followed teams in DB:', err.message);
+    }
+
+    return `🔕 Unfollowed *${m.home_team?.name} vs ${m.away_team?.name}*`;
   }
   return `❓ Which match? E.g. /unfollow Nigeria`;
 }
