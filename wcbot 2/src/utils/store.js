@@ -105,15 +105,17 @@ export function initMatchState(matchId, data) {
   // Only initialise if no state exists yet — never overwrite existing state
   if (matchState.has(String(matchId))) return;
   matchState.set(String(matchId), {
-    seenEventIds:  new Set(),   // all event IDs we have already alerted on
     homeScore:     0,
     awayScore:     0,
+    homeRedCards:  0,   // count-based red card tracking (restart-safe)
+    awayRedCards:  0,
     status:        'pre',
     odds:          null,
     sentKO:        false,
     sentHT:        false,
     sentFT:        false,
     sentPreMatch:  false,
+    seeded:        false, // true after first poll baseline is established
     ...data,
   });
 }
