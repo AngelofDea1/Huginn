@@ -126,6 +126,19 @@ async function handleFollow(sessionId, text) {
   }
 
   const m = matches[0];
+  const group = getGroup(sessionId);
+
+  // Check if they are already following this match JID
+  if (group && group.followedMatchIds.has(String(m.id))) {
+    const isLive = m.status === 'LIVE' || m.status === 'HT';
+    const scoreText = isLive ? `\n📊 Score: *${m.home_team?.name} ${m.home_score ?? 0}–${m.away_score ?? 0} ${m.away_team?.name}*` : '';
+    const timeText = isLive
+      ? (m.status === 'HT' ? ` (HT)` : ` (${m.minute ? m.minute : '1'}' minute)`)
+      : ` (Kickoff: ${new Date(m.kickoff_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })})`;
+
+    return `🛡️ You are already following *${m.home_team?.name} vs ${m.away_team?.name}*!${scoreText}${timeText}\n\nLive alerts are fully active for this chat.`;
+  }
+
   followMatch(sessionId, m.id);
   initMatchState(m.id, {});
 

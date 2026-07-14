@@ -255,21 +255,29 @@ export async function getLiveMatches() {
         // Enrichment failed — keep defaults
       }
 
-      // Calculate elapsed fallback minute if missing
-      if (!minute && status !== 'FT') {
+      // Calculate elapsed fallback minute if missing or lagging
+      if (status !== 'FT') {
         if (status === 'HT') {
           minute = 45;
         } else {
           const kick = new Date(m.kickoff_time).getTime();
           if (!isNaN(kick) && Date.now() >= kick) {
             const elapsed = Math.floor((Date.now() - kick) / 60000);
+            
+            // Calculate a smart game minute (assuming 15 min half time)
+            let calculatedMinute;
             if (elapsed < 45) {
-              minute = elapsed > 0 ? elapsed : 1;
+              calculatedMinute = elapsed > 0 ? elapsed : 1;
             } else if (elapsed >= 45 && elapsed <= 60) {
-              minute = 45; // HT range
+              calculatedMinute = 45;
               status = 'HT';
             } else {
-              minute = Math.min(90, elapsed - 15); // subtract HT interval
+              calculatedMinute = Math.min(90, elapsed - 15);
+            }
+
+            // If API minute is missing, or is lagging behind the calculated wall time, use calculated time
+            if (!minute || (calculatedMinute > minute)) {
+              minute = calculatedMinute;
             }
           }
         }

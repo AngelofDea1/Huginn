@@ -32,6 +32,7 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="manifest" href="/manifest.json" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=JetBrains+Mono:wght@100..800&family=Tourney:wght@600;800&display=swap" rel="stylesheet" />
       </head>
       <body className={`font-sans antialiased ${GeistPixelLine.variable}`}>
