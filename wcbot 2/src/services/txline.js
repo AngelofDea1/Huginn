@@ -27,8 +27,10 @@ const WC_COMPETITION_IDS = new Set([
 ]);
 
 // Game phase IDs that mean "in progress" (from Soccer Feed docs)
-const LIVE_PHASES = new Set([2, 4, 7, 9, 12]); // H1, H2, ET1, ET2, PE
-const HT_PHASE   = 3;  // HT
+// Phase field (snapshot feed): 2=H1, 4=H2, 7=ET1, 9=ET2, 12=PE, 3=HT, 5=F, 10=FET, 13=FPE
+// GameState field (fixture feed): 1=H1 (Live), 2=H2, 3=HT, 4=FT — so 1 must be included!
+const LIVE_PHASES = new Set([1, 2, 4, 7, 9, 12]); // 1=GameState H1, 2=Phase H1, 4=H2, 7=ET1, 9=ET2, 12=PE
+const HT_PHASE   = 3;  // HT (both Phase and GameState)
 const FT_PHASES  = new Set([5, 10, 13]); // F, FET, FPE
 
 function makeClient() {
@@ -54,12 +56,25 @@ function normaliseFixture(f) {
   const homeScore = f.Score?.Participant1?.Total?.Goals ?? f.ScoreHome ?? null;
   const awayScore = f.Score?.Participant2?.Total?.Goals ?? f.ScoreAway ?? null;
 
+  // Determine status:
+  // The fixture feed uses GameState (integer) as the primary live-state indicator.
+  // Phase is used in the snapshot/detail feed. Use Phase first, fall back to GameState.
+  let status;
+  if (f.Phase !== undefined && f.Phase !== null && f.Phase !== 0) {
+    status = phaseToStatus(f.Phase);
+  } else if (f.GameState !== undefined && f.GameState !== null) {
+    // GameState integers in fixture feed: 1=H1(Live), 2=H2(Live), 3=HT, 4=FT, 0=NS
+    status = phaseToStatus(f.GameState);
+  } else {
+    status = 'NS';
+  }
+
   return {
     id:           String(f.FixtureId),
     home_team:    { name: f.Participant1 || f.HomeTeam || 'Team A' },
     away_team:    { name: f.Participant2 || f.AwayTeam || 'Team B' },
     kickoff_time: f.StartTime || f.KickoffTime,
-    status:       phaseToStatus(f.Phase),
+    status,
     stage:        f.CompetitionName || f.TournamentName || 'World Cup 2026',
     home_score:   homeScore,
     away_score:   awayScore,
