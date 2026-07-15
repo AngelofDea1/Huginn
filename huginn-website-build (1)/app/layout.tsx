@@ -15,7 +15,7 @@ export const metadata: Metadata = {
         type: 'image/jpeg',
       },
     ],
-    apple: '/raven-logo-v2.jpeg',
+    apple: '/apple-icon-v2.jpeg',
     shortcut: '/raven-logo-v2.jpeg',
   },
 }
