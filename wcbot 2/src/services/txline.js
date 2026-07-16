@@ -495,11 +495,10 @@ async function getAllFixtures() {
       return wcMatches;
     }
 
-    // Fallback: if no matches found with our ID set, log the unique competition IDs seen
-    // so we can identify the correct one, and return all fixtures
+    // Stop returning all fixtures as fallback — only WC fixtures are supported
     const seen = [...new Set(all.map(f => f._raw?.CompetitionId).filter(Boolean))];
-    log.warn(`getAllFixtures: No WC matches found. Competition IDs in feed: [${seen.join(', ')}]. Returning all ${all.length} fixtures as fallback.`);
-    return all;
+    log.warn(`getAllFixtures: No WC matches found. Competition IDs in feed: [${seen.join(', ')}]. Returning empty list.`);
+    return [];
   } catch (err) {
     log.warn('getAllFixtures failed:', err.message);
     return [];
