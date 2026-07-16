@@ -100,6 +100,32 @@ function phaseStringToStatus(gameState) {
   return 'NS';
 }
 
+function inferMockReplayStatus(latest) {
+  if (!latest || typeof latest !== 'object') return null;
+  const action = String(latest.Action || '').toLowerCase();
+  if (action === 'game_finalised' || (action === 'status' && latest.Data?.StatusId === 5)) {
+    return 'FT';
+  }
+  if (action === 'halftime_finalised') {
+    return 'HT';
+  }
+
+  const liveMarkers = new Set([
+    'kickoff_team', 'kickoff', 'goal', 'corner', 'yellow_card', 'substitution',
+    'shot', 'free_kick', 'throw_in', 'danger_possession', 'high_danger_possession',
+    'attack_possession', 'possession', 'game_start', 'players_on_the_pitch'
+  ]);
+  if (liveMarkers.has(action)) {
+    return 'LIVE';
+  }
+
+  if (latest.Clock?.Running && Number(latest.Clock.Seconds) > 0) {
+    return 'LIVE';
+  }
+
+  return null;
+}
+
 function normaliseScores(scoreUpdates, fixture) {
   let updates = [];
   if (typeof scoreUpdates === 'string') {
@@ -134,6 +160,13 @@ function normaliseScores(scoreUpdates, fixture) {
   // Override with 'LIVE' if GameState explicitly says so
   if (typeof latest.GameState === 'string' && (latest.GameState.toLowerCase() === 'live' || latest.GameState.toLowerCase() === 'inplay')) {
     status = 'LIVE';
+  }
+
+  // Mock replay feed may only report GameState as 'scheduled', so infer live/HT/FT
+  // from the replay action markers instead of relying on the feed status alone.
+  if (typeof global.getMockReplayDetails === 'function' && status === 'NS') {
+    const inferred = inferMockReplayStatus(latest);
+    if (inferred) status = inferred;
   }
 
   const elapsedSeconds = latest.Clock?.Seconds ?? 0;
@@ -244,13 +277,13 @@ export async function getLiveMatches() {
           id: '18241006',
           home_team: { name: 'England' },
           away_team: { name: 'Argentina' },
-          kickoff_time: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30m ago
+          kickoff_time: typeof detail._raw?.StartTime === 'number' ? new Date(detail._raw.StartTime).toISOString() : detail._raw?.StartTime || new Date(Date.now() - 30 * 60 * 1000).toISOString(),
           status: detail.status,
-          stage: 'World Cup 2026',
+          stage: detail._raw?.CompetitionName || 'World Cup 2026',
           home_score: detail.home_score,
           away_score: detail.away_score,
           minute: detail.minute,
-          _raw: {}
+          _raw: detail._raw || {}
         }];
       }
     }
@@ -348,13 +381,13 @@ export async function getUpcomingMatches(hoursAhead = 2) {
           id: '18241006',
           home_team: { name: 'England' },
           away_team: { name: 'Argentina' },
-          kickoff_time: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30m from now
+          kickoff_time: typeof detail._raw?.StartTime === 'number' ? new Date(detail._raw.StartTime).toISOString() : detail._raw?.StartTime || new Date(Date.now() + 30 * 60 * 1000).toISOString(),
           status: 'NS',
-          stage: 'World Cup 2026',
-          home_score: 0,
-          away_score: 0,
-          minute: 0,
-          _raw: {}
+          stage: detail._raw?.CompetitionName || 'World Cup 2026',
+          home_score: detail.home_score,
+          away_score: detail.away_score,
+          minute: detail.minute || 0,
+          _raw: detail._raw || {}
         }];
       }
     }
@@ -482,6 +515,28 @@ export async function searchMatch(query) {
 //  Internal helpers 
 
 async function getAllFixtures() {
+  if (typeof global.getMockReplayDetails === 'function') {
+    const list = global.getMockReplayDetails();
+    if (Array.isArray(list) && list.length) {
+      const detail = normaliseScores(list);
+      if (detail) {
+        return [{
+          id: '18241006',
+          home_team: { name: 'England' },
+          away_team: { name: 'Argentina' },
+          kickoff_time: typeof detail._raw?.StartTime === 'number' ? new Date(detail._raw.StartTime).toISOString() : detail._raw?.StartTime || new Date().toISOString(),
+          status: detail.status,
+          stage: detail._raw?.CompetitionName || 'World Cup 2026',
+          home_score: detail.home_score,
+          away_score: detail.away_score,
+          minute: detail.minute,
+          _raw: detail._raw || {}
+        }];
+      }
+    }
+    return [];
+  }
+
   // Fetch all available fixtures in one call then filter locally
   try {
     const { data } = await client.get('/fixtures/snapshot');

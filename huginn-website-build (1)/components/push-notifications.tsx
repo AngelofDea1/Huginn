@@ -349,6 +349,7 @@ export function PushNotifications() {
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
 
     if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
       doSubscribe(setState);
       return;
     }

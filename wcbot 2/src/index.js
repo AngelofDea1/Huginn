@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cron from 'node-cron';
 import fs from 'fs';
+import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { initializeWhatsApp, activeQr, getAuthExport, forceRelink } from './services/whatsapp.js';
@@ -52,9 +53,6 @@ app.get('/api/live', getLiveMatchesAPI);
 // ─── Replay Simulation Control Endpoint ───────────────────────────────────────
 // This allows you and other users to control the simulated England vs Argentina replay
 // directly on your live Render website. Exposes states: pre, kickoff, step, goal.
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 const __idxFilename = fileURLToPath(import.meta.url);
 const __idxDirname = path.dirname(__idxFilename);
 
