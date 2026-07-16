@@ -49,6 +49,111 @@ app.get('/', (_, res) => res.sendFile(join(frontendDir, 'index.html')));
 app.post('/api/chat', handleChatMessage);
 app.get('/api/live', getLiveMatchesAPI);
 
+// ─── Replay Simulation Control Endpoint ───────────────────────────────────────
+// This allows you and other users to control the simulated England vs Argentina replay
+// directly on your live Render website. Exposes states: pre, kickoff, step, goal.
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __idxFilename = fileURLToPath(import.meta.url);
+const __idxDirname = path.dirname(__idxFilename);
+
+let replaySnapshots = [];
+try {
+  const fileContent = fs.readFileSync(path.join(__idxDirname, 'match_18241006_snapshot.json'), 'utf8');
+  replaySnapshots = JSON.parse(fileContent).sort((a, b) => (a.Seq || 0) - (b.Seq || 0));
+  
+  // Set up the global replay hook
+  global.mockReplayActive = true;
+  global.mockReplayIndex = 0;
+  global.getMockReplayDetails = function() {
+    if (!global.mockReplayActive) return null;
+    return replaySnapshots.slice(0, global.mockReplayIndex + 1);
+  };
+} catch (e) {
+  log.warn('Could not load England vs Argentina snapshot file for web control:', e.message);
+}
+
+app.post('/api/replay/control', async (req, res) => {
+  const { command } = req.body;
+  if (!replaySnapshots.length) {
+    return res.status(503).json({ ok: false, error: 'Replay snapshots not loaded on server' });
+  }
+
+  const { pollMatches } = await import('./services/matchPoller.js');
+  const { updateMatchState } = await import('./utils/store.js');
+
+  try {
+    if (command === 'pre') {
+      global.mockReplayActive = true;
+      global.mockReplayIndex = 0;
+      updateMatchState('18241006', {
+        seeded: false,
+        sentPreMatch: false,
+        sentKO: false,
+        homeScore: 0,
+        awayScore: 0,
+        status: 'pre'
+      });
+      return res.json({ ok: true, status: 'NS (Pre-Match)', index: 0 });
+    }
+    
+    if (command === 'kickoff') {
+      global.mockReplayActive = true;
+      global.mockReplayIndex = 1;
+      await pollMatches();
+      return res.json({ ok: true, status: 'LIVE (Kickoff)', index: 1 });
+    }
+
+    if (command === 'step') {
+      if (global.mockReplayIndex < replaySnapshots.length - 1) {
+        global.mockReplayIndex++;
+        await pollMatches();
+        return res.json({ ok: true, status: 'stepped', index: global.mockReplayIndex });
+      }
+      return res.json({ ok: true, status: 'finished', index: global.mockReplayIndex });
+    }
+
+    if (command === 'goal') {
+      let found = false;
+      const detail = global.getMockReplayDetails();
+      const currentHome = detail?.slice(-1)[0]?.Score?.Participant1?.Total?.Goals || 0;
+      const currentAway = detail?.slice(-1)[0]?.Score?.Participant2?.Total?.Goals || 0;
+
+      for (let i = global.mockReplayIndex + 1; i < replaySnapshots.length; i++) {
+        const item = replaySnapshots[i];
+        const itemHome = item?.Score?.Participant1?.Total?.Goals || 0;
+        const itemAway = item?.Score?.Participant2?.Total?.Goals || 0;
+        if (itemHome > currentHome || itemAway > currentAway) {
+          global.mockReplayIndex = i;
+          found = true;
+          await pollMatches();
+          return res.json({ ok: true, status: 'goal', index: i, score: `${itemHome}-${itemAway}` });
+        }
+      }
+      return res.json({ ok: false, error: 'No further goal snapshots available' });
+    }
+
+    if (command === 'stop') {
+      global.mockReplayActive = false;
+      return res.json({ ok: true, status: 'disabled' });
+    }
+
+    res.status(400).json({ ok: false, error: 'Invalid command. Use: pre, kickoff, step, goal, stop' });
+  } catch (err) {
+    log.error('Replay control error:', err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+app.get('/api/replay/status', (req, res) => {
+  res.json({
+    active: global.mockReplayActive || false,
+    index: global.mockReplayIndex || 0,
+    total: replaySnapshots.length
+  });
+});
+
 // ─── Manual pre-match blast (one-shot admin trigger) ──────────────────────────
 app.post('/api/send-prematch', async (req, res) => {
   try {
