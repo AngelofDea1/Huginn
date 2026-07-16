@@ -284,21 +284,27 @@ async function processMatch(match, groups) {
   if (currentHome > state.homeScore) {
     const newGoals = currentHome - state.homeScore;
     const homeGoalEvents = events.filter(e => e.type === 'goal' && e.team === 'home');
-    // ✅ FIX: Update score in-memory IMMEDIATELY before any await, so the next
-    // poll cycle (which may fire in 5s while AI is still generating) already
-    // sees the new baseline and won't re-detect the same goal.
-    //
-    // IMPORTANT — score semantics:
-    // `state` is a LOCAL snapshot captured at the top of processMatch().
-    // updateMatchState() writes to the Map but does NOT mutate the local `state` object.
-    // Therefore state.homeScore below still holds the PRE-GOAL value throughout this
-    // loop, which is exactly what we need for goalNum arithmetic.
-    //
-    // The POST-GOAL score passed to the AI is goalNum (= state.homeScore + i + 1),
-    // injected explicitly into `detail` at the handleEvent call site.
-    // handleEvent reads homeScore from detail, NOT from the Map — so the AI always
-    // receives "score NOW" (after this goal) which is the correct commentary context.
+    // ✅ FIX: Update score immediately AND persist to Redis right away
+    // This prevents duplicate goal alerts if a new poll cycle starts before
+    // the end-of-cycle persistMatchScore() completes.
     updateMatchState(matchId, { homeScore: currentHome });
+    await persistMatchScore(matchId, {
+      homeScore:       currentHome,
+      awayScore:       currentAway,
+      homeRedCards:    state.homeRedCards || 0,
+      awayRedCards:    state.awayRedCards || 0,
+      homeYellowCards: state.homeYellowCards || 0,
+      awayYellowCards: state.awayYellowCards || 0,
+      homePenalties:   state.homePenalties || 0,
+      awayPenalties:   state.awayPenalties || 0,
+      addedTimeAlerts: state.addedTimeAlerts || 0,
+      status:          currentStatus,
+      sentPreMatch:    state.sentPreMatch || false,
+      sentKO:          state.sentKO       || false,
+      sentHT:          state.sentHT       || false,
+      sentFT:          state.sentFT       || false,
+      sentSecondHalf:  state.sentSecondHalf || false,
+    });
     for (let i = 0; i < newGoals; i++) {
       const goalNum = state.homeScore + i + 1; // pre-goal snapshot + increment = post-this-goal score
       // ✅ FIX: Pick the event that matches the goalNum index directly.
@@ -333,10 +339,27 @@ async function processMatch(match, groups) {
   if (currentAway > state.awayScore) {
     const newGoals = currentAway - state.awayScore;
     const awayGoalEvents = events.filter(e => e.type === 'goal' && e.team === 'away');
-    // ✅ FIX: Same immediate in-memory update for away goals.
-    // Same score semantics: state.awayScore is still the PRE-GOAL value (local snapshot).
-    // goalNum is the post-this-goal score passed explicitly to the AI via detail.
+    // ✅ FIX: Update score immediately AND persist to Redis right away
+    // This prevents duplicate goal alerts if a new poll cycle starts before
+    // the end-of-cycle persistMatchScore() completes.
     updateMatchState(matchId, { awayScore: currentAway });
+    await persistMatchScore(matchId, {
+      homeScore:       currentHome,
+      awayScore:       currentAway,
+      homeRedCards:    state.homeRedCards || 0,
+      awayRedCards:    state.awayRedCards || 0,
+      homeYellowCards: state.homeYellowCards || 0,
+      awayYellowCards: state.awayYellowCards || 0,
+      homePenalties:   state.homePenalties || 0,
+      awayPenalties:   state.awayPenalties || 0,
+      addedTimeAlerts: state.addedTimeAlerts || 0,
+      status:          currentStatus,
+      sentPreMatch:    state.sentPreMatch || false,
+      sentKO:          state.sentKO       || false,
+      sentHT:          state.sentHT       || false,
+      sentFT:          state.sentFT       || false,
+      sentSecondHalf:  state.sentSecondHalf || false,
+    });
     for (let i = 0; i < newGoals; i++) {
       const goalNum = state.awayScore + i + 1; // pre-goal snapshot + increment = post-this-goal score
       const ev = awayGoalEvents[goalNum - 1] || awayGoalEvents[awayGoalEvents.length - 1] || {};
@@ -384,6 +407,24 @@ async function processMatch(match, groups) {
   if (currentHomeRed > prevHomeRed) {
     const newCards = currentHomeRed - prevHomeRed;
     const homeRedEvents = events.filter(e => e.type === 'red_card' && e.team === 'home');
+    updateMatchState(matchId, { homeRedCards: currentHomeRed });
+    await persistMatchScore(matchId, {
+      homeScore:       currentHome,
+      awayScore:       currentAway,
+      homeRedCards:    currentHomeRed,
+      awayRedCards:    state.awayRedCards || 0,
+      homeYellowCards: state.homeYellowCards || 0,
+      awayYellowCards: state.awayYellowCards || 0,
+      homePenalties:   state.homePenalties || 0,
+      awayPenalties:   state.awayPenalties || 0,
+      addedTimeAlerts: state.addedTimeAlerts || 0,
+      status:          currentStatus,
+      sentPreMatch:    state.sentPreMatch || false,
+      sentKO:          state.sentKO       || false,
+      sentHT:          state.sentHT       || false,
+      sentFT:          state.sentFT       || false,
+      sentSecondHalf:  state.sentSecondHalf || false,
+    });
     for (let i = 0; i < newCards; i++) {
       const ev = homeRedEvents[prevHomeRed + i] || {};
       log.event(`Red card [${matchId}] ${homeTeam} #${prevHomeRed + i + 1} @ ${ev.minute || 'unknown'}'`);
@@ -404,6 +445,24 @@ async function processMatch(match, groups) {
   if (currentAwayRed > prevAwayRed) {
     const newCards = currentAwayRed - prevAwayRed;
     const awayRedEvents = events.filter(e => e.type === 'red_card' && e.team === 'away');
+    updateMatchState(matchId, { awayRedCards: currentAwayRed });
+    await persistMatchScore(matchId, {
+      homeScore:       currentHome,
+      awayScore:       currentAway,
+      homeRedCards:    state.homeRedCards || 0,
+      awayRedCards:    currentAwayRed,
+      homeYellowCards: state.homeYellowCards || 0,
+      awayYellowCards: state.awayYellowCards || 0,
+      homePenalties:   state.homePenalties || 0,
+      awayPenalties:   state.awayPenalties || 0,
+      addedTimeAlerts: state.addedTimeAlerts || 0,
+      status:          currentStatus,
+      sentPreMatch:    state.sentPreMatch || false,
+      sentKO:          state.sentKO       || false,
+      sentHT:          state.sentHT       || false,
+      sentFT:          state.sentFT       || false,
+      sentSecondHalf:  state.sentSecondHalf || false,
+    });
     for (let i = 0; i < newCards; i++) {
       const ev = awayRedEvents[prevAwayRed + i] || {};
       log.event(`Red card [${matchId}] ${awayTeam} #${prevAwayRed + i + 1} @ ${ev.minute || 'unknown'}'`);
@@ -422,46 +481,34 @@ async function processMatch(match, groups) {
   }
 
   if (currentHomeYellow > prevHomeYellow) {
-    const newYellows = currentHomeYellow - prevHomeYellow;
-    const homeYellowEvents = events.filter(e => e.type === 'yellow_card' && e.team === 'home');
-    for (let i = 0; i < newYellows; i++) {
-      const ev = homeYellowEvents[prevHomeYellow + i] || {};
-      await handleEvent(
-        {
-          id:          `home-yellow-${prevHomeYellow + i + 1}`,
-          type:        'yellow_card',
-          team:        'home',
-          minute:      ev.minute || null,
-          player:      ev.player || 'Player',
-          description: ev.description || `${homeTeam} yellow card`,
-        },
-        { match, homeTeam, awayTeam, detail, oddsStr, groups, pushSubs }
-      );
-    }
+    // Yellow card alerts disabled — can't reliably identify player from TxLINE data
   }
 
   if (currentAwayYellow > prevAwayYellow) {
-    const newYellows = currentAwayYellow - prevAwayYellow;
-    const awayYellowEvents = events.filter(e => e.type === 'yellow_card' && e.team === 'away');
-    for (let i = 0; i < newYellows; i++) {
-      const ev = awayYellowEvents[prevAwayYellow + i] || {};
-      await handleEvent(
-        {
-          id:          `away-yellow-${prevAwayYellow + i + 1}`,
-          type:        'yellow_card',
-          team:        'away',
-          minute:      ev.minute || null,
-          player:      ev.player || 'Player',
-          description: ev.description || `${awayTeam} yellow card`,
-        },
-        { match, homeTeam, awayTeam, detail, oddsStr, groups, pushSubs }
-      );
-    }
+    // Yellow card alerts disabled — can't reliably identify player from TxLINE data
   }
 
   if (currentHomePenalties > prevHomePenalties) {
     const newPenalties = currentHomePenalties - prevHomePenalties;
     const homePenaltyEvents = events.filter(e => ['penalty_goal', 'penalty_missed', 'penalty'].includes(e.type) && e.team === 'home');
+    updateMatchState(matchId, { homePenalties: currentHomePenalties });
+    await persistMatchScore(matchId, {
+      homeScore:       currentHome,
+      awayScore:       currentAway,
+      homeRedCards:    state.homeRedCards || 0,
+      awayRedCards:    state.awayRedCards || 0,
+      homeYellowCards: state.homeYellowCards || 0,
+      awayYellowCards: state.awayYellowCards || 0,
+      homePenalties:   currentHomePenalties,
+      awayPenalties:   state.awayPenalties || 0,
+      addedTimeAlerts: state.addedTimeAlerts || 0,
+      status:          currentStatus,
+      sentPreMatch:    state.sentPreMatch || false,
+      sentKO:          state.sentKO       || false,
+      sentHT:          state.sentHT       || false,
+      sentFT:          state.sentFT       || false,
+      sentSecondHalf:  state.sentSecondHalf || false,
+    });
     for (let i = 0; i < newPenalties; i++) {
       const ev = homePenaltyEvents[prevHomePenalties + i] || {};
       await handleEvent(
@@ -481,6 +528,24 @@ async function processMatch(match, groups) {
   if (currentAwayPenalties > prevAwayPenalties) {
     const newPenalties = currentAwayPenalties - prevAwayPenalties;
     const awayPenaltyEvents = events.filter(e => ['penalty_goal', 'penalty_missed', 'penalty'].includes(e.type) && e.team === 'away');
+    updateMatchState(matchId, { awayPenalties: currentAwayPenalties });
+    await persistMatchScore(matchId, {
+      homeScore:       currentHome,
+      awayScore:       currentAway,
+      homeRedCards:    state.homeRedCards || 0,
+      awayRedCards:    state.awayRedCards || 0,
+      homeYellowCards: state.homeYellowCards || 0,
+      awayYellowCards: state.awayYellowCards || 0,
+      homePenalties:   state.homePenalties || 0,
+      awayPenalties:   currentAwayPenalties,
+      addedTimeAlerts: state.addedTimeAlerts || 0,
+      status:          currentStatus,
+      sentPreMatch:    state.sentPreMatch || false,
+      sentKO:          state.sentKO       || false,
+      sentHT:          state.sentHT       || false,
+      sentFT:          state.sentFT       || false,
+      sentSecondHalf:  state.sentSecondHalf || false,
+    });
     for (let i = 0; i < newPenalties; i++) {
       const ev = awayPenaltyEvents[prevAwayPenalties + i] || {};
       await handleEvent(
@@ -757,7 +822,8 @@ async function handleEvent(event, { match, homeTeam, awayTeam, detail, oddsStr, 
       log.info(`Poller sending Red Card push to ${pushSubs.length} subscribers.`);
       await sendPushNotification('Red Card! 🟥', `${event.player} sent off in the ${event.minute}'`, '/', pushSubs);
     } else if (event.type === 'yellow_card') {
-      msg = `🟨 *Yellow card!* ${event.player || 'A player'} is booked${event.minute ? ` (${event.minute}')` : ''}`;
+      // Yellow card alerts disabled
+      return;
       log.info(`Poller sending Yellow Card push to ${pushSubs.length} subscribers.`);
       await sendPushNotification('Yellow Card! 🟨', `${event.player || 'A player'} booked in the ${event.minute}'`, '/', pushSubs);
     } else if (event.type === 'penalty_goal' || event.type === 'penalty_missed' || event.type === 'penalty') {
@@ -778,8 +844,6 @@ async function handleEvent(event, { match, homeTeam, awayTeam, detail, oddsStr, 
       msg = `⚽ *GOAL!* ${homeTeam} ${homeScore}–${awayScore} ${awayTeam}${minLabel ? ` (${minLabel})` : ''}`;
     } else if (event.type === 'red_card') {
       msg = `🟥 *Red card!* ${event.player || 'A player'} sent off${minLabel ? ` (${minLabel})` : ''}`;
-    } else if (event.type === 'yellow_card') {
-      msg = `🟨 *Yellow card!* ${event.player || 'A player'} booked${minLabel ? ` (${minLabel})` : ''}`;
     } else if (event.type === 'penalty_goal' || event.type === 'penalty_missed' || event.type === 'penalty') {
       msg = `🎯 *${event.type === 'penalty_missed' ? 'Penalty missed' : 'Penalty goal'}!*${minLabel ? ` (${minLabel})` : ''}`;
     } else if (event.type === 'added_time') {
