@@ -1,7 +1,7 @@
 import { getUpcomingMatches, getMatchOdds, formatOdds } from './txline.js';
 import { notifyMatchGroups } from './whatsapp.js';
 import { getGroupsFollowingMatch, getMatchState, updateMatchState } from '../utils/store.js';
-import { persistMatchScore } from '../utils/subscriptionStore.js';
+import { persistMatchScore, getPersistedMatchScore } from '../utils/subscriptionStore.js';
 import { sendPushNotification } from './pushNotify.js';
 import { getSubscribersForTeams } from '../utils/subscriptionStore.js';
 import { log } from '../utils/logger.js';
@@ -29,7 +29,9 @@ export async function schedulePreMatchBulletins() {
     if (!groups.length) continue; // nobody following this match
 
     const state = getMatchState(matchId);
-    if (state?.sentPreMatch) continue; // already sent — never fire twice
+    const persisted = await getPersistedMatchScore(matchId);
+    const alreadySentPreMatch = state?.sentPreMatch || persisted?.sentPreMatch || false;
+    if (alreadySentPreMatch) continue; // already sent — never fire twice
 
     const kickoffTime = match.kickoff_time ? new Date(match.kickoff_time).getTime() : null;
     if (!kickoffTime) continue;

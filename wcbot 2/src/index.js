@@ -56,6 +56,7 @@ app.post('/api/send-prematch', async (req, res) => {
     const { getUpcomingMatches, getMatchOdds, formatOdds } = await import('./services/txline.js');
     const { notifyMatchGroups } = await import('./services/whatsapp.js');
     const { getGroupsFollowingMatch, getMatchState, updateMatchState } = await import('./utils/store.js');
+    const { persistMatchScore } = await import('./utils/subscriptionStore.js');
     const { sendPushNotification } = await import('./services/pushNotify.js');
     const { getSubscribersForTeams } = await import('./utils/subscriptionStore.js');
 
@@ -98,6 +99,17 @@ app.post('/api/send-prematch', async (req, res) => {
       }
 
       updateMatchState(matchId, { sentPreMatch: true });
+      await persistMatchScore(matchId, {
+        homeScore:    match.home_score ?? 0,
+        awayScore:    match.away_score ?? 0,
+        homeRedCards: 0,
+        awayRedCards: 0,
+        status:       match.status || 'NS',
+        sentPreMatch: true,
+        sentKO:       false,
+        sentHT:       false,
+        sentFT:       false,
+      });
       sent++;
     }
 

@@ -481,11 +481,79 @@ async function processMatch(match, groups) {
   }
 
   if (currentHomeYellow > prevHomeYellow) {
-    // Yellow card alerts disabled — can't reliably identify player from TxLINE data
+    const newYellows = currentHomeYellow - prevHomeYellow;
+    const homeYellowEvents = events.filter(e => e.type === 'yellow_card' && e.team === 'home');
+    updateMatchState(matchId, { homeYellowCards: currentHomeYellow });
+    await persistMatchScore(matchId, {
+      homeScore:       currentHome,
+      awayScore:       currentAway,
+      homeRedCards:    state.homeRedCards || 0,
+      awayRedCards:    state.awayRedCards || 0,
+      homeYellowCards: currentHomeYellow,
+      awayYellowCards: state.awayYellowCards || 0,
+      homePenalties:   state.homePenalties || 0,
+      awayPenalties:   state.awayPenalties || 0,
+      addedTimeAlerts: state.addedTimeAlerts || 0,
+      status:          currentStatus,
+      sentPreMatch:    state.sentPreMatch || false,
+      sentKO:          state.sentKO       || false,
+      sentHT:          state.sentHT       || false,
+      sentFT:          state.sentFT       || false,
+      sentSecondHalf:  state.sentSecondHalf || false,
+    });
+
+    for (let i = 0; i < newYellows; i++) {
+      const ev = homeYellowEvents[prevHomeYellow + i] || {};
+      await handleEvent(
+        {
+          id:          `home-yellow-${prevHomeYellow + i + 1}`,
+          type:        'yellow_card',
+          team:        'home',
+          minute:      ev.minute || null,
+          player:      null,
+          description: `${homeTeam} yellow card`,
+        },
+        { match, homeTeam, awayTeam, detail, oddsStr, groups, pushSubs }
+      );
+    }
   }
 
   if (currentAwayYellow > prevAwayYellow) {
-    // Yellow card alerts disabled — can't reliably identify player from TxLINE data
+    const newYellows = currentAwayYellow - prevAwayYellow;
+    const awayYellowEvents = events.filter(e => e.type === 'yellow_card' && e.team === 'away');
+    updateMatchState(matchId, { awayYellowCards: currentAwayYellow });
+    await persistMatchScore(matchId, {
+      homeScore:       currentHome,
+      awayScore:       currentAway,
+      homeRedCards:    state.homeRedCards || 0,
+      awayRedCards:    state.awayRedCards || 0,
+      homeYellowCards: state.homeYellowCards || 0,
+      awayYellowCards: currentAwayYellow,
+      homePenalties:   state.homePenalties || 0,
+      awayPenalties:   state.awayPenalties || 0,
+      addedTimeAlerts: state.addedTimeAlerts || 0,
+      status:          currentStatus,
+      sentPreMatch:    state.sentPreMatch || false,
+      sentKO:          state.sentKO       || false,
+      sentHT:          state.sentHT       || false,
+      sentFT:          state.sentFT       || false,
+      sentSecondHalf:  state.sentSecondHalf || false,
+    });
+
+    for (let i = 0; i < newYellows; i++) {
+      const ev = awayYellowEvents[prevAwayYellow + i] || {};
+      await handleEvent(
+        {
+          id:          `away-yellow-${prevAwayYellow + i + 1}`,
+          type:        'yellow_card',
+          team:        'away',
+          minute:      ev.minute || null,
+          player:      null,
+          description: `${awayTeam} yellow card`,
+        },
+        { match, homeTeam, awayTeam, detail, oddsStr, groups, pushSubs }
+      );
+    }
   }
 
   if (currentHomePenalties > prevHomePenalties) {
@@ -822,15 +890,17 @@ async function handleEvent(event, { match, homeTeam, awayTeam, detail, oddsStr, 
       log.info(`Poller sending Red Card push to ${pushSubs.length} subscribers.`);
       await sendPushNotification('Red Card! 🟥', `${event.player} sent off in the ${event.minute}'`, '/', pushSubs);
     } else if (event.type === 'yellow_card') {
-      // Yellow card alerts disabled
-      return;
+      const teamName = event.team === 'home' ? homeTeam : awayTeam;
+      msg = `🟨 *Yellow card!* ${teamName}${event.minute ? ` (${event.minute}')` : ''}`;
       log.info(`Poller sending Yellow Card push to ${pushSubs.length} subscribers.`);
-      await sendPushNotification('Yellow Card! 🟨', `${event.player || 'A player'} booked in the ${event.minute}'`, '/', pushSubs);
+      await sendPushNotification('Yellow Card! 🟨', `Yellow card for ${teamName}${event.minute ? ` at ${event.minute}'` : ''}`, '/', pushSubs);
     } else if (event.type === 'penalty_goal' || event.type === 'penalty_missed' || event.type === 'penalty') {
       const penaltyLabel = event.type === 'penalty_missed' ? 'Penalty missed' : 'Penalty goal';
-      msg = `🎯 *${penaltyLabel}!* ${event.player || 'A player'} involved${event.minute ? ` (${event.minute}')` : ''}`;
+      const teamName = event.team === 'home' ? homeTeam : awayTeam;
+      const actor = event.player || 'A player';
+      msg = `🎯 *${penaltyLabel}!* ${teamName} involved${event.minute ? ` (${event.minute}')` : ''} — ${actor}`;
       log.info(`Poller sending Penalty push to ${pushSubs.length} subscribers.`);
-      await sendPushNotification('Penalty! 🎯', `${penaltyLabel} at ${event.minute}'`, '/', pushSubs);
+      await sendPushNotification('Penalty! 🎯', `${penaltyLabel} for ${teamName} at ${event.minute}'`, '/', pushSubs);
     } else if (event.type === 'added_time') {
       msg = `⏱️ *Added time!* The referee has signalled stoppage time${event.minute ? ` (${event.minute}')` : ''}`;
       log.info(`Poller sending Added Time push to ${pushSubs.length} subscribers.`);
@@ -845,7 +915,9 @@ async function handleEvent(event, { match, homeTeam, awayTeam, detail, oddsStr, 
     } else if (event.type === 'red_card') {
       msg = `🟥 *Red card!* ${event.player || 'A player'} sent off${minLabel ? ` (${minLabel})` : ''}`;
     } else if (event.type === 'penalty_goal' || event.type === 'penalty_missed' || event.type === 'penalty') {
-      msg = `🎯 *${event.type === 'penalty_missed' ? 'Penalty missed' : 'Penalty goal'}!*${minLabel ? ` (${minLabel})` : ''}`;
+      const penaltyLabel = event.type === 'penalty_missed' ? 'Penalty missed' : 'Penalty goal';
+      const teamName = event.team === 'home' ? homeTeam : awayTeam;
+      msg = `🎯 *${penaltyLabel}!* ${teamName}${minLabel ? ` (${minLabel})` : ''}`;
     } else if (event.type === 'added_time') {
       msg = `⏱️ *Added time!*${minLabel ? ` (${minLabel})` : ''}`;
     }
