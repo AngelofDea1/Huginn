@@ -186,7 +186,61 @@ function normaliseScores(scoreUpdates, fixture) {
   };
 }
 
-function buildEvents(updates) {
+function inferSupplementaryEvent(update, minute) {
+  const action = String(update?.Action || '').toLowerCase();
+  const data = update?.Data || {};
+  const participant = data?.Participant ?? data?.Team ?? data?.TeamId ?? data?.ParticipantId;
+  const team = participant === 2 || participant === '2' || participant === 'away' ? 'away' : 'home';
+
+  if (action === 'yellow_card') {
+    return {
+      id: `yellow-${minute}-${data.PlayerId || 'x'}`,
+      type: 'yellow_card',
+      team,
+      minute,
+      player: data.PlayerId ? `Player #${data.PlayerId}` : 'Player',
+      description: 'Yellow card',
+    };
+  }
+
+  if (action === 'red_card') {
+    return {
+      id: `red-${minute}-${data.PlayerId || 'x'}`,
+      type: 'red_card',
+      team,
+      minute,
+      player: data.PlayerId ? `Player #${data.PlayerId}` : 'Player',
+      description: 'Red card',
+    };
+  }
+
+  if (action.includes('penalty')) {
+    const type = action.includes('miss') ? 'penalty_missed' : 'penalty_goal';
+    return {
+      id: `${type}-${minute}`,
+      type,
+      team,
+      minute,
+      player: data.PlayerId ? `Player #${data.PlayerId}` : 'Player',
+      description: type === 'penalty_goal' ? 'Penalty goal' : 'Penalty missed',
+    };
+  }
+
+  if (action.includes('added_time') || action.includes('stoppage_time') || action.includes('injury_time') || action.includes('extra_time')) {
+    return {
+      id: `added-time-${minute}`,
+      type: 'added_time',
+      team,
+      minute,
+      player: null,
+      description: 'Added time',
+    };
+  }
+
+  return null;
+}
+
+export function buildEvents(updates) {
   const events = [];
   let prevHome = 0;
   let prevAway = 0;
@@ -202,6 +256,11 @@ function buildEvents(updates) {
 
     const homeRed = u.Stats?.['5'] ?? u.Stats?.[5] ?? 0;
     const awayRed = u.Stats?.['6'] ?? u.Stats?.[6] ?? 0;
+
+    const supplementary = inferSupplementaryEvent(u, ts);
+    if (supplementary) {
+      events.push(supplementary);
+    }
 
     // Detect goals
     if (homeGoals > prevHome) {

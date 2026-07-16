@@ -173,6 +173,92 @@ app.get('/api/replay/status', (req, res) => {
   });
 });
 
+app.get('/demo', (_, res) => {
+  res.type('html').send(`<!doctype html>
+  <html>
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <title>Huginn Replay Demo</title>
+      <style>
+        body { font-family: sans-serif; background: #07111f; color: #f5f7ff; padding: 24px; }
+        button { background: #00c853; color: white; border: none; padding: 12px 18px; border-radius: 999px; cursor: pointer; font-size: 1rem; }
+        .card { max-width: 560px; margin: 0 auto; background: #111c2f; padding: 24px; border-radius: 16px; }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <h1>Huginn Replay Demo</h1>
+        <p>This starts the England vs Argentina replay flow so you can see the alerts in WhatsApp and live chat.</p>
+        <button onclick="runDemo()">Run replay demo</button>
+        <p id="status">Waiting…</p>
+      </div>
+      <script>
+        async function runDemo() {
+          const status = document.getElementById('status');
+          status.textContent = 'Starting replay…';
+          try {
+            const res = await fetch('/api/replay/demo', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ intervalMs: 1500, maxSteps: 30 })
+            });
+            const data = await res.json();
+            status.textContent = data.ok ? 'Replay started.' : 'Replay failed: ' + (data.error || 'unknown');
+          } catch (err) {
+            status.textContent = 'Replay failed: ' + err.message;
+          }
+        }
+      </script>
+    </body>
+  </html>`);
+});
+
+app.post('/api/replay/demo', async (req, res) => {
+  if (!replaySnapshots.length) {
+    return res.status(503).json({ ok: false, error: 'Replay snapshots not loaded on server' });
+  }
+
+  const { pollMatches } = await import('./services/matchPoller.js');
+  const { updateMatchState } = await import('./utils/store.js');
+  const { intervalMs = 1500, maxSteps = 30 } = req.body || {};
+
+  try {
+    global.mockReplayActive = true;
+    global.mockReplayIndex = 0;
+    updateMatchState('18241006', {
+      seeded: false,
+      sentPreMatch: false,
+      sentKO: false,
+      homeScore: 0,
+      awayScore: 0,
+      status: 'pre'
+    });
+
+    res.json({ ok: true, status: 'demo-started', intervalMs, maxSteps });
+
+    const runDemo = async () => {
+      global.mockReplayIndex = 1;
+      await pollMatches();
+
+      for (let i = 2; i < Math.min(replaySnapshots.length, maxSteps); i++) {
+        global.mockReplayIndex = i;
+        await pollMatches();
+        await new Promise(resolve => setTimeout(resolve, Number(intervalMs) || 1500));
+      }
+
+      log.info('Replay demo completed.');
+    };
+
+    runDemo().catch((err) => {
+      log.error('Replay demo failed:', err.message);
+    });
+  } catch (err) {
+    log.error('Replay demo error:', err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // ─── Manual pre-match blast (one-shot admin trigger) ──────────────────────────
 app.post('/api/send-prematch', async (req, res) => {
   try {

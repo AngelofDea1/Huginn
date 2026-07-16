@@ -63,12 +63,18 @@ async function processMatch(match, groups) {
   // First time seeing this match — init placeholder state (corrected below after detail fetch)
   if (!state) {
     initMatchState(matchId, {
-      homeScore:    match.home_score ?? 0,
-      awayScore:    match.away_score ?? 0,
-      homeRedCards: 0,
-      awayRedCards: 0,
-      status:       match.status,
-      seeded:       false,
+      homeScore:      match.home_score ?? 0,
+      awayScore:      match.away_score ?? 0,
+      homeRedCards:   0,
+      awayRedCards:   0,
+      homeYellowCards: 0,
+      awayYellowCards: 0,
+      homePenalties:  0,
+      awayPenalties:  0,
+      addedTimeAlerts: 0,
+      sentSecondHalf: false,
+      status:         match.status,
+      seeded:         false,
     });
     state = getMatchState(matchId);
   }
@@ -117,17 +123,23 @@ async function processMatch(match, groups) {
       // Restart scenario: use persisted score so goals during restart are caught
       log.info(`[${matchId}] Loaded persisted baseline from Redis: ${homeTeam} ${persisted.homeScore}-${persisted.awayScore} ${awayTeam}`);
       updateMatchState(matchId, {
-        seeded:        true,
-        homeScore:     persisted.homeScore,
-        awayScore:     persisted.awayScore,
-        homeRedCards:  persisted.homeRedCards || 0,
-        awayRedCards:  persisted.awayRedCards || 0,
-        status:        persisted.status || currentStatus,
+        seeded:          true,
+        homeScore:       persisted.homeScore,
+        awayScore:       persisted.awayScore,
+        homeRedCards:    persisted.homeRedCards || 0,
+        awayRedCards:    persisted.awayRedCards || 0,
+        homeYellowCards: persisted.homeYellowCards || 0,
+        awayYellowCards: persisted.awayYellowCards || 0,
+        homePenalties:   persisted.homePenalties || 0,
+        awayPenalties:   persisted.awayPenalties || 0,
+        addedTimeAlerts: persisted.addedTimeAlerts || 0,
+        sentSecondHalf:  persisted.sentSecondHalf || false,
+        status:          persisted.status || currentStatus,
         // Restore sent-flags so HT/FT/KO/PreMatch are never sent twice after restart
-        sentPreMatch:  persisted.sentPreMatch || false,
-        sentKO:        persisted.sentKO        || false,
-        sentHT:        persisted.sentHT        || false,
-        sentFT:        persisted.sentFT        || false,
+        sentPreMatch:    persisted.sentPreMatch || false,
+        sentKO:          persisted.sentKO        || false,
+        sentHT:          persisted.sentHT        || false,
+        sentFT:          persisted.sentFT        || false,
       });
     } else {
       // Brand-new follow: set current score as baseline, persist it immediately
@@ -138,21 +150,33 @@ async function processMatch(match, groups) {
       // so we never fire a belated kick-off alert, and send an "already underway" message instead.
       const alreadyLive = currentStatus === 'LIVE' || currentStatus === 'HT';
       updateMatchState(matchId, {
-        seeded:       true,
-        homeScore:    currentHome,
-        awayScore:    currentAway,
-        homeRedCards: initHomeRed,
-        awayRedCards: initAwayRed,
-        status:       currentStatus,
-        sentKO:       alreadyLive, // suppress belated KO alert
+        seeded:          true,
+        homeScore:       currentHome,
+        awayScore:       currentAway,
+        homeRedCards:    initHomeRed,
+        awayRedCards:    initAwayRed,
+        homeYellowCards: 0,
+        awayYellowCards: 0,
+        homePenalties:   0,
+        awayPenalties:   0,
+        addedTimeAlerts: 0,
+        sentSecondHalf:  false,
+        status:          currentStatus,
+        sentKO:          alreadyLive, // suppress belated KO alert
       });
       await persistMatchScore(matchId, {
-        homeScore:    currentHome,
-        awayScore:    currentAway,
-        homeRedCards: initHomeRed,
-        awayRedCards: initAwayRed,
-        status:       currentStatus,
-        sentKO:       alreadyLive,
+        homeScore:       currentHome,
+        awayScore:       currentAway,
+        homeRedCards:    initHomeRed,
+        awayRedCards:    initAwayRed,
+        homeYellowCards: 0,
+        awayYellowCards: 0,
+        homePenalties:   0,
+        awayPenalties:   0,
+        addedTimeAlerts: 0,
+        sentSecondHalf:  false,
+        status:          currentStatus,
+        sentKO:          alreadyLive,
       });
       log.info(`[${matchId}] New baseline set: ${homeTeam} ${currentHome}-${currentAway} ${awayTeam}`);
 
@@ -344,6 +368,19 @@ async function processMatch(match, groups) {
   const prevHomeRed    = state.homeRedCards || 0;
   const prevAwayRed    = state.awayRedCards || 0;
 
+  const currentHomeYellow = events.filter(e => e.type === 'yellow_card' && e.team === 'home').length;
+  const currentAwayYellow = events.filter(e => e.type === 'yellow_card' && e.team === 'away').length;
+  const prevHomeYellow    = state.homeYellowCards || 0;
+  const prevAwayYellow    = state.awayYellowCards || 0;
+
+  const currentHomePenalties = events.filter(e => ['penalty_goal', 'penalty_missed', 'penalty'].includes(e.type) && e.team === 'home').length;
+  const currentAwayPenalties = events.filter(e => ['penalty_goal', 'penalty_missed', 'penalty'].includes(e.type) && e.team === 'away').length;
+  const prevHomePenalties    = state.homePenalties || 0;
+  const prevAwayPenalties    = state.awayPenalties || 0;
+
+  const currentAddedTimeAlerts = events.filter(e => ['added_time', 'stoppage_time', 'injury_time', 'extra_time'].includes(e.type)).length;
+  const prevAddedTimeAlerts = state.addedTimeAlerts || 0;
+
   if (currentHomeRed > prevHomeRed) {
     const newCards = currentHomeRed - prevHomeRed;
     const homeRedEvents = events.filter(e => e.type === 'red_card' && e.team === 'home');
@@ -384,26 +421,160 @@ async function processMatch(match, groups) {
     }
   }
 
+  if (currentHomeYellow > prevHomeYellow) {
+    const newYellows = currentHomeYellow - prevHomeYellow;
+    const homeYellowEvents = events.filter(e => e.type === 'yellow_card' && e.team === 'home');
+    for (let i = 0; i < newYellows; i++) {
+      const ev = homeYellowEvents[prevHomeYellow + i] || {};
+      await handleEvent(
+        {
+          id:          `home-yellow-${prevHomeYellow + i + 1}`,
+          type:        'yellow_card',
+          team:        'home',
+          minute:      ev.minute || null,
+          player:      ev.player || 'Player',
+          description: ev.description || `${homeTeam} yellow card`,
+        },
+        { match, homeTeam, awayTeam, detail, oddsStr, groups, pushSubs }
+      );
+    }
+  }
+
+  if (currentAwayYellow > prevAwayYellow) {
+    const newYellows = currentAwayYellow - prevAwayYellow;
+    const awayYellowEvents = events.filter(e => e.type === 'yellow_card' && e.team === 'away');
+    for (let i = 0; i < newYellows; i++) {
+      const ev = awayYellowEvents[prevAwayYellow + i] || {};
+      await handleEvent(
+        {
+          id:          `away-yellow-${prevAwayYellow + i + 1}`,
+          type:        'yellow_card',
+          team:        'away',
+          minute:      ev.minute || null,
+          player:      ev.player || 'Player',
+          description: ev.description || `${awayTeam} yellow card`,
+        },
+        { match, homeTeam, awayTeam, detail, oddsStr, groups, pushSubs }
+      );
+    }
+  }
+
+  if (currentHomePenalties > prevHomePenalties) {
+    const newPenalties = currentHomePenalties - prevHomePenalties;
+    const homePenaltyEvents = events.filter(e => ['penalty_goal', 'penalty_missed', 'penalty'].includes(e.type) && e.team === 'home');
+    for (let i = 0; i < newPenalties; i++) {
+      const ev = homePenaltyEvents[prevHomePenalties + i] || {};
+      await handleEvent(
+        {
+          id:          `home-penalty-${prevHomePenalties + i + 1}`,
+          type:        ev.type || 'penalty_goal',
+          team:        'home',
+          minute:      ev.minute || null,
+          player:      ev.player || 'Player',
+          description: ev.description || `${homeTeam} penalty`,
+        },
+        { match, homeTeam, awayTeam, detail, oddsStr, groups, pushSubs }
+      );
+    }
+  }
+
+  if (currentAwayPenalties > prevAwayPenalties) {
+    const newPenalties = currentAwayPenalties - prevAwayPenalties;
+    const awayPenaltyEvents = events.filter(e => ['penalty_goal', 'penalty_missed', 'penalty'].includes(e.type) && e.team === 'away');
+    for (let i = 0; i < newPenalties; i++) {
+      const ev = awayPenaltyEvents[prevAwayPenalties + i] || {};
+      await handleEvent(
+        {
+          id:          `away-penalty-${prevAwayPenalties + i + 1}`,
+          type:        ev.type || 'penalty_goal',
+          team:        'away',
+          minute:      ev.minute || null,
+          player:      ev.player || 'Player',
+          description: ev.description || `${awayTeam} penalty`,
+        },
+        { match, homeTeam, awayTeam, detail, oddsStr, groups, pushSubs }
+      );
+    }
+  }
+
+  if (currentAddedTimeAlerts > prevAddedTimeAlerts) {
+    const addedTimeEvents = events.filter(e => ['added_time', 'stoppage_time', 'injury_time', 'extra_time'].includes(e.type));
+    for (const ev of addedTimeEvents.slice(prevAddedTimeAlerts)) {
+      await handleEvent(
+        {
+          id:          `added-time-${ev.minute || Date.now()}`,
+          type:        ev.type,
+          team:        ev.team || 'home',
+          minute:      ev.minute || null,
+          player:      ev.player || null,
+          description: ev.description || 'Added time',
+        },
+        { match, homeTeam, awayTeam, detail, oddsStr, groups, pushSubs }
+      );
+    }
+  }
+
   // ── Persist latest scores + red card counts ───────────────────────────────────
   // Both in-memory (fast) and Redis (restart-safe)
   updateMatchState(matchId, {
-    homeScore:    currentHome,
-    awayScore:    currentAway,
-    homeRedCards: currentHomeRed,
-    awayRedCards: currentAwayRed,
+    homeScore:       currentHome,
+    awayScore:       currentAway,
+    homeRedCards:    currentHomeRed,
+    awayRedCards:    currentAwayRed,
+    homeYellowCards: currentHomeYellow,
+    awayYellowCards: currentAwayYellow,
+    homePenalties:   currentHomePenalties,
+    awayPenalties:   currentAwayPenalties,
+    addedTimeAlerts: currentAddedTimeAlerts,
   });
   // Persist to Redis: scores + sent-flags so nothing re-fires after restart
   await persistMatchScore(matchId, {
-    homeScore:    currentHome,
-    awayScore:    currentAway,
-    homeRedCards: currentHomeRed,
-    awayRedCards: currentAwayRed,
-    status:       currentStatus,
-    sentPreMatch: state.sentPreMatch || false,
-    sentKO:       state.sentKO       || false,
-    sentHT:       state.sentHT       || false,
-    sentFT:       state.sentFT       || false,
+    homeScore:       currentHome,
+    awayScore:       currentAway,
+    homeRedCards:    currentHomeRed,
+    awayRedCards:    currentAwayRed,
+    homeYellowCards: currentHomeYellow,
+    awayYellowCards: currentAwayYellow,
+    homePenalties:   currentHomePenalties,
+    awayPenalties:   currentAwayPenalties,
+    addedTimeAlerts: currentAddedTimeAlerts,
+    status:          currentStatus,
+    sentPreMatch:    state.sentPreMatch || false,
+    sentKO:          state.sentKO       || false,
+    sentHT:          state.sentHT       || false,
+    sentFT:          state.sentFT       || false,
+    sentSecondHalf:  state.sentSecondHalf || false,
   });
+
+  // ── Second-half start ────────────────────────────────────────────────────────
+  if (currentStatus === 'LIVE' && state.status === 'HT' && !state.sentSecondHalf) {
+    log.event(`Second half underway: ${homeTeam} vs ${awayTeam}`);
+    updateMatchState(matchId, { sentSecondHalf: true });
+    try {
+      const msg = `⚽ *Second half underway!*\n\n${homeTeam} vs ${awayTeam} are back out for the second half.\n\nWe’ll keep you updated with every major moment.`;
+      await notifyMatchGroups(groups, msg);
+      await sendPushNotification('Second half underway', `${homeTeam} vs ${awayTeam} are back out for the second half.`, '/', pushSubs);
+    } catch (err) {
+      log.error('Second-half alert failed:', err.message);
+    }
+    await persistMatchScore(matchId, {
+      homeScore:       currentHome,
+      awayScore:       currentAway,
+      homeRedCards:    currentHomeRed,
+      awayRedCards:    currentAwayRed,
+      homeYellowCards: currentHomeYellow,
+      awayYellowCards: currentAwayYellow,
+      homePenalties:   currentHomePenalties,
+      awayPenalties:   currentAwayPenalties,
+      addedTimeAlerts: currentAddedTimeAlerts,
+      status:          currentStatus,
+      sentPreMatch:    state.sentPreMatch || false,
+      sentKO:          state.sentKO       || false,
+      sentHT:          true,
+      sentFT:          state.sentFT       || false,
+      sentSecondHalf:  true,
+    });
+  }
 
   // ── Half-time report ──────────────────────────────────────────────────────────
   if (currentStatus === 'HT' && !state.sentHT) {
@@ -426,15 +597,21 @@ async function processMatch(match, groups) {
       log.error('HT report failed:', err.message);
     }
     await persistMatchScore(matchId, {
-      homeScore:    currentHome,
-      awayScore:    currentAway,
-      homeRedCards: currentHomeRed,
-      awayRedCards: currentAwayRed,
-      status:       currentStatus,
-      sentPreMatch: state.sentPreMatch || false,
-      sentKO:       state.sentKO       || false,
-      sentHT:       true,
-      sentFT:       state.sentFT       || false,
+      homeScore:       currentHome,
+      awayScore:       currentAway,
+      homeRedCards:    currentHomeRed,
+      awayRedCards:    currentAwayRed,
+      homeYellowCards: currentHomeYellow,
+      awayYellowCards: currentAwayYellow,
+      homePenalties:   currentHomePenalties,
+      awayPenalties:   currentAwayPenalties,
+      addedTimeAlerts: currentAddedTimeAlerts,
+      status:          currentStatus,
+      sentPreMatch:    state.sentPreMatch || false,
+      sentKO:          state.sentKO       || false,
+      sentHT:          true,
+      sentFT:          state.sentFT       || false,
+      sentSecondHalf:  state.sentSecondHalf || false,
     });
   }
 
@@ -466,15 +643,21 @@ async function processMatch(match, groups) {
       log.error('FT report failed:', err.message);
     }
     await persistMatchScore(matchId, {
-      homeScore:    currentHome,
-      awayScore:    currentAway,
-      homeRedCards: currentHomeRed,
-      awayRedCards: currentAwayRed,
-      status:       currentStatus,
-      sentPreMatch: state.sentPreMatch || false,
-      sentKO:       state.sentKO       || false,
-      sentHT:       state.sentHT       || false,
-      sentFT:       true,
+      homeScore:       currentHome,
+      awayScore:       currentAway,
+      homeRedCards:    currentHomeRed,
+      awayRedCards:    currentAwayRed,
+      homeYellowCards: currentHomeYellow,
+      awayYellowCards: currentAwayYellow,
+      homePenalties:   currentHomePenalties,
+      awayPenalties:   currentAwayPenalties,
+      addedTimeAlerts: currentAddedTimeAlerts,
+      status:          currentStatus,
+      sentPreMatch:    state.sentPreMatch || false,
+      sentKO:          state.sentKO       || false,
+      sentHT:          state.sentHT       || false,
+      sentFT:          true,
+      sentSecondHalf:  state.sentSecondHalf || false,
     });
   }
 
@@ -510,15 +693,21 @@ async function processMatch(match, groups) {
         await notifyMatchGroups(groups, msg);
         log.info(`Poller sending Odds Shift push to ${pushSubs.length} subscribers.`);
         await persistMatchScore(matchId, {
-          homeScore:    currentHome,
-          awayScore:    currentAway,
-          homeRedCards: currentHomeRed,
-          awayRedCards: currentAwayRed,
-          status:       currentStatus,
-          sentPreMatch: state.sentPreMatch || false,
-          sentKO:       state.sentKO       || false,
-          sentHT:       state.sentHT       || false,
-          sentFT:       state.sentFT       || false,
+          homeScore:         currentHome,
+          awayScore:         currentAway,
+          homeRedCards:      currentHomeRed,
+          awayRedCards:      currentAwayRed,
+          homeYellowCards:   currentHomeYellow,
+          awayYellowCards:   currentAwayYellow,
+          homePenalties:     currentHomePenalties,
+          awayPenalties:     currentAwayPenalties,
+          addedTimeAlerts:   currentAddedTimeAlerts,
+          status:            currentStatus,
+          sentPreMatch:      state.sentPreMatch || false,
+          sentKO:            state.sentKO       || false,
+          sentHT:            state.sentHT       || false,
+          sentFT:            state.sentFT       || false,
+          sentSecondHalf:    state.sentSecondHalf || false,
           lastOddsAlertTime: nowMs,
         });
         await sendPushNotification('Odds Shift', `${homeTeam} vs ${awayTeam}: ${shift.field} ${shift.from}→${shift.to}`, '/', pushSubs);
@@ -567,6 +756,19 @@ async function handleEvent(event, { match, homeTeam, awayTeam, detail, oddsStr, 
       });
       log.info(`Poller sending Red Card push to ${pushSubs.length} subscribers.`);
       await sendPushNotification('Red Card! 🟥', `${event.player} sent off in the ${event.minute}'`, '/', pushSubs);
+    } else if (event.type === 'yellow_card') {
+      msg = `🟨 *Yellow card!* ${event.player || 'A player'} is booked${event.minute ? ` (${event.minute}')` : ''}`;
+      log.info(`Poller sending Yellow Card push to ${pushSubs.length} subscribers.`);
+      await sendPushNotification('Yellow Card! 🟨', `${event.player || 'A player'} booked in the ${event.minute}'`, '/', pushSubs);
+    } else if (event.type === 'penalty_goal' || event.type === 'penalty_missed' || event.type === 'penalty') {
+      const penaltyLabel = event.type === 'penalty_missed' ? 'Penalty missed' : 'Penalty goal';
+      msg = `🎯 *${penaltyLabel}!* ${event.player || 'A player'} involved${event.minute ? ` (${event.minute}')` : ''}`;
+      log.info(`Poller sending Penalty push to ${pushSubs.length} subscribers.`);
+      await sendPushNotification('Penalty! 🎯', `${penaltyLabel} at ${event.minute}'`, '/', pushSubs);
+    } else if (event.type === 'added_time') {
+      msg = `⏱️ *Added time!* The referee has signalled stoppage time${event.minute ? ` (${event.minute}')` : ''}`;
+      log.info(`Poller sending Added Time push to ${pushSubs.length} subscribers.`);
+      await sendPushNotification('Added time ⏱️', 'Stoppage time is being played.', '/', pushSubs);
     }
   } catch (err) {
     log.error(`AI alert failed for event ${event.id}:`, err.message);
@@ -576,6 +778,12 @@ async function handleEvent(event, { match, homeTeam, awayTeam, detail, oddsStr, 
       msg = `⚽ *GOAL!* ${homeTeam} ${homeScore}–${awayScore} ${awayTeam}${minLabel ? ` (${minLabel})` : ''}`;
     } else if (event.type === 'red_card') {
       msg = `🟥 *Red card!* ${event.player || 'A player'} sent off${minLabel ? ` (${minLabel})` : ''}`;
+    } else if (event.type === 'yellow_card') {
+      msg = `🟨 *Yellow card!* ${event.player || 'A player'} booked${minLabel ? ` (${minLabel})` : ''}`;
+    } else if (event.type === 'penalty_goal' || event.type === 'penalty_missed' || event.type === 'penalty') {
+      msg = `🎯 *${event.type === 'penalty_missed' ? 'Penalty missed' : 'Penalty goal'}!*${minLabel ? ` (${minLabel})` : ''}`;
+    } else if (event.type === 'added_time') {
+      msg = `⏱️ *Added time!*${minLabel ? ` (${minLabel})` : ''}`;
     }
   }
 
