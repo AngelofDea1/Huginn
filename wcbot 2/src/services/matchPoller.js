@@ -20,17 +20,39 @@ import { sendPushNotification } from './pushNotify.js';
 import { getSubscribersForTeams } from '../utils/subscriptionStore.js';
 
 /**
- * Called every 5 seconds by cron.
+ * Called every 5 seconds by node-cron.
  * Only processes matches that at least one user is following.
+ *
+ * CONCURRENCY GUARD: node-cron fires the callback on a wall-clock timer regardless
+ * of whether the previous invocation has resolved. Because processMatch() awaits AI
+ * generation + WhatsApp sends (2-4 s per match), a single poll cycle can easily
+ * exceed 5 seconds when multiple matches are live. Without this guard every slow
+ * cycle would spawn an overlapping run, which is the root cause of duplicate alerts.
+ *
+ * The guard is a simple module-level boolean:
+ *   - Set to true synchronously at the top of pollMatches() before any await.
+ *   - Cleared in a finally block so it resets even if an error is thrown.
+ * This guarantees at most one poll cycle is running at any moment.
  */
-export async function pollMatches() {
-  const liveMatches = await getLiveMatches();
-  if (!liveMatches.length) return;
+let _isPolling = false;
 
-  for (const match of liveMatches) {
-    const groups = getGroupsFollowingMatch(match.id);
-    if (!groups.length) continue;
-    await processMatch(match, groups);
+export async function pollMatches() {
+  if (_isPolling) {
+    log.warn('pollMatches: previous cycle still running — skipping this tick');
+    return;
+  }
+  _isPolling = true;
+  try {
+    const liveMatches = await getLiveMatches();
+    if (!liveMatches.length) return;
+
+    for (const match of liveMatches) {
+      const groups = getGroupsFollowingMatch(match.id);
+      if (!groups.length) continue;
+      await processMatch(match, groups);
+    }
+  } finally {
+    _isPolling = false;
   }
 }
 
@@ -111,6 +133,10 @@ async function processMatch(match, groups) {
       // Brand-new follow: set current score as baseline, persist it immediately
       const initHomeRed = events.filter(e => e.type === 'red_card' && e.team === 'home').length;
       const initAwayRed = events.filter(e => e.type === 'red_card' && e.team === 'away').length;
+
+      // If the match is already LIVE when someone first follows it, mark sentKO = true
+      // so we never fire a belated kick-off alert, and send an "already underway" message instead.
+      const alreadyLive = currentStatus === 'LIVE' || currentStatus === 'HT';
       updateMatchState(matchId, {
         seeded:       true,
         homeScore:    currentHome,
@@ -118,6 +144,7 @@ async function processMatch(match, groups) {
         homeRedCards: initHomeRed,
         awayRedCards: initAwayRed,
         status:       currentStatus,
+        sentKO:       alreadyLive, // suppress belated KO alert
       });
       await persistMatchScore(matchId, {
         homeScore:    currentHome,
@@ -125,9 +152,19 @@ async function processMatch(match, groups) {
         homeRedCards: initHomeRed,
         awayRedCards: initAwayRed,
         status:       currentStatus,
+        sentKO:       alreadyLive,
       });
       log.info(`[${matchId}] New baseline set: ${homeTeam} ${currentHome}-${currentAway} ${awayTeam}`);
-      return; // Don't alert on first-ever follow — these are all pre-existing events
+
+      // If the match is already live, send a one-time "already underway" catch-up message
+      if (alreadyLive) {
+        const scoreNow = `${currentHome}–${currentAway}`;
+        const minLabel = minute ? ` (${minute}')` : '';
+        const catchUpMsg = `⚽ *Match already underway!*\n\n*${homeTeam} ${scoreNow} ${awayTeam}*${minLabel}\n\nYou're now following — goal alerts, cards, and match updates will come through here automatically.`;
+        try { await notifyMatchGroups(groups, catchUpMsg); } catch {}
+      }
+
+      return; // Don't replay pre-existing events as new alerts
     }
     // Refresh state reference after update
     state = getMatchState(matchId);
@@ -149,6 +186,9 @@ async function processMatch(match, groups) {
       const minsUntilKickoff = (kickoffTime - Date.now()) / 60000;
       if (minsUntilKickoff <= 32 && minsUntilKickoff > 0) {
         log.event(`Pre-match: ${homeTeam} vs ${awayTeam} (${Math.round(minsUntilKickoff)} mins away)`);
+        // ✅ FIX: Set sent-flag SYNCHRONOUSLY before any await — prevents a concurrent
+        // poll cycle (if the guard somehow fails) from firing a second pre-match alert.
+        updateMatchState(matchId, { sentPreMatch: true });
         const oddsPreview = oddsStr ? `\n\n📊 Opening odds: ${oddsStr}` : '';
         const msg = `🔔 *30-minute warning!*\n\n*${homeTeam} vs ${awayTeam}* kicks off soon.\n\nGet ready for live goal alerts, red cards, and match commentary — all coming directly to this chat.${oddsPreview}`;
         await notifyMatchGroups(groups, msg);
@@ -159,7 +199,6 @@ async function processMatch(match, groups) {
           '/',
           pushSubs
         );
-        updateMatchState(matchId, { sentPreMatch: true });
         // Persist so this never fires again after a restart
         await persistMatchScore(matchId, {
           homeScore:    currentHome,
@@ -183,11 +222,12 @@ async function processMatch(match, groups) {
     !state.sentKO
   ) {
     log.event(`Kick-off: ${homeTeam} vs ${awayTeam}`);
+    // ✅ FIX: Set flag SYNCHRONOUSLY before any await.
+    updateMatchState(matchId, { sentKO: true, status: currentStatus });
     const msg = `⚽ *Kick-off!*\n\n${homeTeam} vs ${awayTeam} is underway.\n\nAll goals, cards, and match updates will come through here automatically.`;
     await notifyMatchGroups(groups, msg);
     log.info(`Poller sending Kick-off push to ${pushSubs.length} subscribers.`);
     await sendPushNotification('Kick-off!', `${homeTeam} vs ${awayTeam} is underway.`, '/', pushSubs);
-    updateMatchState(matchId, { sentKO: true, status: currentStatus });
     // Persist so this never fires again after a restart
     await persistMatchScore(matchId, {
       homeScore:    currentHome,
@@ -220,9 +260,32 @@ async function processMatch(match, groups) {
   if (currentHome > state.homeScore) {
     const newGoals = currentHome - state.homeScore;
     const homeGoalEvents = events.filter(e => e.type === 'goal' && e.team === 'home');
+    // ✅ FIX: Update score in-memory IMMEDIATELY before any await, so the next
+    // poll cycle (which may fire in 5s while AI is still generating) already
+    // sees the new baseline and won't re-detect the same goal.
+    //
+    // IMPORTANT — score semantics:
+    // `state` is a LOCAL snapshot captured at the top of processMatch().
+    // updateMatchState() writes to the Map but does NOT mutate the local `state` object.
+    // Therefore state.homeScore below still holds the PRE-GOAL value throughout this
+    // loop, which is exactly what we need for goalNum arithmetic.
+    //
+    // The POST-GOAL score passed to the AI is goalNum (= state.homeScore + i + 1),
+    // injected explicitly into `detail` at the handleEvent call site.
+    // handleEvent reads homeScore from detail, NOT from the Map — so the AI always
+    // receives "score NOW" (after this goal) which is the correct commentary context.
+    updateMatchState(matchId, { homeScore: currentHome });
     for (let i = 0; i < newGoals; i++) {
-      const goalNum = state.homeScore + i + 1;
-      const ev = homeGoalEvents[homeGoalEvents.length - newGoals + i] || {};
+      const goalNum = state.homeScore + i + 1; // pre-goal snapshot + increment = post-this-goal score
+      // ✅ FIX: Pick the event that matches the goalNum index directly.
+      // homeGoalEvents is ordered chronologically; goalNum-1 is the correct index.
+      // If the event list is short (TXline lag), fall back to the last known event.
+      const ev = homeGoalEvents[goalNum - 1] || homeGoalEvents[homeGoalEvents.length - 1] || {};
+      // ✅ FIX: Always pass homeTeam as the scoring team — we KNOW it's a home goal
+      // because currentHome > state.homeScore. Never derive team from event metadata
+      // which can be misattributed by buildEvents().
+      const scorer = (ev.player && !ev.player.startsWith('Player #') && ev.player !== homeTeam && ev.player !== awayTeam)
+        ? ev.player : homeTeam;
       log.event(`Goal [${matchId}] ${homeTeam} goal #${goalNum} @ ${ev.minute || 'unknown'}'`);
       await handleEvent(
         {
@@ -230,11 +293,13 @@ async function processMatch(match, groups) {
           type:        'goal',
           team:        'home',
           minute:      ev.minute || null,
-          player:      ev.player || homeTeam,
-          description: ev.description || `${homeTeam} goal`,
+          player:      scorer,
+          description: `${homeTeam} goal`,
         },
         {
           match, homeTeam, awayTeam, oddsStr, groups, pushSubs,
+          // home_score = goalNum: the score AFTER this specific goal.
+          // This is what the AI receives as "score now" — correct for commentary.
           detail: { ...detail, home_score: goalNum, away_score: currentAway },
         }
       );
@@ -244,9 +309,16 @@ async function processMatch(match, groups) {
   if (currentAway > state.awayScore) {
     const newGoals = currentAway - state.awayScore;
     const awayGoalEvents = events.filter(e => e.type === 'goal' && e.team === 'away');
+    // ✅ FIX: Same immediate in-memory update for away goals.
+    // Same score semantics: state.awayScore is still the PRE-GOAL value (local snapshot).
+    // goalNum is the post-this-goal score passed explicitly to the AI via detail.
+    updateMatchState(matchId, { awayScore: currentAway });
     for (let i = 0; i < newGoals; i++) {
-      const goalNum = state.awayScore + i + 1;
-      const ev = awayGoalEvents[awayGoalEvents.length - newGoals + i] || {};
+      const goalNum = state.awayScore + i + 1; // pre-goal snapshot + increment = post-this-goal score
+      const ev = awayGoalEvents[goalNum - 1] || awayGoalEvents[awayGoalEvents.length - 1] || {};
+      // ✅ FIX: Always pass awayTeam as scorer team — same reasoning as above.
+      const scorer = (ev.player && !ev.player.startsWith('Player #') && ev.player !== homeTeam && ev.player !== awayTeam)
+        ? ev.player : awayTeam;
       log.event(`Goal [${matchId}] ${awayTeam} goal #${goalNum} @ ${ev.minute || 'unknown'}'`);
       await handleEvent(
         {
@@ -254,11 +326,12 @@ async function processMatch(match, groups) {
           type:        'goal',
           team:        'away',
           minute:      ev.minute || null,
-          player:      ev.player || awayTeam,
-          description: ev.description || `${awayTeam} goal`,
+          player:      scorer,
+          description: `${awayTeam} goal`,
         },
         {
           match, homeTeam, awayTeam, oddsStr, groups, pushSubs,
+          // away_score = goalNum: the score AFTER this specific away goal.
           detail: { ...detail, home_score: currentHome, away_score: goalNum },
         }
       );
@@ -335,6 +408,8 @@ async function processMatch(match, groups) {
   // ── Half-time report ──────────────────────────────────────────────────────────
   if (currentStatus === 'HT' && !state.sentHT) {
     log.event(`Half-time: ${homeTeam} vs ${awayTeam}`);
+    // ✅ FIX: Set flag SYNCHRONOUSLY before any await.
+    updateMatchState(matchId, { sentHT: true });
     try {
       const msg = await generateHalfTimeReport({
         homeTeam, awayTeam,
@@ -350,7 +425,6 @@ async function processMatch(match, groups) {
     } catch (err) {
       log.error('HT report failed:', err.message);
     }
-    updateMatchState(matchId, { sentHT: true });
     await persistMatchScore(matchId, {
       homeScore:    currentHome,
       awayScore:    currentAway,
@@ -367,6 +441,8 @@ async function processMatch(match, groups) {
   // ── Full-time report ──────────────────────────────────────────────────────────
   if (currentStatus === 'FT' && !state.sentFT) {
     log.event(`Full-time: ${homeTeam} ${currentHome}-${currentAway} ${awayTeam}`);
+    // ✅ FIX: Set flag SYNCHRONOUSLY before any await.
+    updateMatchState(matchId, { sentFT: true });
     try {
       const msg = await generateFullTimeReport({
         homeTeam, awayTeam,
@@ -389,7 +465,6 @@ async function processMatch(match, groups) {
     } catch (err) {
       log.error('FT report failed:', err.message);
     }
-    updateMatchState(matchId, { sentFT: true });
     await persistMatchScore(matchId, {
       homeScore:    currentHome,
       awayScore:    currentAway,
@@ -422,6 +497,10 @@ async function processMatch(match, groups) {
       timeSinceLastAlert >= 15 * 60 * 1000
     ) {
       log.event(`Odds shift: ${homeTeam} vs ${awayTeam} — ${shift.field} ${shift.from}→${shift.to}`);
+      // ✅ FIX: Set lastOddsAlertTime SYNCHRONOUSLY before any await — this is
+      // the rate-limit guard; setting it after await means two concurrent polls
+      // could both pass the timeSinceLastAlert check and both fire.
+      updateMatchState(matchId, { lastOddsAlertTime: nowMs });
       try {
         const msg = await generateOddsShiftAlert({
           homeTeam, awayTeam, minute,
@@ -430,8 +509,6 @@ async function processMatch(match, groups) {
         });
         await notifyMatchGroups(groups, msg);
         log.info(`Poller sending Odds Shift push to ${pushSubs.length} subscribers.`);
-        // Update both in-memory and Redis state
-        updateMatchState(matchId, { lastOddsAlertTime: nowMs });
         await persistMatchScore(matchId, {
           homeScore:    currentHome,
           awayScore:    currentAway,

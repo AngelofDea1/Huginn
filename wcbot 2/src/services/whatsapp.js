@@ -268,10 +268,45 @@ export async function sendMessage(to, text) {
 }
 
 
+/**
+ * Filter out phantom JIDs before broadcasting.
+ *
+ * WhatsApp Web multi-device sessions register their own JIDs (e.g.
+ * "web_aopzan5yb@s.whatsapp.net") which get persisted to Redis via
+ * persistGroup() and reloaded into the groups map on startup. These are NOT
+ * valid message recipients — sending to them always fails. We filter them here
+ * rather than at storage time so no existing data needs migration.
+ *
+ * Valid JIDs:
+ *   - Groups:   *@g.us
+ *   - DMs:      *@lid  (phone-number linked device IDs)
+ *   - DMs:      <digits>@s.whatsapp.net  (classic phone JIDs)
+ *
+ * Invalid (silently dropped):
+ *   - web_*@s.whatsapp.net  (WhatsApp Web session IDs — never real chats)
+ */
+function isValidRecipientJid(jid) {
+  if (!jid || typeof jid !== 'string') return false;
+  if (jid.endsWith('@g.us'))  return true;  // group
+  if (jid.endsWith('@lid'))   return true;  // linked device DM
+  // @s.whatsapp.net — only allow if the local part is all digits (real phone number)
+  if (jid.endsWith('@s.whatsapp.net')) {
+    const local = jid.replace('@s.whatsapp.net', '');
+    return /^\d+$/.test(local);
+  }
+  return false;
+}
+
 export async function broadcast(recipients, text) {
-  const results = await Promise.allSettled(recipients.map(id => sendMessage(id, text)));
+  const valid   = recipients.filter(isValidRecipientJid);
+  const skipped = recipients.length - valid.length;
+  if (skipped > 0) {
+    log.warn(`broadcast: dropping ${skipped} invalid JID(s) — phantom web session IDs filtered`);
+  }
+  if (!valid.length) return [];
+  const results = await Promise.allSettled(valid.map(id => sendMessage(id, text)));
   const failed  = results.filter(r => r.status === 'rejected').length;
-  if (failed) log.warn(`broadcast: ${failed}/${recipients.length} failed`);
+  if (failed) log.warn(`broadcast: ${failed}/${valid.length} failed`);
   return results;
 }
 

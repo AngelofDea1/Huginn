@@ -235,6 +235,26 @@ function normaliseOdds(oddsData) {
  * Get all live World Cup matches right now
  */
 export async function getLiveMatches() {
+  if (typeof global.getMockReplayDetails === 'function') {
+    const list = global.getMockReplayDetails();
+    if (list) {
+      const detail = normaliseScores(list);
+      if (detail && (detail.status === 'LIVE' || detail.status === 'HT')) {
+        return [{
+          id: '18241006',
+          home_team: { name: 'England' },
+          away_team: { name: 'Argentina' },
+          kickoff_time: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30m ago
+          status: detail.status,
+          stage: 'World Cup 2026',
+          home_score: detail.home_score,
+          away_score: detail.away_score,
+          minute: detail.minute,
+          _raw: {}
+        }];
+      }
+    }
+  }
   try {
     const all = await getAllFixtures();
     const now = Date.now();
@@ -319,6 +339,26 @@ export async function getLiveMatches() {
  * Get upcoming matches in the next N hours
  */
 export async function getUpcomingMatches(hoursAhead = 2) {
+  if (typeof global.getMockReplayDetails === 'function') {
+    const list = global.getMockReplayDetails();
+    if (list) {
+      const detail = normaliseScores(list);
+      if (detail && detail.status === 'NS') {
+        return [{
+          id: '18241006',
+          home_team: { name: 'England' },
+          away_team: { name: 'Argentina' },
+          kickoff_time: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30m from now
+          status: 'NS',
+          stage: 'World Cup 2026',
+          home_score: 0,
+          away_score: 0,
+          minute: 0,
+          _raw: {}
+        }];
+      }
+    }
+  }
   try {
     const all = await getAllFixtures();
     const now     = Date.now();
@@ -362,6 +402,12 @@ export async function getFixtureSchedule() {
  * Get full match detail (scores + events) for a given fixture ID
  */
 export async function getMatchDetail(matchId) {
+  if (String(matchId) === '18241006' && typeof global.getMockReplayDetails === 'function') {
+    const list = global.getMockReplayDetails();
+    if (list) {
+      return normaliseScores(list);
+    }
+  }
   try {
     const { data } = await client.get(`/scores/snapshot/${matchId}`);
     const updates = data || [];
@@ -376,6 +422,12 @@ export async function getMatchDetail(matchId) {
  * Get live odds for a match
  */
 export async function getMatchOdds(matchId) {
+  if (String(matchId) === '18241006' && typeof global.getMockReplayDetails === 'function') {
+    const list = global.getMockReplayDetails();
+    if (list) {
+      return normaliseOdds(list);
+    }
+  }
   try {
     const { data } = await client.get(`/odds/snapshot/${matchId}`);
     return normaliseOdds(data);
