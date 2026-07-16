@@ -21,29 +21,7 @@ import { log } from '../utils/logger.js';
 export async function schedulePreMatchBulletins() {
   // Fetch NS matches kicking off within the next 35 minutes
   // (getUpcomingMatches uses a future-only window, so we pass 35/60 hours)
-  let upcoming = await getUpcomingMatches(35 / 60);
-
-  // Also check if a replay/mock match is active and being followed
-  if (typeof global.getMockReplayDetails === 'function') {
-    const replayMatch = global.getMockReplayDetails();
-    if (replayMatch) {
-      const mockId = '18241006';
-      const mockGroups = getGroupsFollowingMatch(mockId);
-      if (mockGroups.length > 0) {
-        // Add the replay match to the list of matches to check
-        upcoming = upcoming.concat({
-          id: mockId,
-          home_team: { name: replayMatch.home_team || 'Home' },
-          away_team: { name: replayMatch.away_team || 'Away' },
-          kickoff_time: replayMatch._raw?.StartTime ? new Date(replayMatch._raw.StartTime).toISOString() : null,
-          status: 'NS', // Treat as "not started" for pre-match purposes
-          home_score: replayMatch.home_score || 0,
-          away_score: replayMatch.away_score || 0,
-          _raw: replayMatch._raw || {}
-        });
-      }
-    }
-  }
+  const upcoming = await getUpcomingMatches(35 / 60);
 
   for (const match of upcoming) {
     const matchId = String(match.id);
