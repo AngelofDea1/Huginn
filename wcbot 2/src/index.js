@@ -57,10 +57,31 @@ const __idxFilename = fileURLToPath(import.meta.url);
 const __idxDirname = path.dirname(__idxFilename);
 
 let replaySnapshots = [];
+let replaySnapshotPath = null;
+const replaySnapshotCandidates = [
+  path.join(__idxDirname, 'match_18241006_snapshot.json'),
+  path.join(__idxDirname, '..', 'match_18241006_snapshot.json'),
+  path.join(process.cwd(), 'match_18241006_snapshot.json'),
+  path.join(process.cwd(), 'src', 'match_18241006_snapshot.json'),
+];
+
+for (const candidate of replaySnapshotCandidates) {
+  if (fs.existsSync(candidate)) {
+    replaySnapshotPath = candidate;
+    break;
+  }
+}
+
 try {
-  const fileContent = fs.readFileSync(path.join(__idxDirname, 'match_18241006_snapshot.json'), 'utf8');
+  if (!replaySnapshotPath) {
+    throw new Error('No replay snapshot file found in known locations');
+  }
+
+  const fileContent = fs.readFileSync(replaySnapshotPath, 'utf8');
   replaySnapshots = JSON.parse(fileContent).sort((a, b) => (a.Seq || 0) - (b.Seq || 0));
-  
+
+  log.info(`Loaded replay snapshot from ${replaySnapshotPath}`);
+
   // Set up the global replay hook
   global.mockReplayActive = true;
   global.mockReplayIndex = 0;

@@ -9,6 +9,9 @@ RUN npm ci --only=production
 # Copy application source code
 COPY src/ ./src/
 
+# Include replay fixture used by the mock match replay and admin controls
+COPY match_18241006_snapshot.json ./match_18241006_snapshot.json
+
 # Copy the public folder (includes the pre-built Next.js site in public/huginn/)
 COPY public/ ./public/
 
