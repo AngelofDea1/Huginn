@@ -15,15 +15,13 @@ const BASE  = process.env.TXLINE_BASE_URL || 'https://txline.txodds.com/api';
 const JWT   = process.env.TXLINE_JWT;
 const TOKEN = process.env.TXLINE_API_KEY;
 
-// World Cup competition IDs — broader list to handle different API tier mappings
-// We try these in order; if none match, we fall back to returning ALL fixtures
+// World Cup 2026 competition IDs — ONLY verified WC IDs to prevent fake live matches
+// Do NOT add generic IDs (1, 430, etc.) — they match unrelated competitions and cause
+// non-WC matches (e.g. Vietnam, New Zealand) to appear as live in the feed.
 const WC_COMPETITION_IDS = new Set([
-  72,    // FIFA World Cup 2026 (primary)
-  83,    // FIFA World Cup (alternate ID seen in some feeds)
-  1,     // FIFA World Cup (generic)
-  430,   // International Friendlies
-  2000,  // FIFA World Cup 2026 (alternate)
-  2026,  // FIFA World Cup 2026 (year-based ID)
+  72,    // FIFA World Cup 2026 (primary, confirmed)
+  83,    // FIFA World Cup (alternate ID seen in some tier feeds)
+  2000,  // FIFA World Cup 2026 (alternate, confirmed)
 ]);
 
 // Game phase IDs that mean "in progress" (from Soccer Feed docs)
@@ -349,19 +347,11 @@ export async function getLiveMatches() {
   }
   try {
     const all = await getAllFixtures();
-    const now = Date.now();
-    const live = all.filter(m => {
-      // Direct live phase match
-      if (m.status === 'LIVE' || m.status === 'HT') return true;
-      // Time-based fallback: if kickoff has started and less than 130 minutes ago, and it's not marked FT
-      if (m.status !== 'FT') {
-        const kick = new Date(m.kickoff_time).getTime();
-        if (!isNaN(kick) && now >= kick && now <= kick + 130 * 60 * 1000) {
-          return true;
-        }
-      }
-      return false;
-    });
+    // Only trust TxLINE's explicit live/halftime phase flags.
+    // The time-based fallback was removed — it caused stale non-WC fixtures
+    // with past kickoff times (e.g. Vietnam, New Zealand) to appear as LIVE.
+    // Real live detection comes from TxLINE status + enrichment via getMatchDetail.
+    const live = all.filter(m => m.status === 'LIVE' || m.status === 'HT');
 
     // Enrich each live match with real-time scores from the scores endpoint
     const enriched = await Promise.all(live.map(async (m) => {
@@ -457,13 +447,10 @@ export async function getUpcomingMatches(hoursAhead = 2) {
     const cutoff  = now + hoursAhead * 60 * 60 * 1000;
     return all.filter(m => {
       const kick = new Date(m.kickoff_time).getTime();
-      // If match hasn't started and is inside the future window
-      if (m.status !== 'FT' && kick > now && kick <= cutoff) {
-        // Also check that it's not currently marked live via getLiveMatches logic
-        const isLive = (m.status === 'LIVE' || m.status === 'HT' || (now >= kick && now <= kick + 120 * 60 * 1000));
-        return !isLive;
-      }
-      return false;
+      // Only show matches that haven't kicked off yet and are inside the window
+      // Only trust TxLINE's explicit LIVE/HT flags — no time-based live inference
+      const isLive = (m.status === 'LIVE' || m.status === 'HT');
+      return m.status !== 'FT' && !isLive && kick > now && kick <= cutoff;
     });
   } catch (err) {
     log.error('getUpcomingMatches failed:', err.message);
