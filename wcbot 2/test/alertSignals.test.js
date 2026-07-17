@@ -42,3 +42,14 @@ test('shouldSurfaceLiveMatch requires an explicit live confirmation', () => {
   assert.equal(shouldSurfaceLiveMatch('LIVE', 'LIVE'), true);
   assert.equal(shouldSurfaceLiveMatch('HT', 'HT'), true);
 });
+
+test('resolveLiveStatus ignores phase/live hints before kickoff', () => {
+  const futureFixture = {
+    Phase: 2,
+    GameState: 1,
+    Status: 'scheduled',
+    StartTime: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+  };
+
+  assert.equal(resolveLiveStatus(futureFixture, null), 'NS');
+});

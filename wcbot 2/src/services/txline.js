@@ -51,18 +51,22 @@ export function resolveLiveStatus(rawFixture, detailStatus) {
   const phase = rawFixture?.Phase;
   const gameState = rawFixture?.GameState;
   const statusValue = rawFixture?.Status ?? rawFixture?.StatusId ?? rawFixture?.status;
+  const kickoffTime = rawFixture?.StartTime || rawFixture?.KickoffTime;
+  const hasStarted = kickoffTime ? Date.now() >= new Date(kickoffTime).getTime() : false;
 
   const explicitDetail = detailStatus && typeof detailStatus === 'string' ? detailStatus.toUpperCase() : null;
   if (explicitDetail && explicitDetail !== 'NS') {
     return explicitDetail === 'LIVE' || explicitDetail === 'HT' ? explicitDetail : 'NS';
   }
 
-  if (phase !== undefined && phase !== null && phase !== 0) {
-    return phaseToStatus(phase);
-  }
+  if (hasStarted) {
+    if (phase !== undefined && phase !== null && phase !== 0) {
+      return phaseToStatus(phase);
+    }
 
-  if (gameState !== undefined && gameState !== null) {
-    return gameStateToStatus(gameState);
+    if (gameState !== undefined && gameState !== null) {
+      return gameStateToStatus(gameState);
+    }
   }
 
   if (typeof statusValue === 'string') {
