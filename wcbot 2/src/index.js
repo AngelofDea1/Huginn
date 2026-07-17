@@ -10,8 +10,8 @@ import { schedulePreMatchBulletins } from './services/scheduler.js';
 import { log, logBuffer } from './utils/logger.js';
 import { handleChatMessage, getLiveMatchesAPI, handleGetMessages } from './handlers/chat.js';
 import { getVapidPublicKey, subscribeUser, unsubscribeUser, sendPushNotification } from './services/pushNotify.js';
-import { getAllActiveSubscriptions } from './utils/subscriptionStore.js';
-import { loadGroupsFromRedis, pruneInactiveWebChats } from './utils/store.js';
+import { getAllActiveSubscriptions, resetPersistedFollowState } from './utils/subscriptionStore.js';
+import { loadGroupsFromRedis, pruneInactiveWebChats, resetRuntimeState } from './utils/store.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = dirname(__filename);
@@ -493,6 +493,26 @@ app.post('/api/relink', async (req, res) => {
 // ─── Debug logs endpoint ──────────────────────────────────────────────────────
 app.get('/api/logs', (_, res) => {
   res.type('text/plain').send(logBuffer.join('\n'));
+});
+
+// ─── Reset stale follow state for all users ──────────────────────────────────
+app.post('/api/reset-follow-state', async (req, res) => {
+  const secret = process.env.RESET_SECRET;
+  if (secret) {
+    const auth = req.headers.authorization || '';
+    if (auth !== `Bearer ${secret}`) {
+      return res.status(401).json({ ok: false, error: 'Unauthorized' });
+    }
+  }
+
+  try {
+    const persisted = await resetPersistedFollowState();
+    const runtime = resetRuntimeState();
+    return res.json({ ok: true, persisted, runtime });
+  } catch (err) {
+    log.error('Reset follow state failed:', err.message);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
 });
 
 // ─── Cron: Poll TxLINE every 5 seconds ───────────────────────────────────────

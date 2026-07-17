@@ -244,6 +244,84 @@ export async function getAllPersistedGroups() {
   return results;
 }
 
+export async function resetPersistedFollowState() {
+  const result = { groupsRemoved: 0, matchScoresRemoved: 0, teamMembershipsCleared: 0, subscriptionsReset: 0 };
+
+  try {
+    let cursor = 0;
+    do {
+      const [nextCursor, keys] = await redis.scan(cursor, { match: 'wagroup:*', count: 100 });
+      cursor = Number(nextCursor);
+      if (keys.length) {
+        await redis.del(...keys);
+        result.groupsRemoved += keys.length;
+      }
+    } while (cursor !== 0);
+  } catch (err) {
+    log.error('Failed to clear persisted group state:', err.message);
+  }
+
+  try {
+    let cursor = 0;
+    do {
+      const [nextCursor, keys] = await redis.scan(cursor, { match: 'matchscore:*', count: 100 });
+      cursor = Number(nextCursor);
+      if (keys.length) {
+        await redis.del(...keys);
+        result.matchScoresRemoved += keys.length;
+      }
+    } while (cursor !== 0);
+  } catch (err) {
+    log.error('Failed to clear persisted match scores:', err.message);
+  }
+
+  try {
+    let cursor = 0;
+    do {
+      const [nextCursor, keys] = await redis.scan(cursor, { match: 'team:*', count: 100 });
+      cursor = Number(nextCursor);
+      if (keys.length) {
+        await redis.del(...keys);
+        result.teamMembershipsCleared += keys.length;
+      }
+    } while (cursor !== 0);
+  } catch (err) {
+    log.error('Failed to clear team membership sets:', err.message);
+  }
+
+  try {
+    let cursor = 0;
+    do {
+      const [nextCursor, keys] = await redis.scan(cursor, { match: 'sub:*', count: 100 });
+      cursor = Number(nextCursor);
+      if (keys.length) {
+        const records = await Promise.all(keys.map(async (key) => {
+          try {
+            const raw = await redis.get(key);
+            return typeof raw === 'string' ? JSON.parse(raw) : raw;
+          } catch {
+            return null;
+          }
+        }));
+
+        const updates = [];
+        for (let i = 0; i < keys.length; i++) {
+          const record = records[i];
+          if (!record) continue;
+          const nextRecord = { ...(record || {}), followedTeams: [] };
+          updates.push(redis.set(keys[i], nextRecord));
+        }
+        await Promise.all(updates);
+        result.subscriptionsReset += keys.length;
+      }
+    } while (cursor !== 0);
+  } catch (err) {
+    log.error('Failed to clear persisted followed teams:', err.message);
+  }
+
+  return result;
+}
+
 // ─── First-contact / Welcome Persistence ─────────────────────────────────────
 // Stored in Redis so the welcome message is only EVER sent once,
 // even across server restarts / Render redeployments.

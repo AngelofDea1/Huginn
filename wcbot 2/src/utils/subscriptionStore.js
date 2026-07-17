@@ -25,4 +25,5 @@ export {
   hasBeenWelcomed,
   persistMatchScore,
   getPersistedMatchScore,
+  resetPersistedFollowState,
 } from './db.js';

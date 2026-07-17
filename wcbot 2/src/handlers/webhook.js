@@ -188,7 +188,7 @@ async function handleFollow(from, text) {
       timeText = ` (Kickoff: ${formattedKickoff})`;
     }
 
-    return sendMessage(from, `🛡️ You are already following *${m.home_team?.name} vs ${m.away_team?.name}*!${scoreText}${timeText}\n\nLive alerts are fully active for this chat.`);
+    return sendMessage(from, `🛡️ You are already following *${m.home_team?.name} vs ${m.away_team?.name}*!${scoreText}${timeText}\n\nLive alerts will begin automatically when the match is underway.`);
   }
 
   followMatch(from, m.id);

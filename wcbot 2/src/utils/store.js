@@ -143,6 +143,13 @@ export function getAllMatchStates() {
   return matchState;
 }
 
+export function resetRuntimeState() {
+  groups.clear();
+  matchState.clear();
+  webChatMessages.clear();
+  return { groupsCleared: true, matchStatesCleared: true, webChatsCleared: true };
+}
+
 // ── Web Chat Messages Store & Pruning ──────────────────────────────────────────
 const webChatMessages = new Map();
 
