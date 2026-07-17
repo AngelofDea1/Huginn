@@ -797,7 +797,7 @@ async function processMatch(match, groups) {
   // ── Odds shift alert ──────────────────────────────────────────────────────────
   // Rate-limited to max once every 15 minutes per match, and only for plausible odds (<= 10.0)
   // to avoid high-volatility underdog drift spam in the final minutes.
-  if (odds && state.odds) {
+  if (process.env.ENABLE_ODDS_SHIFT_ALERTS === 'true' && odds && state.odds) {
     const shift = detectOddsShift(state.odds, odds);
     const nowMs = Date.now();
     const lastOddsAlertTime = state.lastOddsAlertTime || 0;

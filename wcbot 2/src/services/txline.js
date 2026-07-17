@@ -24,12 +24,6 @@ const WC_COMPETITION_IDS = new Set([
   2000,  // FIFA World Cup 2026 (alternate, confirmed)
 ]);
 
-// Game phase IDs that mean "in progress" (from Soccer Feed docs)
-// Phase field (snapshot feed): 2=H1, 4=H2, 7=ET1, 9=ET2, 12=PE, 3=HT, 5=F, 10=FET, 13=FPE
-// GameState field (fixture feed): 1=H1 (Live), 2=H2, 3=HT, 4=FT — so 1 must be included!
-const LIVE_PHASES = new Set([1, 2, 4, 7, 9, 12]); // 1=GameState H1, 2=Phase H1, 4=H2, 7=ET1, 9=ET2, 12=PE
-const HT_PHASE   = 3;  // HT (both Phase and GameState)
-const FT_PHASES  = new Set([5, 10, 13]); // F, FET, FPE
 
 function makeClient() {
   return axios.create({
@@ -61,8 +55,7 @@ function normaliseFixture(f) {
   if (f.Phase !== undefined && f.Phase !== null && f.Phase !== 0) {
     status = phaseToStatus(f.Phase);
   } else if (f.GameState !== undefined && f.GameState !== null) {
-    // GameState integers in fixture feed: 1=H1(Live), 2=H2(Live), 3=HT, 4=FT, 0=NS
-    status = phaseToStatus(f.GameState);
+    status = gameStateToStatus(f.GameState);
   } else {
     status = 'NS';
   }
@@ -83,9 +76,21 @@ function normaliseFixture(f) {
 }
 
 function phaseToStatus(phase) {
+  const LIVE_PHASES = new Set([2, 4, 7, 9, 12]); // Snapshot Phase: 2=H1, 4=H2, 7=ET1, 9=ET2, 12=PE
+  const HT_PHASE   = 3;  // HT
+  const FT_PHASES  = new Set([5, 10, 13]); // F, FET, FPE
+
   if (LIVE_PHASES.has(phase))  return 'LIVE';
   if (phase === HT_PHASE)      return 'HT';
   if (FT_PHASES.has(phase))    return 'FT';
+  return 'NS';
+}
+
+function gameStateToStatus(gameState) {
+  // Fixture GameState: 1=H1 (Live), 2=H2 (Live), 3=HT, 4=FT, 0=NS
+  if (gameState === 1 || gameState === 2) return 'LIVE';
+  if (gameState === 3)                    return 'HT';
+  if (gameState === 4)                    return 'FT';
   return 'NS';
 }
 
