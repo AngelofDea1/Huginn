@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildEvents } from '../src/services/txline.js';
+import { buildEvents, resolveLiveStatus } from '../src/services/txline.js';
 
 test('buildEvents extracts yellow cards and penalty/added-time signals', () => {
   const updates = [
@@ -28,4 +28,10 @@ test('buildEvents extracts yellow cards and penalty/added-time signals', () => {
   assert.equal(events.some(e => e.type === 'yellow_card'), true);
   assert.equal(events.some(e => e.type === 'penalty_goal'), true);
   assert.equal(events.some(e => e.type === 'added_time'), true);
+});
+
+test('resolveLiveStatus rejects ambiguous or stale fixture data', () => {
+  assert.equal(resolveLiveStatus({ Phase: 0, GameState: 0, Status: 'scheduled' }, null), 'NS');
+  assert.equal(resolveLiveStatus({ Phase: 0, GameState: 0, Status: 'scheduled' }, { status: 'NS' }), 'NS');
+  assert.equal(resolveLiveStatus({ Phase: 0, GameState: 0, Status: 'scheduled' }, { status: 'LIVE' }), 'NS');
 });

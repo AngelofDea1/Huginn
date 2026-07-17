@@ -10,6 +10,7 @@ import { getAllSubscriptions } from "@/lib/subscriptions";
 import { ensureVapid } from "@/lib/vapid";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   // Protect with a simple bearer secret so only the bot server can trigger it

@@ -43,22 +43,49 @@ const client = makeClient();
 // The real API uses PascalCase fields. We normalise to snake_case so that
 // matchPoller.js, scheduler.js and webhook.js remain unchanged.
 
+function isMockReplayEnabled() {
+  return process.env.NODE_ENV !== 'production' && global.mockReplayActive === true && typeof global.getMockReplayDetails === 'function';
+}
+
+export function resolveLiveStatus(rawFixture, detailStatus) {
+  const phase = rawFixture?.Phase;
+  const gameState = rawFixture?.GameState;
+  const statusValue = rawFixture?.Status ?? rawFixture?.StatusId ?? rawFixture?.status;
+
+  if (detailStatus && detailStatus !== 'NS') {
+    return detailStatus === 'LIVE' || detailStatus === 'HT' ? detailStatus : 'NS';
+  }
+
+  if (phase !== undefined && phase !== null && phase !== 0) {
+    return phaseToStatus(phase);
+  }
+
+  if (gameState !== undefined && gameState !== null) {
+    return gameStateToStatus(gameState);
+  }
+
+  if (typeof statusValue === 'string') {
+    const normalized = statusValue.toLowerCase();
+    if (normalized === 'live' || normalized === 'inplay' || normalized === 'in_play' || normalized === 'firsthalf' || normalized === 'first_half' || normalized === 'secondhalf' || normalized === 'second_half') {
+      return 'LIVE';
+    }
+    if (normalized === 'halftime' || normalized === 'half_time' || normalized === 'ht') {
+      return 'HT';
+    }
+    if (normalized === 'finished' || normalized === 'ft' || normalized === 'fulltime' || normalized === 'full_time' || normalized === 'completed') {
+      return 'FT';
+    }
+  }
+
+  return 'NS';
+}
+
 function normaliseFixture(f) {
   // Try to extract scores from snapshot's Score object if present
   const homeScore = f.Score?.Participant1?.Total?.Goals ?? f.ScoreHome ?? null;
   const awayScore = f.Score?.Participant2?.Total?.Goals ?? f.ScoreAway ?? null;
 
-  // Determine status:
-  // The fixture feed uses GameState (integer) as the primary live-state indicator.
-  // Phase is used in the snapshot/detail feed. Use Phase first, fall back to GameState.
-  let status;
-  if (f.Phase !== undefined && f.Phase !== null && f.Phase !== 0) {
-    status = phaseToStatus(f.Phase);
-  } else if (f.GameState !== undefined && f.GameState !== null) {
-    status = gameStateToStatus(f.GameState);
-  } else {
-    status = 'NS';
-  }
+  const status = resolveLiveStatus(f, null);
 
   return {
     id:           String(f.FixtureId),
@@ -330,7 +357,7 @@ function normaliseOdds(oddsData) {
  * Get all live World Cup matches right now
  */
 export async function getLiveMatches() {
-  if (typeof global.getMockReplayDetails === 'function') {
+  if (isMockReplayEnabled()) {
     const list = global.getMockReplayDetails();
     if (list) {
       const detail = normaliseScores(list);
@@ -371,7 +398,9 @@ export async function getLiveMatches() {
           homeScore = detail.home_score ?? homeScore;
           awayScore = detail.away_score ?? awayScore;
           minute = detail.minute;
-          status = detail.status !== 'NS' ? detail.status : status;
+          if (detail.status && detail.status !== 'NS') {
+            status = detail.status;
+          }
         }
       } catch (e) {
         // Enrichment failed — keep defaults
@@ -426,7 +455,7 @@ export async function getLiveMatches() {
  * Get upcoming matches in the next N hours
  */
 export async function getUpcomingMatches(hoursAhead = 2) {
-  if (typeof global.getMockReplayDetails === 'function') {
+  if (isMockReplayEnabled()) {
     const list = global.getMockReplayDetails();
     if (list) {
       const detail = normaliseScores(list);
@@ -486,7 +515,7 @@ export async function getFixtureSchedule() {
  * Get full match detail (scores + events) for a given fixture ID
  */
 export async function getMatchDetail(matchId) {
-  if (String(matchId) === '18241006' && typeof global.getMockReplayDetails === 'function') {
+  if (String(matchId) === '18241006' && isMockReplayEnabled()) {
     const list = global.getMockReplayDetails();
     if (list) {
       return normaliseScores(list);
@@ -506,7 +535,7 @@ export async function getMatchDetail(matchId) {
  * Get live odds for a match
  */
 export async function getMatchOdds(matchId) {
-  if (String(matchId) === '18241006' && typeof global.getMockReplayDetails === 'function') {
+  if (String(matchId) === '18241006' && isMockReplayEnabled()) {
     const list = global.getMockReplayDetails();
     if (list) {
       return normaliseOdds(list);
@@ -566,7 +595,7 @@ export async function searchMatch(query) {
 //  Internal helpers 
 
 async function getAllFixtures() {
-  if (typeof global.getMockReplayDetails === 'function') {
+  if (isMockReplayEnabled()) {
     const list = global.getMockReplayDetails();
     if (Array.isArray(list) && list.length) {
       const detail = normaliseScores(list);

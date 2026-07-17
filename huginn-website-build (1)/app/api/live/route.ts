@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const BOT_URL = process.env.HUGINN_BOT_URL || "https://huginn-w7d9.onrender.com";
 
