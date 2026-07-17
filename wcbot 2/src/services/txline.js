@@ -52,8 +52,9 @@ export function resolveLiveStatus(rawFixture, detailStatus) {
   const gameState = rawFixture?.GameState;
   const statusValue = rawFixture?.Status ?? rawFixture?.StatusId ?? rawFixture?.status;
 
-  if (detailStatus && detailStatus !== 'NS') {
-    return detailStatus === 'LIVE' || detailStatus === 'HT' ? detailStatus : 'NS';
+  const explicitDetail = detailStatus && typeof detailStatus === 'string' ? detailStatus.toUpperCase() : null;
+  if (explicitDetail && explicitDetail !== 'NS') {
+    return explicitDetail === 'LIVE' || explicitDetail === 'HT' ? explicitDetail : 'NS';
   }
 
   if (phase !== undefined && phase !== null && phase !== 0) {
@@ -66,12 +67,6 @@ export function resolveLiveStatus(rawFixture, detailStatus) {
 
   if (typeof statusValue === 'string') {
     const normalized = statusValue.toLowerCase();
-    if (normalized === 'live' || normalized === 'inplay' || normalized === 'in_play' || normalized === 'firsthalf' || normalized === 'first_half' || normalized === 'secondhalf' || normalized === 'second_half') {
-      return 'LIVE';
-    }
-    if (normalized === 'halftime' || normalized === 'half_time' || normalized === 'ht') {
-      return 'HT';
-    }
     if (normalized === 'finished' || normalized === 'ft' || normalized === 'fulltime' || normalized === 'full_time' || normalized === 'completed') {
       return 'FT';
     }
@@ -128,6 +123,17 @@ function phaseStringToStatus(gameState) {
   if (s === 'halftime' || s === 'half_time' || s === 'ht') return 'HT';
   if (s === 'finished' || s === 'ft' || s === 'fulltime' || s === 'full_time' || s === 'completed') return 'FT';
   return 'NS';
+}
+
+export function shouldSurfaceLiveMatch(status, detailStatus) {
+  const normalized = typeof status === 'string' ? status.toUpperCase() : '';
+  const explicitDetail = detailStatus && typeof detailStatus === 'string' ? detailStatus.toUpperCase() : null;
+
+  if (normalized === 'LIVE' || normalized === 'HT') {
+    return explicitDetail === 'LIVE' || explicitDetail === 'HT';
+  }
+
+  return false;
 }
 
 function inferMockReplayStatus(latest) {
@@ -383,7 +389,7 @@ export async function getLiveMatches() {
     // The time-based fallback was removed — it caused stale non-WC fixtures
     // with past kickoff times (e.g. Vietnam, New Zealand) to appear as LIVE.
     // Real live detection comes from TxLINE status + enrichment via getMatchDetail.
-    const live = all.filter(m => m.status === 'LIVE' || m.status === 'HT');
+    const live = all.filter(m => shouldSurfaceLiveMatch(m.status, null));
 
     // Enrich each live match with real-time scores from the scores endpoint
     const enriched = await Promise.all(live.map(async (m) => {
@@ -399,11 +405,16 @@ export async function getLiveMatches() {
           awayScore = detail.away_score ?? awayScore;
           minute = detail.minute;
           if (detail.status && detail.status !== 'NS') {
-            status = detail.status;
+            status = shouldSurfaceLiveMatch(detail.status, status) ? detail.status : 'NS';
+          } else {
+            status = 'NS';
           }
+        } else {
+          status = 'NS';
         }
       } catch (e) {
-        // Enrichment failed — keep defaults
+        // Enrichment failed — do not surface as live without confirmation
+        status = 'NS';
       }
 
       // Calculate elapsed fallback minute if missing or lagging
@@ -434,12 +445,14 @@ export async function getLiveMatches() {
         }
       }
 
+      const finalStatus = shouldSurfaceLiveMatch(status, null) ? status : 'NS';
+
       return {
         ...m,
         home_score: homeScore,
         away_score: awayScore,
         minute:     minute,
-        status:     status,
+        status:     finalStatus,
       };
     }));
 
@@ -483,7 +496,7 @@ export async function getUpcomingMatches(hoursAhead = 2) {
       const kick = new Date(m.kickoff_time).getTime();
       // Only show matches that haven't kicked off yet and are inside the window
       // Only trust TxLINE's explicit LIVE/HT flags — no time-based live inference
-      const isLive = (m.status === 'LIVE' || m.status === 'HT');
+      const isLive = shouldSurfaceLiveMatch(m.status, null);
       return m.status !== 'FT' && !isLive && kick > now && kick <= cutoff;
     });
   } catch (err) {

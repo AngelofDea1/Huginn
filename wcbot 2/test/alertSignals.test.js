@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildEvents, resolveLiveStatus } from '../src/services/txline.js';
+import { buildEvents, resolveLiveStatus, shouldSurfaceLiveMatch } from '../src/services/txline.js';
 
 test('buildEvents extracts yellow cards and penalty/added-time signals', () => {
   const updates = [
@@ -34,4 +34,11 @@ test('resolveLiveStatus rejects ambiguous or stale fixture data', () => {
   assert.equal(resolveLiveStatus({ Phase: 0, GameState: 0, Status: 'scheduled' }, null), 'NS');
   assert.equal(resolveLiveStatus({ Phase: 0, GameState: 0, Status: 'scheduled' }, { status: 'NS' }), 'NS');
   assert.equal(resolveLiveStatus({ Phase: 0, GameState: 0, Status: 'scheduled' }, { status: 'LIVE' }), 'NS');
+});
+
+test('shouldSurfaceLiveMatch requires an explicit live confirmation', () => {
+  assert.equal(shouldSurfaceLiveMatch('LIVE', null), false);
+  assert.equal(shouldSurfaceLiveMatch('LIVE', 'NS'), false);
+  assert.equal(shouldSurfaceLiveMatch('LIVE', 'LIVE'), true);
+  assert.equal(shouldSurfaceLiveMatch('HT', 'HT'), true);
 });
