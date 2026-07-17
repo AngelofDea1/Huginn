@@ -142,3 +142,37 @@ export function updateMatchState(matchId, updates) {
 export function getAllMatchStates() {
   return matchState;
 }
+
+// ── Web Chat Messages Store & Pruning ──────────────────────────────────────────
+const webChatMessages = new Map();
+
+export function addWebChatMessage(sessionId, message) {
+  if (!webChatMessages.has(sessionId)) {
+    webChatMessages.set(sessionId, { messages: [], lastActive: Date.now() });
+  }
+  const session = webChatMessages.get(sessionId);
+  session.messages.push(message);
+  session.lastActive = Date.now();
+}
+
+export function getWebChatMessages(sessionId) {
+  if (!webChatMessages.has(sessionId)) {
+    webChatMessages.set(sessionId, { messages: [], lastActive: Date.now() });
+  }
+  const session = webChatMessages.get(sessionId);
+  session.lastActive = Date.now();
+  return session.messages;
+}
+
+export function pruneInactiveWebChats(maxAgeMs) {
+  const now = Date.now();
+  let prunedCount = 0;
+  for (const [sessionId, data] of webChatMessages.entries()) {
+    if (now - data.lastActive > maxAgeMs) {
+      webChatMessages.delete(sessionId);
+      prunedCount++;
+    }
+  }
+  return prunedCount;
+}
+

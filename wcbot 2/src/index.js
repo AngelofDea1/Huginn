@@ -8,10 +8,10 @@ import { initializeWhatsApp, activeQr, getAuthExport, forceRelink } from './serv
 import { pollMatches } from './services/matchPoller.js';
 import { schedulePreMatchBulletins } from './services/scheduler.js';
 import { log, logBuffer } from './utils/logger.js';
-import { handleChatMessage, getLiveMatchesAPI } from './handlers/chat.js';
+import { handleChatMessage, getLiveMatchesAPI, handleGetMessages } from './handlers/chat.js';
 import { getVapidPublicKey, subscribeUser, unsubscribeUser, sendPushNotification } from './services/pushNotify.js';
 import { getAllActiveSubscriptions } from './utils/subscriptionStore.js';
-import { loadGroupsFromRedis } from './utils/store.js';
+import { loadGroupsFromRedis, pruneInactiveWebChats } from './utils/store.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = dirname(__filename);
@@ -47,7 +47,21 @@ app.get('/', (_, res) => res.sendFile(join(frontendDir, 'index.html')));
 
 // ─── Web Chat API ─────────────────────────────────────────────────────────────
 app.post('/api/chat', handleChatMessage);
+app.get('/api/chat', handleGetMessages);
 app.get('/api/live', getLiveMatchesAPI);
+
+// Evict inactive web chat sessions (older than 24 hours) every hour
+setInterval(() => {
+  try {
+    const pruned = pruneInactiveWebChats(24 * 60 * 60 * 1000);
+    if (pruned > 0) {
+      log.info(`Pruned ${pruned} inactive web chat sessions from memory.`);
+    }
+  } catch (err) {
+    log.error('Error running web chat pruning job:', err.message);
+  }
+}, 3600000);
+
 
 
 // ─── Live Demo Replay Controller ──────────────────────────────────────────────

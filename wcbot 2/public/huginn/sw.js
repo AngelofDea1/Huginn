@@ -21,8 +21,8 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body,
-    icon: '/img/icon-192.png',
-    badge: '/img/icon-192.png',
+    icon: '/raven-logo-v2.jpeg',
+    badge: '/raven-logo-v2.jpeg',
     vibrate: [200, 100, 200],
     data: {
       url: data.url || '/'

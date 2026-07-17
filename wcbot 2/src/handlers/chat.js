@@ -8,7 +8,8 @@
 import { getLiveMatches, getUpcomingMatches, searchMatch, getFixtureSchedule } from '../services/txline.js';
 import {
   registerGroup, getGroup, setGroupStyle,
-  followMatch, unfollowMatch, initMatchState
+  followMatch, unfollowMatch, initMatchState,
+  addWebChatMessage, getWebChatMessages
 } from '../utils/store.js';
 import { log } from '../utils/logger.js';
 import { STYLES } from '../services/ai.js';
@@ -34,7 +35,14 @@ export async function handleChatMessage(req, res) {
 
     log.info(`[Web] Session ${sessionId}: ${text}`);
 
+    // Store user message
+    addWebChatMessage(sessionId, { from: 'user', text, ts: Date.now() });
+
     const reply = await routeWebCommand(sessionId, text);
+
+    // Store bot message
+    addWebChatMessage(sessionId, { from: 'huginn', text: reply, ts: Date.now() });
+
     return res.json({ reply });
 
   } catch (err) {
@@ -42,6 +50,25 @@ export async function handleChatMessage(req, res) {
     return res.status(500).json({ reply: '⚽ Something went wrong. Please try again!' });
   }
 }
+
+/**
+ * GET /api/chat?sessionId=...
+ * Returns all messages buffered on the server for this session.
+ */
+export async function handleGetMessages(req, res) {
+  try {
+    const { sessionId } = req.query;
+    if (!sessionId) {
+      return res.status(400).json({ error: 'sessionId is required' });
+    }
+    const messages = getWebChatMessages(sessionId);
+    return res.json({ messages });
+  } catch (err) {
+    log.error('Get messages API error:', err.message);
+    return res.status(500).json({ error: 'Failed to retrieve messages' });
+  }
+}
+
 
 /**
  * GET /api/live  - returns current live matches for the scoreboard panel

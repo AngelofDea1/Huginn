@@ -21,6 +21,7 @@ import makeWASocket, {
 
 import { log }          from '../utils/logger.js';
 import { routeCommand } from '../handlers/webhook.js';
+import { addWebChatMessage } from '../utils/store.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const __dirname   = dirname(fileURLToPath(import.meta.url));
@@ -298,18 +299,36 @@ function isValidRecipientJid(jid) {
 }
 
 export async function broadcast(recipients, text) {
-  const valid   = recipients.filter(isValidRecipientJid);
-  const skipped = recipients.length - valid.length;
+  // 1. Intercept web sessions early
+  const webSessions = recipients.filter(id => id && id.startsWith('web_'));
+  for (const session of webSessions) {
+    try {
+      addWebChatMessage(session, { from: 'huginn', text, ts: Date.now() });
+      log.info(`[Web] Routed broadcast alert to session ${session}`);
+    } catch (err) {
+      log.error(`[Web] Failed to route broadcast to session ${session}:`, err.message);
+    }
+  }
+
+  // 2. Filter out web sessions so they don't hit WhatsApp logic or isValidRecipientJid
+  const nonWebRecipients = recipients.filter(id => id && !id.startsWith('web_'));
+
+  const valid   = nonWebRecipients.filter(isValidRecipientJid);
+  const skipped = nonWebRecipients.length - valid.length;
   if (skipped > 0) {
     log.warn(`broadcast: dropping ${skipped} invalid JID(s) — phantom web session IDs filtered`);
   }
-  if (!valid.length) return [];
+
+  const webResults = webSessions.map(id => ({ status: 'fulfilled', value: undefined }));
+  if (!valid.length) return webResults;
+
   const results = await Promise.allSettled(valid.map(id => sendMessage(id, text)));
   const failed  = results.filter(r => r.status === 'rejected').length;
   if (failed) log.warn(`broadcast: ${failed}/${valid.length} failed`);
-  return results;
+  return [...webResults, ...results];
 }
 
 export async function notifyMatchGroups(groups, text) {
   return broadcast(groups.map(g => g.id), text);
 }
+

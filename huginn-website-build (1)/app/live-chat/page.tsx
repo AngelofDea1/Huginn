@@ -148,12 +148,36 @@ export default function LiveChatPage() {
     }
   }, []);
 
+  // ── Sync messages from server ────────────────────────────────────────────────
+  const syncMessages = useCallback(async () => {
+    if (!sessionIdRef.current) return;
+    try {
+      const res = await fetch(`/api/chat?sessionId=${sessionIdRef.current}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.messages && Array.isArray(data.messages)) {
+        if (data.messages.length > 0) {
+          setMessages(data.messages);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to sync messages:", err);
+    }
+  }, []);
+
   // ── Auto-refresh: 10s when any match is live, 30s otherwise ─────────────────
   useEffect(() => {
     const hasLive = fixtures.some((f) => f.status === "LIVE");
     const interval = setInterval(fetchScores, hasLive ? 10_000 : 30_000);
     return () => clearInterval(interval);
   }, [fixtures, fetchScores]);
+
+  // ── Periodic background message synchronization ──────────────────────────────
+  useEffect(() => {
+    syncMessages();
+    const interval = setInterval(syncMessages, 4000);
+    return () => clearInterval(interval);
+  }, [syncMessages]);
 
   // ── Send a message ───────────────────────────────────────────────────────────
   const send = useCallback(async (text: string) => {
@@ -166,18 +190,12 @@ export default function LiveChatPage() {
     setSending(true);
 
     try {
-      const res = await fetch("/api/chat", {
+      await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId: sessionIdRef.current, message: trimmed }),
       });
-      const data = await res.json();
-      const botMsg: Message = {
-        from: "huginn",
-        text: data.reply || "Something went wrong. Try again.",
-        ts: Date.now(),
-      };
-      setMessages((prev) => [...prev, botMsg]);
+      await syncMessages();
     } catch {
       setMessages((prev) => [
         ...prev,
@@ -186,7 +204,7 @@ export default function LiveChatPage() {
     } finally {
       setSending(false);
     }
-  }, [sending]);
+  }, [sending, syncMessages]);
 
   const handleFixtureClick = useCallback((f: Fixture) => {
     setSelectedFixture(f);
@@ -195,6 +213,9 @@ export default function LiveChatPage() {
 
   const clearHistory = () => {
     localStorage.removeItem(STORAGE_KEY);
+    const newSid = "web_" + Math.random().toString(36).slice(2, 11);
+    localStorage.setItem(SESSION_KEY, newSid);
+    sessionIdRef.current = newSid;
     setMessages([welcomeMessage]);
   };
 
