@@ -163,7 +163,7 @@ async function handleFollow(sessionId, text) {
       ? (m.status === 'HT' ? ` (HT)` : ` (${m.minute ? m.minute : '1'}' minute)`)
       : ` (Kickoff: ${new Date(m.kickoff_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })})`;
 
-    return `🛡️ You are already following *${m.home_team?.name} vs ${m.away_team?.name}*!${scoreText}${timeText}\n\nLive alerts are fully active for this chat.`;
+    return `🛡️ You are already following *${m.home_team?.name} vs ${m.away_team?.name}*!${scoreText}${timeText}\n\nLive alerts will begin automatically when the match is underway.`;
   }
 
   followMatch(sessionId, m.id);
