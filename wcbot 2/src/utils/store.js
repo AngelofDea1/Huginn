@@ -32,7 +32,7 @@ export function registerGroup(groupId, name = 'your group') {
       followedMatchIds: new Set(),
     };
     groups.set(groupId, newGroup);
-    persistGroup(groupId, newGroup);
+    persistGroup(groupId, newGroup).catch(err => console.error('[store] persistGroup failed (register):', err.message));
   }
   return groups.get(groupId);
 }
@@ -42,14 +42,14 @@ export function getGroup(groupId) {
 }
 
 export function getAllGroups() {
-  return [...groups.values()].map((g, i) => ({ ...g, id: [...groups.keys()][i] }));
+  return [...groups.entries()].map(([id, g]) => ({ ...g, id }));
 }
 
 export function setGroupStyle(groupId, style) {
   const group = groups.get(groupId);
   if (group) {
     group.style = style;
-    persistGroup(groupId, group);
+    persistGroup(groupId, group).catch(err => console.error('[store] persistGroup failed (style):', err.message));
   }
 }
 
@@ -57,7 +57,7 @@ export function followMatch(groupId, matchId) {
   const group = groups.get(groupId);
   if (group) {
     group.followedMatchIds.add(String(matchId));
-    persistGroup(groupId, group);
+    persistGroup(groupId, group).catch(err => console.error('[store] persistGroup failed (follow):', err.message));
   }
 }
 
@@ -65,7 +65,7 @@ export function unfollowMatch(groupId, matchId) {
   const group = groups.get(groupId);
   if (group) {
     group.followedMatchIds.delete(String(matchId));
-    persistGroup(groupId, group);
+    persistGroup(groupId, group).catch(err => console.error('[store] persistGroup failed (unfollow):', err.message));
   }
 }
 

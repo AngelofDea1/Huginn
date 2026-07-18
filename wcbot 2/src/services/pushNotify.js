@@ -8,7 +8,11 @@ let vapidKeys = {
 };
 
 if (!vapidKeys.publicKey || !vapidKeys.privateKey) {
-  log.info('Generating dynamic VAPID keys...');
+  // ⚠️ CRITICAL: dynamically generated VAPID keys are different on EVERY restart.
+  // Any push subscription registered with the old public key will immediately fail.
+  // To fix: run `node -e "const w=require('web-push'); console.log(JSON.stringify(w.generateVAPIDKeys()))"`,
+  // then set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY as permanent env vars on Render.
+  log.warn('⚠️  VAPID keys not set in env vars — generating ephemeral keys. Push subscriptions will break on every restart! Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY in Render env vars.');
   const keys = webpush.generateVAPIDKeys();
   vapidKeys = keys;
   process.env.VAPID_PUBLIC_KEY = keys.publicKey;

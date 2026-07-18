@@ -45,13 +45,8 @@ export async function handleWebhook(req, res) {
 export async function routeCommand(from, text, meta = {}) {
   const { mentionedJids = [], botJid = null, botMentioned = false } = meta;
 
-  // Group chat guard:
-  // In group chats (@g.us), only respond if:
-  //   1. Message starts with /  (explicit command), OR
-  //   2. Huginn's number was @mentioned in the message
-  const isGroupChat = from.endsWith('@g.us');
-
-  if (isGroupChat && !text.trim().startsWith('/') && !botMentioned) return;
+  // Note: The group-chat guard (slash-commands + @mention only) lives in whatsapp.js
+  // so that the single source of truth is the message listener. Do not duplicate it here.
 
   // If Huginn was @mentioned, strip the @mention prefix from the text so
   // command routing still works (e.g. "@2349026755711 /follow Nigeria" → "/follow Nigeria")

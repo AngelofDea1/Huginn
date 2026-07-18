@@ -287,7 +287,7 @@ async function handleSchedule() {
     
     let reply = `📅 *TOURNAMENT FIXTURES:*\n\n`;
     for (const m of upcoming.slice(0, 10)) {
-      const date = new Date(m.kickoff_time).toLocaleDateString('en-GB', {
+      const date = new Date(m.kickoff_time).toLocaleString('en-GB', {
         weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
       });
       reply += `• *${m.home_team?.name} vs ${m.away_team?.name}*\n  ${date}\n\n`;

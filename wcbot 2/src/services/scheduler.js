@@ -37,8 +37,9 @@ export async function schedulePreMatchBulletins() {
     if (!kickoffTime) continue;
 
     const minsUntilKickoff = (kickoffTime - Date.now()) / 60000;
-    // Only fire in the 28–35 minute window (generous band to survive the 1-min cron gap)
-    if (minsUntilKickoff > 35 || minsUntilKickoff <= 0) continue;
+    // Fire in the 28–35 minute window. Lower bound prevents a "30-min warning"
+    // being sent when kickoff is only 2 minutes away (factually wrong message).
+    if (minsUntilKickoff > 35 || minsUntilKickoff < 28) continue;
 
     const homeTeam = match.home_team?.name || 'Home';
     const awayTeam = match.away_team?.name || 'Away';
