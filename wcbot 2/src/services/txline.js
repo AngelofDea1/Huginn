@@ -203,8 +203,8 @@ function normaliseScores(scoreUpdates, fixture) {
   let awayScore = 0;
   for (let i = updates.length - 1; i >= 0; i--) {
     const u = updates[i];
-    if (u.Score?.Participant1?.Total?.Goals !== undefined) {
-      homeScore = u.Score.Participant1.Total.Goals;
+    if (u.Score) {
+      homeScore = u.Score.Participant1?.Total?.Goals ?? 0;
       awayScore = u.Score.Participant2?.Total?.Goals ?? 0;
       break;
     }
@@ -251,17 +251,9 @@ function normaliseScores(scoreUpdates, fixture) {
 
   const events = buildEvents(updates);
 
-  let finalHomeScore = homeScore;
-  let finalAwayScore = awayScore;
-
-  if (!finalHomeScore && !finalAwayScore && events.length > 0) {
-    finalHomeScore = events.filter(e => e.type === 'goal' && e.team === 'home').length;
-    finalAwayScore = events.filter(e => e.type === 'goal' && e.team === 'away').length;
-  }
-
   return {
-    home_score: finalHomeScore,
-    away_score: finalAwayScore,
+    home_score: homeScore,
+    away_score: awayScore,
     status:     status,
     minute:     minute,
     events,
