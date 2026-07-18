@@ -373,23 +373,22 @@ export async function sendMessage(to, text, broadcast = false) {
 
   log.info(`✉ Sending to jid: ${jid} (broadcast=${broadcast})`);
 
-  // Only quote the triggering message for direct user replies, not push alerts.
-  // Broadcasting alerts to groups should always be clean, unquoted messages.
-  let originalMsg = broadcast ? null : lastMsgPerJid.get(jid);
+  // Look up the last raw message received from this user.
+  // This is CRITICAL for 1:1 chats because incoming messages from multi-device users
+  // arrive with an @lid identifier. Even though we resolve it to their phone number (@s.whatsapp.net)
+  // for our databases, WhatsApp demands that we send the reply back to the @lid chat ID.
+  const recentMsg = lastMsgPerJid.get(jid);
+  const targetJid = recentMsg ? recentMsg.key.remoteJid : jid;
   
-  // FIX: If the incoming message came from an @lid but we are replying to the resolved 
-  // @s.whatsapp.net phone number, quoting the @lid message causes WhatsApp servers to 
-  // silently drop the outbound message because the contextInfo chat ID doesn't match the destination.
-  if (originalMsg && originalMsg.key.remoteJid !== jid) {
-    originalMsg = null;
-  }
+  // Only quote the triggering message for direct user replies, not push alerts.
+  const originalMsg = broadcast ? null : recentMsg;
 
   if (originalMsg) {
-    await sock.sendMessage(jid, { text }, { quoted: originalMsg });
+    await sock.sendMessage(targetJid, { text }, { quoted: originalMsg });
   } else {
-    await sock.sendMessage(jid, { text });
+    await sock.sendMessage(targetJid, { text });
   }
-  log.info(`✉ → ${jid}: ${text.slice(0, 80).replace(/\n/g, ' ')}…`);
+  log.info(`✉ → ${targetJid}: ${text.slice(0, 80).replace(/\n/g, ' ')}…`);
 }
 
 
