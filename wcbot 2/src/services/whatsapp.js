@@ -148,6 +148,29 @@ async function connect() {
     if (mapped > 0) log.info(`📇 Mapped ${mapped} LID(s) to real JIDs (total: ${lidToJid.size})`);
   });
 
+  sock.ev.on('contacts.set', ({ contacts }) => {
+    let mapped = 0;
+    for (const c of contacts) {
+      if (c.lid && c.id) {
+        lidToJid.set(c.lid, c.id);
+        mapped++;
+      }
+    }
+    if (mapped > 0) log.info(`📇 Mapped ${mapped} LID(s) to real JIDs via contacts.set (total: ${lidToJid.size})`);
+  });
+
+  sock.ev.on('messaging-history.set', ({ contacts }) => {
+    if (!contacts) return;
+    let mapped = 0;
+    for (const c of contacts) {
+      if (c.lid && c.id) {
+        lidToJid.set(c.lid, c.id);
+        mapped++;
+      }
+    }
+    if (mapped > 0) log.info(`📇 Mapped ${mapped} LID(s) to real JIDs via messaging-history.set (total: ${lidToJid.size})`);
+  });
+
   // ── Connection state ──────────────────────────────────────────────────────
   sock.ev.on('connection.update', (update) => {
     const { connection, lastDisconnect, qr } = update;
