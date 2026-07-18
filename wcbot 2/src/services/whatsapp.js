@@ -224,16 +224,41 @@ async function connect() {
         if (msg.key.remoteJid === 'status@broadcast')   continue;
 
         // ── REPLY TARGET ─────────────────────────────────────────────────────
-        // Always use msg.key.remoteJid exactly as received (the raw @lid or @g.us JID)
-        // with zero transformations, resolutions, or substitutions.
-        const replyJid = msg.key.remoteJid;
+        let replyJid = msg.key.remoteJid;
         const isGroup  = replyJid.endsWith('@g.us');
 
         log.info(`📨 raw from remoteJid=${msg.key.remoteJid}`);
 
-        // Cache the raw Baileys message for quoted-reply routing (see sendMessage).
-        // Baileys uses contextInfo from the quoted message to route replies correctly
-        // even when the sender JID is an @lid device identifier.
+        // If the message is from an @lid (multi-device linked identifier),
+        // we MUST resolve it to the real @s.whatsapp.net phone number.
+        // Sending directly to @lid fails because WhatsApp doesn't route outbound DMs to LIDs.
+        if (replyJid.endsWith('@lid')) {
+          const cached = lidToJid.get(replyJid);
+          if (cached) {
+            log.info(`📨 Resolved incoming @lid JID from cache: ${replyJid} -> ${cached}`);
+            replyJid = cached;
+          } else {
+            try {
+              const resolved = await sock.onWhatsApp(replyJid);
+              if (resolved?.[0]?.jid) {
+                log.info(`📨 Resolved incoming @lid JID via API: ${replyJid} -> ${resolved[0].jid}`);
+                lidToJid.set(replyJid, resolved[0].jid);
+                replyJid = resolved[0].jid;
+              } else {
+                // Last ditch fallback: strip @lid and append @s.whatsapp.net
+                const num = replyJid.replace('@lid', '');
+                if (/^\d+$/.test(num)) {
+                  replyJid = `${num}@s.whatsapp.net`;
+                  log.warn(`📨 Fallback conversion for incoming @lid: ${replyJid}`);
+                }
+              }
+            } catch (err) {
+              log.warn(`📨 Failed to resolve incoming @lid JID: ${err.message}`);
+            }
+          }
+        }
+
+        // Cache the raw Baileys message for quoted-reply routing if needed.
         lastMsgPerJid.set(replyJid, msg);
 
         // ── Extract text ────────────────────────────────────────────────────
@@ -306,43 +331,19 @@ export async function forceRelink() {
 
 /**
  * Send a plain-text message to a JID.
- *
- * For @lid JIDs (multi-device linked-device IDs, not phone numbers), Baileys
- * cannot route an outbound sendMessage reliably. The fix: if we have the last
- * received message from this JID cached, we reply with { quoted: originalMsg }
- * which lets Baileys use the message's own routing context — bypassing the
- * @lid resolution problem entirely.
- *
- * Fallback chain for @lid when no cached message exists:
- *   1. Check lidToJid map (populated from contacts.upsert)
- *   2. Send to @lid as-is (works once the session is fully established)
+ * Dest JIDs are expected to be resolved @s.whatsapp.net or @g.us JIDs.
  */
 export async function sendMessage(to, text) {
   if (!sock) throw new Error('Socket not ready');
-  let jid = to.includes('@') ? to : `${to}@s.whatsapp.net`;
-
-  if (jid.endsWith('@lid')) {
-    // ── Preferred: reply using the original message context ──────────────────
-    const originalMsg = lastMsgPerJid.get(jid);
-    if (originalMsg) {
-      log.info(`✉ @lid reply via quoted-message routing → ${jid}`);
-      await sock.sendMessage(jid, { text }, { quoted: originalMsg });
-      log.info(`✉ → ${jid}: ${text.slice(0, 80).replace(/\n/g, ' ')}…`);
-      return;
-    }
-
-    // ── Fallback: contacts.upsert map ────────────────────────────────────────
-    const resolved = lidToJid.get(jid);
-    if (resolved) {
-      log.info(`✉ Resolved @lid → ${resolved} (contacts map)`);
-      jid = resolved;
-    } else {
-      log.warn(`✉ @lid ${jid} — no cached msg or contacts map entry, sending as-is`);
-    }
-  }
+  const jid = to.includes('@') ? to : `${to}@s.whatsapp.net`;
 
   log.info(`✉ Sending to jid: ${jid}`);
-  await sock.sendMessage(jid, { text });
+  const originalMsg = lastMsgPerJid.get(jid);
+  if (originalMsg) {
+    await sock.sendMessage(jid, { text }, { quoted: originalMsg });
+  } else {
+    await sock.sendMessage(jid, { text });
+  }
   log.info(`✉ → ${jid}: ${text.slice(0, 80).replace(/\n/g, ' ')}…`);
 }
 
