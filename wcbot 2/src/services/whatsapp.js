@@ -312,9 +312,16 @@ async function connect() {
         const mentionedJids = mc.extendedTextMessage?.contextInfo?.mentionedJid || [];
         const botMentioned  = mentionedJids.some(j => selfJids.has(j));
 
-        // Group guard: only respond in groups if the message starts with / OR the bot was @mentioned.
-        // @mention support allows users to send "@Huginn /live" or "@Huginn who is winning?" naturally.
-        if (isGroup && !text.startsWith('/') && !botMentioned) continue;
+        // Global guard: 
+        // In groups, only respond if message starts with / OR the bot was @mentioned.
+        // In 1:1 chats, only respond if message starts with / to prevent replying to personal friends.
+        // Users can use `/ask ...` to talk to the AI oracle in a 1:1 chat.
+        if (isGroup) {
+          if (!text.startsWith('/') && !botMentioned) continue;
+        } else {
+          // 1:1 chat: block all normal conversational text.
+          if (!text.startsWith('/')) continue;
+        }
 
         const senderJid = isGroup ? (msg.key.participant || msg.key.remoteJid) : replyJid;
 
@@ -368,7 +375,15 @@ export async function sendMessage(to, text, broadcast = false) {
 
   // Only quote the triggering message for direct user replies, not push alerts.
   // Broadcasting alerts to groups should always be clean, unquoted messages.
-  const originalMsg = broadcast ? null : lastMsgPerJid.get(jid);
+  let originalMsg = broadcast ? null : lastMsgPerJid.get(jid);
+  
+  // FIX: If the incoming message came from an @lid but we are replying to the resolved 
+  // @s.whatsapp.net phone number, quoting the @lid message causes WhatsApp servers to 
+  // silently drop the outbound message because the contextInfo chat ID doesn't match the destination.
+  if (originalMsg && originalMsg.key.remoteJid !== jid) {
+    originalMsg = null;
+  }
+
   if (originalMsg) {
     await sock.sendMessage(jid, { text }, { quoted: originalMsg });
   } else {

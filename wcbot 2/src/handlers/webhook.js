@@ -105,6 +105,13 @@ export async function routeCommand(from, text, meta = {}) {
   }
 
   try {
+    // If they explicitly used an /ask alias, strip it out so the AI just gets the question
+    if (cleanText.toLowerCase().startsWith('/ask')) {
+      cleanText = cleanText.substring(4).trim();
+    } else if (cleanText.toLowerCase().startsWith('/huginn')) {
+      cleanText = cleanText.substring(7).trim();
+    }
+
     const { answerFootballQuestion } = await import('../services/ai.js');
     const { getLiveMatches, getUpcomingMatches } = await import('../services/txline.js');
     const group = getGroup(from);
