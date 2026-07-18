@@ -346,7 +346,19 @@ export function buildEvents(updates) {
     prevHomeRed = homeRed;
     prevAwayRed = awayRed;
   }
-  return events;
+
+  // Deduplicate events by ID. The SSE stream frequently repeats events for the same 
+  // incident (e.g. initial goal, then VAR confirm).
+  const uniqueEvents = [];
+  const seen = new Set();
+  for (const ev of events) {
+    if (!seen.has(ev.id)) {
+      seen.add(ev.id);
+      uniqueEvents.push(ev);
+    }
+  }
+
+  return uniqueEvents;
 }
 
 function normaliseOdds(oddsData) {
