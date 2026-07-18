@@ -227,9 +227,17 @@ function normaliseScores(scoreUpdates, fixture) {
 
   const events = buildEvents(updates);
 
+  let finalHomeScore = homeScore;
+  let finalAwayScore = awayScore;
+
+  if (!finalHomeScore && !finalAwayScore && events.length > 0) {
+    finalHomeScore = events.filter(e => e.type === 'goal' && e.team === 'home').length;
+    finalAwayScore = events.filter(e => e.type === 'goal' && e.team === 'away').length;
+  }
+
   return {
-    home_score: homeScore,
-    away_score: awayScore,
+    home_score: finalHomeScore,
+    away_score: finalAwayScore,
     status:     status,
     minute:     minute,
     events,
