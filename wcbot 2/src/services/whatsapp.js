@@ -312,15 +312,8 @@ async function connect() {
         const mentionedJids = mc.extendedTextMessage?.contextInfo?.mentionedJid || [];
         const botMentioned  = mentionedJids.some(j => selfJids.has(j));
 
-        // Global guard: 
-        // In groups, only respond if message starts with / OR the bot was @mentioned.
-        // In 1:1 chats, only respond if message starts with / to prevent replying to personal friends.
-        // Users can use `/ask ...` to talk to the AI oracle in a 1:1 chat.
         if (isGroup) {
           if (!text.startsWith('/') && !botMentioned) continue;
-        } else {
-          // 1:1 chat: block all normal conversational text.
-          if (!text.startsWith('/')) continue;
         }
 
         const senderJid = isGroup ? (msg.key.participant || msg.key.remoteJid) : replyJid;
