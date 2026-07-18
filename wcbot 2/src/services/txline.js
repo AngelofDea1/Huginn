@@ -228,13 +228,6 @@ function normaliseScores(scoreUpdates, fixture) {
     }
   }
 
-  // Mock replay feed may only report GameState as 'scheduled', so infer live/HT/FT
-  // from the replay action markers instead of relying on the feed status alone.
-  if (typeof global.getMockReplayDetails === 'function' && status === 'NS') {
-    const inferred = inferMockReplayStatus(latest);
-    if (inferred) status = inferred;
-  }
-
   // Extract minute by scanning backwards
   let minute = null;
   for (let i = updates.length - 1; i >= 0; i--) {
@@ -247,6 +240,12 @@ function normaliseScores(scoreUpdates, fixture) {
       minute = Math.floor(u.Clock.Seconds / 60);
       break;
     }
+  }
+
+  // If status is still 'NS' but the match clearly has goals or time elapsed, force it to 'LIVE'.
+  // This handles edge cases where the API doesn't formally switch the GameState yet.
+  if (status === 'NS' && (homeScore > 0 || awayScore > 0 || minute > 0)) {
+    status = 'LIVE';
   }
 
   const events = buildEvents(updates);
