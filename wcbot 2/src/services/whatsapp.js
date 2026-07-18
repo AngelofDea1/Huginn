@@ -17,6 +17,7 @@ import makeWASocket, {
   useMultiFileAuthState,
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
+  jidNormalizedUser,
 } from '@whiskeysockets/baileys';
 
 import { log }          from '../utils/logger.js';
@@ -258,12 +259,35 @@ export async function forceRelink() {
 /**
  * Send a plain-text message.
  * `to` must be a valid JID: @s.whatsapp.net, @g.us, or @lid.
- * When replying to an incoming message use replyJid (derived above), not remoteJid.
+ * @lid JIDs (multi-device linked IDs) are resolved to @s.whatsapp.net
+ * before sending — WhatsApp silently drops replies to @lid in some sessions.
  */
 export async function sendMessage(to, text) {
   if (!sock) throw new Error('Socket not ready');
-  const jid = to.includes('@') ? to : `${to}@s.whatsapp.net`;
-  log.info(`✉ Sending to RAW jid: ${jid}`);
+  let jid = to.includes('@') ? to : `${to}@s.whatsapp.net`;
+
+  // Resolve @lid → @s.whatsapp.net for reliable 1:1 delivery.
+  // Groups (@g.us) are passed through unchanged.
+  if (jid.endsWith('@lid') && !jid.endsWith('@g.us')) {
+    try {
+      const resolved = await sock.onWhatsApp(jid);
+      if (resolved?.[0]?.jid) {
+        log.info(`✉ Resolved @lid → ${resolved[0].jid}`);
+        jid = resolved[0].jid;
+      } else {
+        // Fallback: strip @lid and use @s.whatsapp.net
+        const num = jid.replace('@lid', '');
+        if (/^\d+$/.test(num)) {
+          jid = `${num}@s.whatsapp.net`;
+          log.warn(`✉ @lid resolve returned empty — fallback to ${jid}`);
+        }
+      }
+    } catch (err) {
+      log.warn(`✉ @lid resolution failed (${err.message}) — sending to original JID`);
+    }
+  }
+
+  log.info(`✉ Sending to jid: ${jid}`);
   await sock.sendMessage(jid, { text });
   log.info(`✉ → ${jid}: ${text.slice(0, 80).replace(/\n/g, ' ')}…`);
 }
