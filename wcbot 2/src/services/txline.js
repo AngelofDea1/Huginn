@@ -326,6 +326,8 @@ function inferSupplementaryEvent(update, minute) {
 
 export function buildEvents(updates) {
   const events = [];
+  let prevHome = 0;
+  let prevAway = 0;
   let prevHomeRed = 0;
   let prevAwayRed = 0;
 
@@ -338,25 +340,22 @@ export function buildEvents(updates) {
       events.push(supplementary);
     }
 
-    const action = String(u.Action || '').toLowerCase();
-    const isHome = u.Participant1IsHome ? true : false; // Would need better team detection if Action: goal didn't specify
-    
-    // Detect goals via explicit 'goal' Action to avoid Score tree lag/fluctuations
-    if (action === 'goal') {
-      // Determine which team scored based on u.Data or general heuristic.
-      // Usually TxLINE specifies the scoring team in `u.ParticipantId` or we infer it if missing.
-      const teamId = u.Data?.ParticipantId || u.ParticipantId;
-      const team = teamId === u.Participant2Id ? 'away' : 'home';
-      const scorer = u.Data?.PlayerId ? `Player #${u.Data.PlayerId}` : 'Goal';
+    // Detect goals safely (prevent undefined dropouts from resetting the counter)
+    if (u.Score) {
+      const homeGoals = u.Score.Participant1?.Total?.Goals;
+      const awayGoals = u.Score.Participant2?.Total?.Goals;
+
+      if (homeGoals !== undefined && homeGoals > prevHome) {
+        const scorer = u.Action === 'goal' && u.Data?.PlayerId ? `Player #${u.Data.PlayerId}` : 'Goal';
+        events.push({ id: `g1-${ts}`, type: 'goal', team: 'home', minute: ts, player: scorer, description: `Home goal at ${ts}'` });
+        prevHome = homeGoals;
+      }
       
-      events.push({ 
-        id: `goal-${ts}-${u.Id || Math.random().toString(36).substr(2, 5)}`, 
-        type: 'goal', 
-        team: team, 
-        minute: ts, 
-        player: scorer, 
-        description: `${team === 'home' ? 'Home' : 'Away'} goal at ${ts}'` 
-      });
+      if (awayGoals !== undefined && awayGoals > prevAway) {
+        const scorer = u.Action === 'goal' && u.Data?.PlayerId ? `Player #${u.Data.PlayerId}` : 'Goal';
+        events.push({ id: `g2-${ts}`, type: 'goal', team: 'away', minute: ts, player: scorer, description: `Away goal at ${ts}'` });
+        prevAway = awayGoals;
+      }
     }
 
     // Detect red cards

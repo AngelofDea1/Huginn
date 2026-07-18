@@ -34,7 +34,7 @@ const TXLINE_API       = 'https://txline.txodds.com';
 // Free tier - choose one:
 //   1  = World Cup + Int Friendlies (60-second delay)
 //   12 = World Cup + Int Friendlies (real-time)
-const SERVICE_LEVEL_ID = 1;
+const SERVICE_LEVEL_ID = 12;
 const DURATION_WEEKS   = 4;     // 4 weeks minimum, free
 
 // ---- IDL (subscribe instruction only) ----------------------------------------
