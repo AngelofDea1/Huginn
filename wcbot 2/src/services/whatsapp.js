@@ -233,6 +233,9 @@ async function connect() {
         // we MUST resolve it to the real @s.whatsapp.net phone number.
         // Sending directly to @lid fails because WhatsApp doesn't route outbound DMs to LIDs.
         if (replyJid.endsWith('@lid')) {
+          log.info(`📨 DEBUG @lid message keys: ${Object.keys(msg).join(', ')}`);
+          log.info(`📨 DEBUG @lid message key details: ${JSON.stringify(msg.key)}`);
+          
           // In Baileys multi-device messages, msg.key.participant contains the real JID of the sender (ends with @s.whatsapp.net)
           const participantJid = msg.key.participant;
           if (participantJid && participantJid.endsWith('@s.whatsapp.net')) {
