@@ -765,12 +765,13 @@ async function processMatch(match, groups) {
       log.info(`Poller sending FT push to ${pushSubs.length} subscribers.`);
       await sendPushNotification('Full-time', `${homeTeam} ${currentHome}-${currentAway} ${awayTeam}`, '/', pushSubs);
 
-      // Sweepstake points
+      // Predict points
       try {
-        const { processMatchEndPoints } = await import('../handlers/sweepstake.js');
-        await processMatchEndPoints(homeTeam, awayTeam, currentHome, currentAway);
+        const { processPredictionPoints } = await import('../handlers/predict.js');
+        const round = match.round || 'group_stage';
+        await processPredictionPoints(homeTeam, awayTeam, currentHome, currentAway, round);
       } catch (e) {
-        log.error('Sweepstake points failed:', e.message);
+        log.error('Prediction points failed:', e.message);
       }
     } catch (err) {
       log.error('FT report failed:', err.message);

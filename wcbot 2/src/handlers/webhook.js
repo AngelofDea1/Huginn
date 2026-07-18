@@ -89,9 +89,11 @@ export async function routeCommand(from, text, meta = {}) {
   if (lower === '/schedule' || lower === '/fixtures' || lower === '/upcoming') return handleSchedule(from);
   if (lower === '/live')                                        return handleLive(from);
   if (lower.startsWith('/stats'))                               return handleStats(from, cleanText);
-  if (lower.startsWith('/sweepstake')) {
-    const { handleSweepstakeCommand } = await import('./sweepstake.js');
-    return handleSweepstakeCommand(from, cleanText, senderJid);
+  if (lower.startsWith('/predict')) {
+    const { handlePredictCommand } = await import('./predict.js');
+    const name = meta.pushName || senderJid.split('@')[0];
+    const args = cleanText.replace(/\/predict\s*/i, '').trim().split(/\s+/).filter(Boolean);
+    return handlePredictCommand(from, senderJid, name, args);
   }
 
   // Catch-all: AI Football Oracle
@@ -159,6 +161,7 @@ async function handleHelp(from) {
     `/unfollow <team> · stop alerts\n` +
     `/live · matches in progress now\n` +
     `/schedule · upcoming fixtures\n` +
+    `/predict <team> · predict the tournament winner\n` +
     `/stats <player> · career stats, style, injury history\n` +
     `/status · what you're currently tracking\n` +
     `/style <mode> · hype, tactical, funny, balanced\n\n` +

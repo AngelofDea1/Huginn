@@ -79,6 +79,15 @@ export function resolveLiveStatus(rawFixture, detailStatus) {
   return 'NS';
 }
 
+function normalizeRound(f) {
+  const name = String(f.RoundName || f.TournamentPhase || f.PhaseName || f.stage || '').toLowerCase();
+  if (name.includes('semi')) return 'semi_final';
+  if (name.includes('quarter')) return 'quarter_final';
+  if (name.includes('16')) return 'round_of_16';
+  if (name.includes('final')) return 'final'; // check after semi/quarter
+  return 'group_stage';
+}
+
 function normaliseFixture(f) {
   // Try to extract scores from snapshot's Score object if present
   const homeScore = f.Score?.Participant1?.Total?.Goals ?? f.ScoreHome ?? null;
@@ -93,6 +102,7 @@ function normaliseFixture(f) {
     kickoff_time: f.StartTime || f.KickoffTime,
     status,
     stage:        f.CompetitionName || f.TournamentName || 'World Cup 2026',
+    round:        normalizeRound(f),
     home_score:   homeScore,
     away_score:   awayScore,
     minute:       f.Elapsed ?? null,

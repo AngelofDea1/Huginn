@@ -88,9 +88,9 @@ export async function loadGroupsFromRedis() {
         style:            g.style,
         followedMatchIds: g.followedMatchIds,
       };
-      // Restore sweepstake if it was persisted
-      if (g.sweepstake) {
-        entry.sweepstake = g.sweepstake;
+      // Restore predictions if persisted
+      if (g.predictions) {
+        entry.predictions = g.predictions;
       }
       groups.set(g.id, entry);
     }
