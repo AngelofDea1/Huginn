@@ -210,16 +210,22 @@ function normaliseScores(scoreUpdates, fixture) {
     }
   }
   
-  // Extract phase / status — try numeric Phase first, then string GameState
-  let status;
-  if (latest.Phase !== undefined && latest.Phase !== null) {
-    status = phaseToStatus(latest.Phase);
-  } else {
-    status = phaseStringToStatus(latest.GameState);
-  }
-  // Override with 'LIVE' if GameState explicitly says so
-  if (typeof latest.GameState === 'string' && (latest.GameState.toLowerCase() === 'live' || latest.GameState.toLowerCase() === 'inplay')) {
-    status = 'LIVE';
+  // Extract phase / status by scanning backwards
+  let status = 'NS';
+  for (let i = updates.length - 1; i >= 0; i--) {
+    const u = updates[i];
+    if (u.Phase !== undefined && u.Phase !== null) {
+      status = phaseToStatus(u.Phase);
+      break;
+    } else if (u.GameState !== undefined && u.GameState !== null) {
+      if (typeof u.GameState === 'string') {
+        status = phaseStringToStatus(u.GameState);
+        if (u.GameState.toLowerCase() === 'live' || u.GameState.toLowerCase() === 'inplay') status = 'LIVE';
+      } else {
+        status = gameStateToStatus(u.GameState); // Using the helper for numeric GameState
+      }
+      break;
+    }
   }
 
   // Mock replay feed may only report GameState as 'scheduled', so infer live/HT/FT
@@ -229,10 +235,19 @@ function normaliseScores(scoreUpdates, fixture) {
     if (inferred) status = inferred;
   }
 
-  const elapsedSeconds = latest.Clock?.Seconds ?? 0;
-  const minute = latest.Elapsed !== undefined && latest.Elapsed !== null 
-    ? latest.Elapsed 
-    : (elapsedSeconds > 0 ? Math.floor(elapsedSeconds / 60) : null);
+  // Extract minute by scanning backwards
+  let minute = null;
+  for (let i = updates.length - 1; i >= 0; i--) {
+    const u = updates[i];
+    if (u.Elapsed !== undefined && u.Elapsed !== null) {
+      minute = u.Elapsed;
+      break;
+    }
+    if (u.Clock?.Seconds !== undefined) {
+      minute = Math.floor(u.Clock.Seconds / 60);
+      break;
+    }
+  }
 
   const events = buildEvents(updates);
 
