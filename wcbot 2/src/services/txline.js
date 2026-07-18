@@ -197,9 +197,18 @@ function normaliseScores(scoreUpdates, fixture) {
   const latest = updates?.[updates.length - 1];
   if (!latest) return null;
 
-  // Extract scores from Score object — may be absent if match hasn't started
-  const homeScore = latest.Score?.Participant1?.Total?.Goals ?? 0;
-  const awayScore = latest.Score?.Participant2?.Total?.Goals ?? 0;
+  // Extract scores from Score object — we must scan backwards because the very last 
+  // SSE payload might just be a heartbeat or partial update missing the Score tree.
+  let homeScore = 0;
+  let awayScore = 0;
+  for (let i = updates.length - 1; i >= 0; i--) {
+    const u = updates[i];
+    if (u.Score?.Participant1?.Total?.Goals !== undefined) {
+      homeScore = u.Score.Participant1.Total.Goals;
+      awayScore = u.Score.Participant2?.Total?.Goals ?? 0;
+      break;
+    }
+  }
   
   // Extract phase / status — try numeric Phase first, then string GameState
   let status;
