@@ -1,4 +1,5 @@
-import { getGroup, persistGroup, getAllGroups } from '../utils/store.js';
+import { getGroup, getAllGroups } from '../utils/store.js';
+import { persistGroup } from '../utils/subscriptionStore.js';
 import { sendMessage } from '../services/whatsapp.js';
 
 export async function handlePredictCommand(from, senderJid, pushName, args) {
