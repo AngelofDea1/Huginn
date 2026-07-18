@@ -141,9 +141,10 @@ function phaseStringToStatus(gameState) {
 
 export function shouldSurfaceLiveMatch(status, detailStatus) {
   const normalized = typeof status === 'string' ? status.toUpperCase() : '';
-  const explicitDetail = detailStatus && typeof detailStatus === 'string' ? detailStatus.toUpperCase() : null;
-
+  
   if (normalized === 'LIVE' || normalized === 'HT') {
+    if (detailStatus == null) return true;
+    const explicitDetail = typeof detailStatus === 'string' ? detailStatus.toUpperCase() : '';
     return explicitDetail === 'LIVE' || explicitDetail === 'HT';
   }
 
