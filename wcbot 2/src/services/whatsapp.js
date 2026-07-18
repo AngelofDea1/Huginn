@@ -233,27 +233,35 @@ async function connect() {
         // we MUST resolve it to the real @s.whatsapp.net phone number.
         // Sending directly to @lid fails because WhatsApp doesn't route outbound DMs to LIDs.
         if (replyJid.endsWith('@lid')) {
-          const cached = lidToJid.get(replyJid);
-          if (cached) {
-            log.info(`📨 Resolved incoming @lid JID from cache: ${replyJid} -> ${cached}`);
-            replyJid = cached;
+          // In Baileys multi-device messages, msg.key.participant contains the real JID of the sender (ends with @s.whatsapp.net)
+          const participantJid = msg.key.participant;
+          if (participantJid && participantJid.endsWith('@s.whatsapp.net')) {
+            log.info(`📨 Resolved incoming @lid via message participant: ${replyJid} -> ${participantJid}`);
+            lidToJid.set(replyJid, participantJid);
+            replyJid = participantJid;
           } else {
-            try {
-              const resolved = await sock.onWhatsApp(replyJid);
-              if (resolved?.[0]?.jid) {
-                log.info(`📨 Resolved incoming @lid JID via API: ${replyJid} -> ${resolved[0].jid}`);
-                lidToJid.set(replyJid, resolved[0].jid);
-                replyJid = resolved[0].jid;
-              } else {
-                // Last ditch fallback: strip @lid and append @s.whatsapp.net
-                const num = replyJid.replace('@lid', '');
-                if (/^\d+$/.test(num)) {
-                  replyJid = `${num}@s.whatsapp.net`;
-                  log.warn(`📨 Fallback conversion for incoming @lid: ${replyJid}`);
+            const cached = lidToJid.get(replyJid);
+            if (cached) {
+              log.info(`📨 Resolved incoming @lid JID from cache: ${replyJid} -> ${cached}`);
+              replyJid = cached;
+            } else {
+              try {
+                const resolved = await sock.onWhatsApp(replyJid);
+                if (resolved?.[0]?.jid) {
+                  log.info(`📨 Resolved incoming @lid JID via API: ${replyJid} -> ${resolved[0].jid}`);
+                  lidToJid.set(replyJid, resolved[0].jid);
+                  replyJid = resolved[0].jid;
+                } else {
+                  // Last ditch fallback: strip @lid and append @s.whatsapp.net
+                  const num = replyJid.replace('@lid', '');
+                  if (/^\d+$/.test(num)) {
+                    replyJid = `${num}@s.whatsapp.net`;
+                    log.warn(`📨 Fallback conversion for incoming @lid: ${replyJid}`);
+                  }
                 }
+              } catch (err) {
+                log.warn(`📨 Failed to resolve incoming @lid JID: ${err.message}`);
               }
-            } catch (err) {
-              log.warn(`📨 Failed to resolve incoming @lid JID: ${err.message}`);
             }
           }
         }
