@@ -13,7 +13,7 @@ const WORLD_CUP_TEAMS = [
 /**
  * Handle sweepstake command routing
  */
-export async function handleSweepstakeCommand(from, text) {
+export async function handleSweepstakeCommand(from, text, senderJid = from) {
   const parts = text.split(/\s+/);
   const action = parts[1]?.toLowerCase();
 
@@ -34,7 +34,7 @@ export async function handleSweepstakeCommand(from, text) {
   }
   if (action === 'join') {
     const name = parts.slice(2).join(' ').trim();
-    return joinSweepstake(from, group, name);
+    return joinSweepstake(from, group, name, senderJid);
   }
   if (action === 'draw') {
     return drawSweepstake(from, group);
@@ -76,7 +76,7 @@ async function startSweepstake(from, group) {
   );
 }
 
-async function joinSweepstake(from, group, name) {
+async function joinSweepstake(from, group, name, senderJid) {
   if (group.sweepstake.status !== 'joining') {
     return sendMessage(from, `⚠️ Signups are closed. Start a new sweepstake first with */sweepstake start*.`);
   }
@@ -90,7 +90,7 @@ async function joinSweepstake(from, group, name) {
     return sendMessage(from, `⚠️ "${name}" has already joined the sweepstake.`);
   }
 
-  group.sweepstake.participants.push({ jid: from, name });
+  group.sweepstake.participants.push({ jid: senderJid, name });
   // Persist so a restart doesn't lose who joined
   await persistGroup(from, group);
   return sendMessage(from, `✅ *${name}* joined! (Total players: ${group.sweepstake.participants.length})`);

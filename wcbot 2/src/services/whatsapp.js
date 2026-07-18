@@ -316,10 +316,13 @@ async function connect() {
         // @mention support allows users to send "@Huginn /live" or "@Huginn who is winning?" naturally.
         if (isGroup && !text.startsWith('/') && !botMentioned) continue;
 
+        const senderJid = isGroup ? (msg.key.participant || msg.key.remoteJid) : replyJid;
+
         await routeCommand(replyJid, text, {
           mentionedJids,
           botJid:       botJidNorm,
           botMentioned,
+          senderJid,
         });
       } catch (err) {
         log.error('Message handler error:', err.message);

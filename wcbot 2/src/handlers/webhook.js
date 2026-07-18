@@ -43,7 +43,7 @@ export async function handleWebhook(req, res) {
 
 //  Command router
 export async function routeCommand(from, text, meta = {}) {
-  const { mentionedJids = [], botJid = null, botMentioned = false } = meta;
+  const { mentionedJids = [], botJid = null, botMentioned = false, senderJid = from } = meta;
 
   // Note: The group-chat guard (slash-commands + @mention only) lives in whatsapp.js
   // so that the single source of truth is the message listener. Do not duplicate it here.
@@ -91,7 +91,7 @@ export async function routeCommand(from, text, meta = {}) {
   if (lower.startsWith('/stats'))                               return handleStats(from, cleanText);
   if (lower.startsWith('/sweepstake')) {
     const { handleSweepstakeCommand } = await import('./sweepstake.js');
-    return handleSweepstakeCommand(from, cleanText);
+    return handleSweepstakeCommand(from, cleanText, senderJid);
   }
 
   // Catch-all: AI Football Oracle
