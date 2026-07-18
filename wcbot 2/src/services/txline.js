@@ -242,13 +242,23 @@ function normaliseScores(scoreUpdates, fixture) {
     }
   }
 
+  // Build events via pure Action parsing (no lag, no duplicate glitches)
+  const events = buildEvents(updates);
+
+  // Merge the robust Score tree with the instantaneous events array
+  // This guarantees we never lag behind live TV if the Score tree takes 20s to update,
+  // but we also never lose a goal if an Action packet is dropped.
+  const instantHomeGoals = events.filter(e => e.type === 'goal' && e.team === 'home').length;
+  const instantAwayGoals = events.filter(e => e.type === 'goal' && e.team === 'away').length;
+
+  homeScore = Math.max(homeScore, instantHomeGoals);
+  awayScore = Math.max(awayScore, instantAwayGoals);
+
   // If status is still 'NS' but the match clearly has goals or time elapsed, force it to 'LIVE'.
   // This handles edge cases where the API doesn't formally switch the GameState yet.
   if (status === 'NS' && (homeScore > 0 || awayScore > 0 || minute > 0)) {
     status = 'LIVE';
   }
-
-  const events = buildEvents(updates);
 
   return {
     home_score: homeScore,
@@ -316,8 +326,6 @@ function inferSupplementaryEvent(update, minute) {
 
 export function buildEvents(updates) {
   const events = [];
-  let prevHome = 0;
-  let prevAway = 0;
   let prevHomeRed = 0;
   let prevAwayRed = 0;
 
@@ -325,28 +333,36 @@ export function buildEvents(updates) {
     const elapsedSeconds = u.Clock?.Seconds ?? 0;
     const ts = u.Elapsed !== undefined && u.Elapsed !== null ? u.Elapsed : (Math.floor(elapsedSeconds / 60) || 0);
 
-    const homeGoals = u.Score?.Participant1?.Total?.Goals ?? 0;
-    const awayGoals = u.Score?.Participant2?.Total?.Goals ?? 0;
-
-    const homeRed = u.Stats?.['5'] ?? u.Stats?.[5] ?? 0;
-    const awayRed = u.Stats?.['6'] ?? u.Stats?.[6] ?? 0;
-
     const supplementary = inferSupplementaryEvent(u, ts);
     if (supplementary) {
       events.push(supplementary);
     }
 
-    // Detect goals
-    if (homeGoals > prevHome) {
-      const scorer = u.Action === 'goal' && u.Data?.PlayerId ? `Player #${u.Data.PlayerId}` : 'Goal';
-      events.push({ id: `g1-${ts}`, type: 'goal', team: 'home', minute: ts, player: scorer, description: `Home goal at ${ts}'` });
-    }
-    if (awayGoals > prevAway) {
-      const scorer = u.Action === 'goal' && u.Data?.PlayerId ? `Player #${u.Data.PlayerId}` : 'Goal';
-      events.push({ id: `g2-${ts}`, type: 'goal', team: 'away', minute: ts, player: scorer, description: `Away goal at ${ts}'` });
+    const action = String(u.Action || '').toLowerCase();
+    const isHome = u.Participant1IsHome ? true : false; // Would need better team detection if Action: goal didn't specify
+    
+    // Detect goals via explicit 'goal' Action to avoid Score tree lag/fluctuations
+    if (action === 'goal') {
+      // Determine which team scored based on u.Data or general heuristic.
+      // Usually TxLINE specifies the scoring team in `u.ParticipantId` or we infer it if missing.
+      const teamId = u.Data?.ParticipantId || u.ParticipantId;
+      const team = teamId === u.Participant2Id ? 'away' : 'home';
+      const scorer = u.Data?.PlayerId ? `Player #${u.Data.PlayerId}` : 'Goal';
+      
+      events.push({ 
+        id: `goal-${ts}-${u.Id || Math.random().toString(36).substr(2, 5)}`, 
+        type: 'goal', 
+        team: team, 
+        minute: ts, 
+        player: scorer, 
+        description: `${team === 'home' ? 'Home' : 'Away'} goal at ${ts}'` 
+      });
     }
 
     // Detect red cards
+    const homeRed = u.Stats?.['5'] ?? u.Stats?.[5] ?? 0;
+    const awayRed = u.Stats?.['6'] ?? u.Stats?.[6] ?? 0;
+
     if (homeRed > prevHomeRed) {
       const player = u.Data?.PlayerId ? `Player #${u.Data.PlayerId}` : 'Player';
       events.push({ id: `rc1-${ts}`, type: 'red_card', team: 'home', minute: ts, player, description: `Home red card at ${ts}'` });
@@ -356,8 +372,6 @@ export function buildEvents(updates) {
       events.push({ id: `rc2-${ts}`, type: 'red_card', team: 'away', minute: ts, player, description: `Away red card at ${ts}'` });
     }
 
-    prevHome = homeGoals;
-    prevAway = awayGoals;
     prevHomeRed = homeRed;
     prevAwayRed = awayRed;
   }
