@@ -79,8 +79,15 @@ function loadOrCreateKeypair(keypairPath) {
     return kp;
   }
 
-  const kp = Keypair.generate();
   const savePath = path.join(__dirname, 'txline-keypair.json');
+  if (!keypairPath && fs.existsSync(savePath)) {
+    const raw = JSON.parse(fs.readFileSync(savePath, 'utf-8'));
+    const kp  = Keypair.fromSecretKey(Uint8Array.from(raw));
+    console.log('Loaded local keypair:', kp.publicKey.toBase58());
+    return kp;
+  }
+
+  const kp = Keypair.generate();
   fs.writeFileSync(savePath, JSON.stringify(Array.from(kp.secretKey)));
   console.log('Generated new keypair:', kp.publicKey.toBase58());
   console.log('Keypair saved to:', savePath);
