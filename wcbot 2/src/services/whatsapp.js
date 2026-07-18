@@ -33,6 +33,11 @@ const SESSION_TXT = path.join(__dirname, '..', 'session_data.txt');
 export let activeQr = null;
 let sock = null;
 
+// Maps @lid JIDs → real @s.whatsapp.net JIDs.
+// Populated from contacts.upsert at session sync — this is the only reliable
+// way to resolve multi-device LIDs since they are device IDs, not phone numbers.
+const lidToJid = new Map();
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Session helpers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -126,6 +131,19 @@ async function connect() {
 
   sock.ev.on('creds.update', saveCreds);
 
+  // ── Contact sync: build LID → JID map ────────────────────────────────────
+  // WhatsApp multi-device sends @lid identifiers for incoming messages.
+  // contacts.upsert provides both the real JID (id) and the lid for each contact.
+  sock.ev.on('contacts.upsert', (contacts) => {
+    let mapped = 0;
+    for (const c of contacts) {
+      if (c.lid && c.id) {
+        lidToJid.set(c.lid, c.id);
+        mapped++;
+      }
+    }
+    if (mapped > 0) log.info(`📇 Mapped ${mapped} LID(s) to real JIDs (total: ${lidToJid.size})`);
+  });
 
   // ── Connection state ──────────────────────────────────────────────────────
   sock.ev.on('connection.update', (update) => {
@@ -259,31 +277,25 @@ export async function forceRelink() {
 /**
  * Send a plain-text message.
  * `to` must be a valid JID: @s.whatsapp.net, @g.us, or @lid.
- * @lid JIDs (multi-device linked IDs) are resolved to @s.whatsapp.net
- * before sending — WhatsApp silently drops replies to @lid in some sessions.
+ *
+ * @lid JIDs are multi-device linked-device identifiers — NOT phone numbers.
+ * We resolve them using the lidToJid map populated from contacts.upsert.
+ * Groups (@g.us) are passed through unchanged.
  */
 export async function sendMessage(to, text) {
   if (!sock) throw new Error('Socket not ready');
   let jid = to.includes('@') ? to : `${to}@s.whatsapp.net`;
 
-  // Resolve @lid → @s.whatsapp.net for reliable 1:1 delivery.
-  // Groups (@g.us) are passed through unchanged.
-  if (jid.endsWith('@lid') && !jid.endsWith('@g.us')) {
-    try {
-      const resolved = await sock.onWhatsApp(jid);
-      if (resolved?.[0]?.jid) {
-        log.info(`✉ Resolved @lid → ${resolved[0].jid}`);
-        jid = resolved[0].jid;
-      } else {
-        // Fallback: strip @lid and use @s.whatsapp.net
-        const num = jid.replace('@lid', '');
-        if (/^\d+$/.test(num)) {
-          jid = `${num}@s.whatsapp.net`;
-          log.warn(`✉ @lid resolve returned empty — fallback to ${jid}`);
-        }
-      }
-    } catch (err) {
-      log.warn(`✉ @lid resolution failed (${err.message}) — sending to original JID`);
+  if (jid.endsWith('@lid')) {
+    const resolved = lidToJid.get(jid);
+    if (resolved) {
+      log.info(`✉ Resolved @lid → ${resolved}`);
+      jid = resolved;
+    } else {
+      // LID not in map yet (contact sync not yet received for this user).
+      // Keep the original @lid — Baileys will attempt delivery and usually
+      // succeeds once the session is fully established.
+      log.warn(`✉ @lid ${jid} not in contact map yet — sending as-is (may fail on fresh session)`);
     }
   }
 
