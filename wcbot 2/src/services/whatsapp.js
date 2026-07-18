@@ -33,10 +33,13 @@ const SESSION_TXT = path.join(__dirname, '..', 'session_data.txt');
 export let activeQr = null;
 let sock = null;
 
-// Maps @lid JIDs → real @s.whatsapp.net JIDs.
-// Populated from contacts.upsert at session sync — this is the only reliable
-// way to resolve multi-device LIDs since they are device IDs, not phone numbers.
+// Maps @lid JIDs → real @s.whatsapp.net JIDs (from contacts.upsert).
 const lidToJid = new Map();
+
+// Caches the last received Baileys message object per JID.
+// Used to reply with { quoted: msg } so Baileys routes correctly
+// regardless of @lid vs @s.whatsapp.net addressing.
+const lastMsgPerJid = new Map();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Session helpers
@@ -205,6 +208,10 @@ async function connect() {
 
         log.info(`📨 raw from remoteJid=${msg.key.remoteJid}`);
 
+        // Cache the raw Baileys message for quoted-reply routing (see sendMessage).
+        // Baileys uses contextInfo from the quoted message to route replies correctly
+        // even when the sender JID is an @lid device identifier.
+        lastMsgPerJid.set(replyJid, msg);
 
         // ── Extract text ────────────────────────────────────────────────────
         const mc = msg.message?.ephemeralMessage?.message
@@ -275,27 +282,39 @@ export async function forceRelink() {
 }
 
 /**
- * Send a plain-text message.
- * `to` must be a valid JID: @s.whatsapp.net, @g.us, or @lid.
+ * Send a plain-text message to a JID.
  *
- * @lid JIDs are multi-device linked-device identifiers — NOT phone numbers.
- * We resolve them using the lidToJid map populated from contacts.upsert.
- * Groups (@g.us) are passed through unchanged.
+ * For @lid JIDs (multi-device linked-device IDs, not phone numbers), Baileys
+ * cannot route an outbound sendMessage reliably. The fix: if we have the last
+ * received message from this JID cached, we reply with { quoted: originalMsg }
+ * which lets Baileys use the message's own routing context — bypassing the
+ * @lid resolution problem entirely.
+ *
+ * Fallback chain for @lid when no cached message exists:
+ *   1. Check lidToJid map (populated from contacts.upsert)
+ *   2. Send to @lid as-is (works once the session is fully established)
  */
 export async function sendMessage(to, text) {
   if (!sock) throw new Error('Socket not ready');
   let jid = to.includes('@') ? to : `${to}@s.whatsapp.net`;
 
   if (jid.endsWith('@lid')) {
+    // ── Preferred: reply using the original message context ──────────────────
+    const originalMsg = lastMsgPerJid.get(jid);
+    if (originalMsg) {
+      log.info(`✉ @lid reply via quoted-message routing → ${jid}`);
+      await sock.sendMessage(jid, { text }, { quoted: originalMsg });
+      log.info(`✉ → ${jid}: ${text.slice(0, 80).replace(/\n/g, ' ')}…`);
+      return;
+    }
+
+    // ── Fallback: contacts.upsert map ────────────────────────────────────────
     const resolved = lidToJid.get(jid);
     if (resolved) {
-      log.info(`✉ Resolved @lid → ${resolved}`);
+      log.info(`✉ Resolved @lid → ${resolved} (contacts map)`);
       jid = resolved;
     } else {
-      // LID not in map yet (contact sync not yet received for this user).
-      // Keep the original @lid — Baileys will attempt delivery and usually
-      // succeeds once the session is fully established.
-      log.warn(`✉ @lid ${jid} not in contact map yet — sending as-is (may fail on fresh session)`);
+      log.warn(`✉ @lid ${jid} — no cached msg or contacts map entry, sending as-is`);
     }
   }
 
