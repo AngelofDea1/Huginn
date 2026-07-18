@@ -83,11 +83,16 @@ export async function loadGroupsFromRedis() {
   try {
     const list = await getAllPersistedGroups();
     for (const g of list) {
-      groups.set(g.id, {
-        name: g.name,
-        style: g.style,
-        followedMatchIds: g.followedMatchIds
-      });
+      const entry = {
+        name:             g.name,
+        style:            g.style,
+        followedMatchIds: g.followedMatchIds,
+      };
+      // Restore sweepstake if it was persisted
+      if (g.sweepstake) {
+        entry.sweepstake = g.sweepstake;
+      }
+      groups.set(g.id, entry);
     }
     console.log(`Loaded ${list.length} groups/private chats from Redis.`);
   } catch (err) {

@@ -101,7 +101,7 @@ async function routeWebCommand(sessionId, text) {
   if (lower.startsWith('/unfollow') || lower.startsWith('unfollow')) {
     return handleUnfollow(sessionId, text);
   }
-  if (lower.startsWith('/style') || lower.startsWith('style')) {
+  if (lower.startsWith('/style') || lower.startsWith('/vibe') || lower.startsWith('style') || lower.startsWith('vibe')) {
     return handleStyle(sessionId, text);
   }
   if (lower === '/status' || lower === 'status') {
@@ -208,7 +208,7 @@ async function handleUnfollow(sessionId, text) {
 }
 
 async function handleStyle(sessionId, text) {
-  const mode = text.replace(/\/?(style)\s*/i, '').trim().toLowerCase();
+  const mode = text.replace(/\/?(style|vibe)\s*/i, '').trim().toLowerCase();
   const valid = Object.keys(STYLES);
 
   if (!valid.includes(mode)) {

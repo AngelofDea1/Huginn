@@ -195,12 +195,24 @@ const groupKey = (groupId) => `wagroup:${groupId}`;
 
 export async function persistGroup(groupId, groupData) {
   try {
-    // Save to Redis (automatically serializes object structure)
-    await redis.set(groupKey(groupId), {
-      name: groupData.name,
-      style: groupData.style,
-      followedMatchIds: [...groupData.followedMatchIds]
-    });
+    const payload = {
+      name:             groupData.name,
+      style:            groupData.style,
+      followedMatchIds: [...groupData.followedMatchIds],
+    };
+
+    // Persist sweepstake state if it exists so it survives restarts.
+    // Standings and assignments are plain objects — safe to JSON-serialize.
+    if (groupData.sweepstake) {
+      payload.sweepstake = {
+        status:       groupData.sweepstake.status,
+        participants: groupData.sweepstake.participants || [],
+        assignments:  groupData.sweepstake.assignments || {},
+        standings:    groupData.sweepstake.standings   || {},
+      };
+    }
+
+    await redis.set(groupKey(groupId), payload);
   } catch (err) {
     log.error(`Failed to persist group ${groupId} to Redis:`, err.message);
   }
@@ -229,10 +241,12 @@ export async function getAllPersistedGroups() {
             const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
             const groupId = key.replace('wagroup:', '');
             results.push({
-              id: groupId,
-              name: data.name,
-              style: data.style || 'hype',
-              followedMatchIds: new Set(data.followedMatchIds || [])
+              id:              groupId,
+              name:            data.name,
+              style:           data.style || 'hype',
+              followedMatchIds: new Set(data.followedMatchIds || []),
+              // Restore sweepstake state if it was persisted
+              sweepstake:      data.sweepstake || null,
             });
           }
         } catch {}

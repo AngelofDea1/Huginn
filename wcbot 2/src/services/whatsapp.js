@@ -312,8 +312,9 @@ async function connect() {
         const mentionedJids = mc.extendedTextMessage?.contextInfo?.mentionedJid || [];
         const botMentioned  = mentionedJids.some(j => selfJids.has(j));
 
-        // Group guard: slash commands only — @mentions no longer trigger the bot
-        if (isGroup && !text.startsWith('/')) continue;
+        // Group guard: only respond in groups if the message starts with / OR the bot was @mentioned.
+        // @mention support allows users to send "@Huginn /live" or "@Huginn who is winning?" naturally.
+        if (isGroup && !text.startsWith('/') && !botMentioned) continue;
 
         await routeCommand(replyJid, text, {
           mentionedJids,
@@ -347,14 +348,24 @@ export async function forceRelink() {
 
 /**
  * Send a plain-text message to a JID.
- * Dest JIDs are expected to be resolved @s.whatsapp.net or @g.us JIDs.
+ *
+ * @param {string} to        - Resolved @s.whatsapp.net or @g.us JID.
+ * @param {string} text      - Message body.
+ * @param {boolean} broadcast - When true, sends without quoting the user's last message.
+ *                              Use broadcast=true for all automated push alerts (goals,
+ *                              cards, HT/FT reports) so they don't quote a random user.
+ *                              Leave false (default) for direct command replies so the
+ *                              reply is visually threaded to the user's command.
  */
-export async function sendMessage(to, text) {
+export async function sendMessage(to, text, broadcast = false) {
   if (!sock) throw new Error('Socket not ready');
   const jid = to.includes('@') ? to : `${to}@s.whatsapp.net`;
 
-  log.info(`✉ Sending to jid: ${jid}`);
-  const originalMsg = lastMsgPerJid.get(jid);
+  log.info(`✉ Sending to jid: ${jid} (broadcast=${broadcast})`);
+
+  // Only quote the triggering message for direct user replies, not push alerts.
+  // Broadcasting alerts to groups should always be clean, unquoted messages.
+  const originalMsg = broadcast ? null : lastMsgPerJid.get(jid);
   if (originalMsg) {
     await sock.sendMessage(jid, { text }, { quoted: originalMsg });
   } else {
@@ -417,7 +428,8 @@ export async function broadcast(recipients, text) {
   const webResults = webSessions.map(id => ({ status: 'fulfilled', value: undefined }));
   if (!valid.length) return webResults;
 
-  const results = await Promise.allSettled(valid.map(id => sendMessage(id, text)));
+  // broadcast=true: automated alerts must never quote a previous group member's message.
+  const results = await Promise.allSettled(valid.map(id => sendMessage(id, text, true)));
   const failed  = results.filter(r => r.status === 'rejected').length;
   if (failed) log.warn(`broadcast: ${failed}/${valid.length} failed`);
   return [...webResults, ...results];

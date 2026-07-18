@@ -79,7 +79,7 @@ export async function routeCommand(from, text, meta = {}) {
 
   if (lower.startsWith('/follow'))                              return handleFollow(from, cleanText);
   if (lower.startsWith('/unfollow'))                            return handleUnfollow(from, cleanText);
-  if (lower.startsWith('/style'))                               return handleStyle(from, cleanText);
+  if (lower.startsWith('/style') || lower.startsWith('/vibe'))          return handleStyle(from, cleanText);
   if (lower === '/help' || lower === '/start' || lower === 'hi' || lower === 'hello') return handleHelp(from);
   if (lower === '/status')                                      return handleStatus(from);
   if (lower === '/schedule' || lower === '/fixtures' || lower === '/upcoming') return handleSchedule(from);
@@ -246,7 +246,7 @@ async function handleUnfollow(from, text) {
 
 // /style <mode>
 async function handleStyle(from, text) {
-  const mode = text.replace(/\/style\s*/i, '').trim().toLowerCase();
+  const mode = text.replace(/\/(style|vibe)\s*/i, '').trim().toLowerCase();
   const valid = Object.keys(STYLES);
 
   if (!valid.includes(mode)) {

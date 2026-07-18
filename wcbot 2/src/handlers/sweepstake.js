@@ -1,5 +1,6 @@
-import { getGroup, registerGroup } from '../utils/store.js';
+import { getGroup, registerGroup, getAllGroups } from '../utils/store.js';
 import { sendMessage } from '../services/whatsapp.js';
+import { persistGroup } from '../utils/db.js';
 
 // Hardcoded World Cup 2026 nations for the draft
 const WORLD_CUP_TEAMS = [
@@ -54,7 +55,7 @@ export async function handleSweepstakeCommand(from, text) {
   );
 }
 
-function startSweepstake(from, group) {
+async function startSweepstake(from, group) {
   if (group.sweepstake.status !== 'none') {
     return sendMessage(from, `⚠️ A sweepstake is already active or in signup phase in this group. Type */sweepstake draw* to run the draft or check the scoreboard with */sweepstake leaderboard*.`);
   }
@@ -66,13 +67,16 @@ function startSweepstake(from, group) {
     standings: {}
   };
 
+  // Persist immediately so a restart doesn't lose the open signup
+  await persistGroup(from, group);
+
   return sendMessage(from,
     `🏆 *World Cup Group Sweepstake Started!*\n\n` +
     `Type */sweepstake join <Your Name>* to join the draft. All group members who want to participate must join now!`
   );
 }
 
-function joinSweepstake(from, group, name) {
+async function joinSweepstake(from, group, name) {
   if (group.sweepstake.status !== 'joining') {
     return sendMessage(from, `⚠️ Signups are closed. Start a new sweepstake first with */sweepstake start*.`);
   }
@@ -87,10 +91,12 @@ function joinSweepstake(from, group, name) {
   }
 
   group.sweepstake.participants.push({ jid: from, name });
+  // Persist so a restart doesn't lose who joined
+  await persistGroup(from, group);
   return sendMessage(from, `✅ *${name}* joined! (Total players: ${group.sweepstake.participants.length})`);
 }
 
-function drawSweepstake(from, group) {
+async function drawSweepstake(from, group) {
   if (group.sweepstake.status !== 'joining') {
     return sendMessage(from, `⚠️ There is no sweepstake in the signup phase. Start one with */sweepstake start*.`);
   }
@@ -120,6 +126,9 @@ function drawSweepstake(from, group) {
   group.sweepstake.status = 'active';
   group.sweepstake.assignments = assignments;
   group.sweepstake.standings = standings;
+
+  // Persist the completed draw immediately — this is the most critical save point
+  await persistGroup(from, group);
 
   let msg = `🏆 *The World Cup Sweepstake Draw is complete!* 🏆\n\nHere are your team assignments:\n\n`;
   players.forEach(p => {
@@ -152,17 +161,18 @@ function showLeaderboard(from, group) {
 }
 
 /**
- * Update points for all active sweepstakes when a match finishes
+ * Update points for all active sweepstakes when a match finishes.
+ * Called by matchPoller.js at Full-Time.
  */
 export async function processMatchEndPoints(homeTeam, awayTeam, homeScore, awayScore) {
-  const { getAllGroups } = await import('../utils/store.js');
   const allGroups = getAllGroups();
 
   for (const group of allGroups) {
     if (!group.sweepstake || group.sweepstake.status !== 'active') continue;
 
-    const standings = group.sweepstake.standings;
+    const standings   = group.sweepstake.standings;
     const assignments = group.sweepstake.assignments;
+    let changed = false;
 
     // Award points to owners of the teams
     Object.keys(assignments).forEach(jid => {
@@ -173,6 +183,7 @@ export async function processMatchEndPoints(homeTeam, awayTeam, homeScore, awayS
         if (homeScore > awayScore) standings[jid] = (standings[jid] || 0) + 3; // Win
         else if (homeScore === awayScore) standings[jid] = (standings[jid] || 0) + 1; // Draw
         standings[jid] = (standings[jid] || 0) + homeScore; // Goal bonus (1pt per goal)
+        changed = true;
       }
 
       // If they own away team
@@ -180,7 +191,18 @@ export async function processMatchEndPoints(homeTeam, awayTeam, homeScore, awayS
         if (awayScore > homeScore) standings[jid] = (standings[jid] || 0) + 3; // Win
         else if (homeScore === awayScore) standings[jid] = (standings[jid] || 0) + 1; // Draw
         standings[jid] = (standings[jid] || 0) + awayScore; // Goal bonus (1pt per goal)
+        changed = true;
       }
     });
+
+    // Persist updated standings to Redis if any points were awarded
+    if (changed) {
+      try {
+        await persistGroup(group.id, group);
+      } catch (err) {
+        // Non-fatal: log but don't crash the FT alert pipeline
+        console.error(`[Sweepstake] Failed to persist standings for group ${group.id}:`, err.message);
+      }
+    }
   }
 }
