@@ -212,6 +212,10 @@ export async function persistGroup(groupId, groupData) {
       };
     }
 
+    if (groupData.matchPredictions) {
+      payload.matchPredictions = groupData.matchPredictions;
+    }
+
     await redis.set(groupKey(groupId), payload);
   } catch (err) {
     log.error(`Failed to persist group ${groupId} to Redis:`, err.message);
@@ -247,6 +251,7 @@ export async function getAllPersistedGroups() {
               followedMatchIds: new Set(data.followedMatchIds || []),
               // Restore sweepstake state if it was persisted
               sweepstake:      data.sweepstake || null,
+              matchPredictions: data.matchPredictions || null,
             });
           }
         } catch {}

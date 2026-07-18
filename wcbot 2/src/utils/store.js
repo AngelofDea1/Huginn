@@ -89,8 +89,8 @@ export async function loadGroupsFromRedis() {
         followedMatchIds: g.followedMatchIds,
       };
       // Restore predictions if persisted
-      if (g.predictions) {
-        entry.predictions = g.predictions;
+      if (g.matchPredictions) {
+        entry.matchPredictions = g.matchPredictions;
       }
       groups.set(g.id, entry);
     }

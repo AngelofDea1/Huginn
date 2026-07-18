@@ -272,8 +272,14 @@ export async function answerFootballQuestion(question, matchContext = '', vibe =
 
     return reply;
   } catch (err) {
-    console.error('Groq Oracle Error:', err.response?.data || err.message);
-    return `Something went wrong.\n\nTry asking again.`;
+    const apiError = err.response?.data?.error;
+    console.error('Groq Oracle Error:', apiError || err.message);
+    
+    if (apiError?.code === 'invalid_api_key' || err.response?.status === 401) {
+      return '⚽ Hold up! My Groq API key is invalid or expired. The manager needs to update it in the .env file before I can give tactical analysis!';
+    }
+    
+    return '⚽ Sorry, I hit a tactical foul. Try asking again!';
   }
 }
 

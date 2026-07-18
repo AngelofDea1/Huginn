@@ -765,13 +765,12 @@ async function processMatch(match, groups) {
       log.info(`Poller sending FT push to ${pushSubs.length} subscribers.`);
       await sendPushNotification('Full-time', `${homeTeam} ${currentHome}-${currentAway} ${awayTeam}`, '/', pushSubs);
 
-      // Predict points
+      // Predict outcomes
       try {
-        const { processPredictionPoints } = await import('../handlers/predict.js');
-        const round = match.round || 'group_stage';
-        await processPredictionPoints(homeTeam, awayTeam, currentHome, currentAway, round);
+        const { processMatchPredictions } = await import('../handlers/predict.js');
+        await processMatchPredictions(matchId, homeTeam, awayTeam, currentHome, currentAway);
       } catch (e) {
-        log.error('Prediction points failed:', e.message);
+        log.error('Prediction processing failed:', e.message);
       }
     } catch (err) {
       log.error('FT report failed:', err.message);

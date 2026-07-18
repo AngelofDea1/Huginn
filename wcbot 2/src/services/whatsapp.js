@@ -366,15 +366,21 @@ export async function sendMessage(to, text, broadcast = false) {
 
   log.info(`✉ Sending to jid: ${jid} (broadcast=${broadcast})`);
 
-  // Look up the last raw message received from this user.
-  // This is CRITICAL for 1:1 chats because incoming messages from multi-device users
-  // arrive with an @lid identifier. Even though we resolve it to their phone number (@s.whatsapp.net)
-  // for our databases, WhatsApp demands that we send the reply back to the @lid chat ID.
   const recentMsg = lastMsgPerJid.get(jid);
-  const targetJid = recentMsg ? recentMsg.key.remoteJid : jid;
+  
+  // Use the resolved JID directly (e.g. phone number or group ID)
+  // instead of falling back to the raw LID from the recent message.
+  // Sending directly to the phone number bypasses LID routing issues.
+  const targetJid = jid;
   
   // Only quote the triggering message for direct user replies, not push alerts.
-  const originalMsg = broadcast ? null : recentMsg;
+  let originalMsg = broadcast ? null : recentMsg;
+
+  // If we are sending to a 1:1 phone number JID but the original message used an LID,
+  // we do not quote it to avoid WhatsApp client linkage errors or message drops.
+  if (originalMsg && jid.endsWith('@s.whatsapp.net') && originalMsg.key.remoteJid?.endsWith('@lid')) {
+    originalMsg = null;
+  }
 
   if (originalMsg) {
     await sock.sendMessage(targetJid, { text }, { quoted: originalMsg });

@@ -1,25 +1,22 @@
 import { getGroup, getAllGroups } from '../utils/store.js';
 import { persistGroup } from '../utils/subscriptionStore.js';
 import { sendMessage } from '../services/whatsapp.js';
+import { getFixtureSchedule } from '../services/txline.js';
 
 export async function handlePredictCommand(from, senderJid, pushName, args) {
   let group = getGroup(from);
   
   // Ensure predictions state object exists
-  if (!group.predictions) {
-    group.predictions = {
-      participants: [] // { jid, name, team, points, status: 'still in' | 'eliminated' }
-    };
+  if (!group.matchPredictions) {
+    group.matchPredictions = {}; // { [matchId]: { participants: [{ jid, name, predictedTeam }] } }
   }
 
   const subCommand = args[0] ? args[0].toLowerCase() : '';
 
   if (subCommand === 'list') {
     return showPredictionList(from, group);
-  } else if (subCommand === 'leaderboard') {
-    return showLeaderboard(from, group);
   } else if (subCommand === '') {
-    return sendMessage(from, `⚠️ Send */predict <team>* to lock in your tournament champion (e.g. */predict brazil*).\n\nOther commands:\n*/predict list*\n*/predict leaderboard*`);
+    return sendMessage(from, `⚠️ Send */predict <team>* to lock in your pick for their upcoming match (e.g. */predict brazil*).\n\nOther commands:\n*/predict list*`);
   } else {
     // Treat the arguments as the team name
     const teamName = args.join(' ').toLowerCase();
@@ -28,133 +25,154 @@ export async function handlePredictCommand(from, senderJid, pushName, args) {
 }
 
 async function lockPrediction(from, jid, pushName, teamName, group) {
-  // Check if already locked in
-  const existing = group.predictions.participants.find(p => p.jid === jid);
-  if (existing) {
-    return sendMessage(from, `⚠️ Your pick is already locked in: *${existing.team}*\nYou cannot change your prediction once submitted.`);
-  }
-
-  // Validate team name (basic check for empty or just garbage)
+  // Validate team name
   if (teamName.length < 3) {
     return sendMessage(from, `⚠️ Invalid team name. Please enter a valid country name (e.g. */predict argentina*).`);
   }
 
+  // Fetch upcoming matches
+  const schedule = await getFixtureSchedule();
+  
+  // Find the next match for this team
+  const nextMatch = schedule.find(m => 
+    m.home_team.name.toLowerCase().includes(teamName) || 
+    m.away_team.name.toLowerCase().includes(teamName)
+  );
+
+  if (!nextMatch) {
+    return sendMessage(from, `⚠️ Could not find any upcoming matches for *${teamName}*.`);
+  }
+
+  const matchId = nextMatch.id;
+  
+  // Initialize match array if needed
+  if (!group.matchPredictions[matchId]) {
+    group.matchPredictions[matchId] = { participants: [] };
+  }
+
+  const matchParticipants = group.matchPredictions[matchId].participants;
+
+  // Check if already locked in
+  const existing = matchParticipants.find(p => p.jid === jid);
+  if (existing) {
+    return sendMessage(from, `⚠️ You already predicted *${existing.predictedTeam}* for ${nextMatch.home_team.name} vs ${nextMatch.away_team.name}.`);
+  }
+
+  // The user might have typed 'arg', but we want to store the actual team name
+  const actualTeamName = nextMatch.home_team.name.toLowerCase().includes(teamName) ? nextMatch.home_team.name : nextMatch.away_team.name;
+
   // Add prediction
-  group.predictions.participants.push({
+  matchParticipants.push({
     jid,
     name: pushName || 'Unknown',
-    team: teamName,
-    points: 0,
-    status: 'still in'
+    predictedTeam: actualTeamName
   });
 
   // Persist
   await persistGroup(from, group);
 
-  return sendMessage(from, `✅ locked in: *${teamName}* to win it all`);
+  return sendMessage(from, `✅ Locked in: *${actualTeamName}* to win ${nextMatch.home_team.name} vs ${nextMatch.away_team.name}`);
 }
 
-function showPredictionList(from, group) {
-  const participants = group.predictions.participants;
-  if (!participants || participants.length === 0) {
+async function showPredictionList(from, group) {
+  if (!group.matchPredictions || Object.keys(group.matchPredictions).length === 0) {
     return sendMessage(from, `No predictions locked in yet! Be the first: */predict <team>*`);
   }
 
-  // Group by team
-  const teamsMap = {};
-  participants.forEach(p => {
-    if (!teamsMap[p.team]) teamsMap[p.team] = [];
-    teamsMap[p.team].push(p.name);
-  });
+  const schedule = await getFixtureSchedule();
+  let msg = `🔮 *Predictions so far:*\n\n`;
+  let hasPredictions = false;
 
-  let msg = `🔮 *the calls so far:*\n\n`;
-  for (const [team, names] of Object.entries(teamsMap)) {
-    msg += `*${team}* → ${names.join(', ')}\n`;
+  for (const [matchId, matchData] of Object.entries(group.matchPredictions)) {
+    const participants = matchData.participants;
+    if (!participants || participants.length === 0) continue;
+
+    // Find match details from schedule to get team names
+    const match = schedule.find(m => m.id === matchId);
+    const matchTitle = match ? `${match.home_team.name} vs ${match.away_team.name}` : `Match ${matchId}`;
+
+    msg += `*${matchTitle}*\n`;
+    
+    // Group by team
+    const teamsMap = {};
+    participants.forEach(p => {
+      if (!teamsMap[p.predictedTeam]) teamsMap[p.predictedTeam] = [];
+      teamsMap[p.predictedTeam].push(p.name);
+    });
+
+    for (const [team, names] of Object.entries(teamsMap)) {
+      msg += `  ${team} → ${names.join(', ')}\n`;
+    }
+    msg += '\n';
+    hasPredictions = true;
   }
 
-  return sendMessage(from, msg);
-}
-
-function showLeaderboard(from, group) {
-  const participants = group.predictions.participants;
-  if (!participants || participants.length === 0) {
-    return sendMessage(from, `No predictions locked in yet!`);
+  if (!hasPredictions) {
+    return sendMessage(from, `No predictions locked in yet! Be the first: */predict <team>*`);
   }
 
-  const sorted = [...participants].sort((a, b) => b.points - a.points);
-
-  let msg = `🏆 *Huginn Predict Leaderboard* 🏆\n\n`;
-  sorted.forEach((p, idx) => {
-    const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '👤';
-    msg += `${medal} ${p.name} · ${p.team} (${p.status}) · ${p.points} pts\n`;
-  });
-
-  return sendMessage(from, msg);
+  return sendMessage(from, msg.trim());
 }
 
 /**
- * Update points for all active predictions when a match finishes.
+ * Announce prediction results when a match finishes.
  * Called by matchPoller.js at Full-Time.
- * @param {string} homeTeam 
- * @param {string} awayTeam 
- * @param {number} homeScore 
- * @param {number} awayScore 
- * @param {string} round 'quarter_final', 'semi_final', 'final', etc.
  */
-export async function processPredictionPoints(homeTeam, awayTeam, homeScore, awayScore, round) {
+export async function processMatchPredictions(matchId, homeTeam, awayTeam, homeScore, awayScore) {
   const allGroups = getAllGroups();
 
-  const home = homeTeam.toLowerCase();
-  const away = awayTeam.toLowerCase();
-
   let winner = null;
-  let loser = null;
-
   if (homeScore > awayScore) {
-    winner = home;
-    loser = away;
+    winner = homeTeam.toLowerCase();
   } else if (awayScore > homeScore) {
-    winner = away;
-    loser = home;
-  }
-
-  // Determine points to award based on round
-  let pointsToAward = 0;
-  if (round === 'quarter_final') {
-    pointsToAward = 2; // Reached semi-final
-  } else if (round === 'semi_final') {
-    pointsToAward = 4; // Reached final
-  } else if (round === 'final') {
-    pointsToAward = 10; // Won tournament
+    winner = awayTeam.toLowerCase();
   }
 
   for (const group of allGroups) {
-    if (!group.predictions || !group.predictions.participants || !group.predictions.participants.length) continue;
+    if (!group.matchPredictions || !group.matchPredictions[matchId]) continue;
 
-    let changed = false;
+    const participants = group.matchPredictions[matchId].participants;
+    if (!participants || participants.length === 0) continue;
 
-    group.predictions.participants.forEach(p => {
-      const pickedTeam = p.team.toLowerCase();
+    let winners = [];
+    let losers = [];
 
-      // If their team won and we have points to award
-      if (winner && pickedTeam === winner && pointsToAward > 0) {
-        p.points += pointsToAward;
-        changed = true;
-      }
-
-      // If their team played and lost, they are eliminated
-      if (loser && pickedTeam === loser && p.status !== 'eliminated') {
-        p.status = 'eliminated';
-        changed = true;
+    participants.forEach(p => {
+      const picked = p.predictedTeam.toLowerCase();
+      if (winner && picked === winner) {
+        winners.push(p.name);
+      } else {
+        losers.push({ name: p.name, team: p.predictedTeam });
       }
     });
 
-    if (changed) {
-      try {
-        await persistGroup(group.id, group);
-      } catch (err) {
-        console.error(`[Predict] Failed to persist points for group ${group.id}:`, err.message);
+    let msg = `🎯 *Prediction Results: ${homeTeam} ${homeScore}-${awayScore} ${awayTeam}*\n\n`;
+
+    if (winner) {
+      if (winners.length > 0) {
+        msg += `✅ *Nailed it!* Congrats to: ${winners.join(', ')}\n\n`;
+      } else {
+        msg += `❌ Nobody predicted ${winner} to win!\n\n`;
       }
+      
+      if (losers.length > 0) {
+        msg += `💔 Better luck next time:\n`;
+        losers.forEach(l => {
+          msg += `- ${l.name} (picked ${l.team})\n`;
+        });
+      }
+    } else {
+      // Draw
+      msg += `🤝 It's a draw! Nobody wins this prediction round.`;
+    }
+
+    try {
+      await sendMessage(group.id, msg);
+      // Optional: Clear predictions for this match so it doesn't clutter state
+      delete group.matchPredictions[matchId];
+      await persistGroup(group.id, group);
+    } catch (err) {
+      console.error(`[Predict] Failed to send prediction results for group ${group.id}:`, err.message);
     }
   }
 }
