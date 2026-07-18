@@ -55,6 +55,15 @@ export async function routeCommand(from, text, meta = {}) {
     const botNumber = botJid.replace(/@.*/, '');
     // Remove @PHONENUMBER from anywhere in the string, then trim
     cleanText = text.replace(new RegExp(`@${botNumber}\\s*`, 'g'), '').trim();
+
+    // Safety net: if stripping left a phone number prefix before a slash command
+    // (e.g. "2349026755711 /sweepstake"), extract from the first '/' onwards.
+    // This handles cases where the mention JID format doesn't exactly match the
+    // regex pattern — the slash command is always recoverable this way.
+    if (!cleanText.startsWith('/') && cleanText.includes('/')) {
+      cleanText = cleanText.slice(cleanText.indexOf('/')).trim();
+    }
+
     // If nothing remains after stripping the mention, send help
     if (!cleanText) cleanText = '/help';
   }
@@ -85,7 +94,16 @@ export async function routeCommand(from, text, meta = {}) {
     return handleSweepstakeCommand(from, cleanText);
   }
 
-  // Catch-all: AI Football Oracle (only in direct/private chats; group chats are blocked above)
+  // Catch-all: AI Football Oracle
+  // Only fires in 1:1 DMs (never in group chats — groups only accept /commands and @mentions).
+  // In a group if we reached here it means an unknown command was sent — show help instead.
+  if (from.endsWith('@g.us')) {
+    return sendMessage(from,
+      `❓ Unknown command. Type */help* to see what I can do.\n\n` +
+      `In groups, I only respond to /commands or when you @mention me.`
+    );
+  }
+
   try {
     const { answerFootballQuestion } = await import('../services/ai.js');
     const { getLiveMatches, getUpcomingMatches } = await import('../services/txline.js');
