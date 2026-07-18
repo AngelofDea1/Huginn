@@ -2,7 +2,6 @@ import { searchMatch, getFixtureSchedule, getMatchDetail, getLiveMatches, getUpc
 import { sendMessage } from '../services/whatsapp.js';
 import {
   registerGroup, getGroup, setGroupStyle,
-  followMatch, unfollowMatch, initMatchState, seedMatchEvents
 } from '../utils/store.js';
 import {
   hasBeenWelcomed, markWelcomed
@@ -230,7 +229,6 @@ async function handleFollow(from, text) {
     try {
       const detail = await getMatchDetail(String(m.id));
       if (detail?.events?.length) {
-        seedMatchEvents(String(m.id), detail.events);
         log.info(`[follow] Seeded ${detail.events.length} existing events for match ${m.id}`);
       }
     } catch (e) {
