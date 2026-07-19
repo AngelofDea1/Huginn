@@ -168,17 +168,17 @@ export default function LiveChatPage() {
     }
   }, []);
 
-  // ── Auto-refresh: 10s when any match is live, 30s otherwise ─────────────────
+  // ── Auto-refresh: 2s when any match is live, 10s otherwise ─────────────────
   useEffect(() => {
     const hasLive = fixtures.some((f) => f.status === "LIVE");
-    const interval = setInterval(fetchScores, hasLive ? 10_000 : 30_000);
+    const interval = setInterval(fetchScores, hasLive ? 2000 : 10000);
     return () => clearInterval(interval);
   }, [fixtures, fetchScores]);
 
-  // ── Periodic background message synchronization ──────────────────────────────
+  // ── Periodic background message synchronization (2s) ─────────────────────────
   useEffect(() => {
     syncMessages();
-    const interval = setInterval(syncMessages, 4000);
+    const interval = setInterval(syncMessages, 2000);
     return () => clearInterval(interval);
   }, [syncMessages]);
 
