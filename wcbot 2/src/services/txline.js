@@ -16,23 +16,47 @@ async function getHeaders() {
 export async function getAllFixtures() {
   const headers = await getHeaders();
   const { data } = await axios.get(`${BASE_URL}/fixtures/snapshot`, { headers });
-  if (!data) return [];
+  let fixtures = [];
+  if (data) {
+    fixtures = data.map(m => {
+      const home_score = m.Score?.Participant1?.Total?.Goals || 0;
+      const away_score = m.Score?.Participant2?.Total?.Goals || 0;
+      const minute = m.Clock?.Seconds ? Math.floor(m.Clock.Seconds / 60) : 0;
+      return {
+        id: m.FixtureId,
+        home_team: { name: m.Participant1 },
+        away_team: { name: m.Participant2 },
+        home_score,
+        away_score,
+        minute,
+        kickoff_time: m.StartTime ? new Date(m.StartTime).toISOString() : new Date().toISOString(),
+        status: m.GameState === 'live' || m.GameState === 2 || m.GameState === 3 ? 'LIVE' : (m.Phase === 5 ? 'FT' : 'NS')
+      };
+    });
+  }
+
+  // INJECT DEMO MATCH (France vs England)
+  const now = new Date();
+  const targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 30, 0, 0);
   
-  return data.map(m => {
-    const home_score = m.Score?.Participant1?.Total?.Goals || 0;
-    const away_score = m.Score?.Participant2?.Total?.Goals || 0;
-    const minute = m.Clock?.Seconds ? Math.floor(m.Clock.Seconds / 60) : 0;
-    return {
-      id: m.FixtureId,
-      home_team: { name: m.Participant1 },
-      away_team: { name: m.Participant2 },
-      home_score,
-      away_score,
-      minute,
-      kickoff_time: m.StartTime ? new Date(m.StartTime).toISOString() : new Date().toISOString(),
-      status: m.GameState === 'live' || m.GameState === 2 || m.GameState === 3 ? 'LIVE' : (m.Phase === 5 ? 'FT' : 'NS')
-    };
+  // Calculate status based on simulator
+  let status = 'NS';
+  if (Date.now() >= targetDate.getTime()) {
+    status = 'LIVE';
+  }
+
+  fixtures.push({
+    id: 18257865,
+    home_team: { name: 'France' },
+    away_team: { name: 'England' },
+    home_score: 0,
+    away_score: 0,
+    minute: status === 'LIVE' ? Math.floor((Date.now() - targetDate.getTime()) / 60000) : 0,
+    kickoff_time: targetDate.toISOString(),
+    status
   });
+
+  return fixtures;
 }
 
 export async function searchMatch(query) {
