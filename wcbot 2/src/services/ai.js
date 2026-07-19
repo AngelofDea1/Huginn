@@ -164,7 +164,7 @@ export async function generateKickoffAlert({ half, homeTeam, awayTeam, vibe = 'h
 match: ${homeTeam} vs ${awayTeam}
 event: ${halfText}
 
-react to this kickoff for a WhatsApp group chat. Build hype for the action about to unfold. No all-caps. Use line breaks.
+react to this kickoff for a WhatsApp group chat. Build hype, but keep it VERY SHORT and punchy (maximum 1 or 2 sentences). Do not write long paragraphs. No all-caps.
 `.trim();
 
   return callGroq(prompt, vibe);
