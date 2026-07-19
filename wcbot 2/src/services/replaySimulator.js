@@ -31,9 +31,10 @@ class ReplaySimulator {
         return;
       }
 
-      // Calculate Target Kickoff (1 minute from now, so user can see it start in real-time)
+      // Calculate Target Kickoff (10:30 AM local time today)
       const now = new Date();
-      this.targetKickoffMs = now.getTime() + (60 * 1000);
+      const targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 30, 0, 0);
+      this.targetKickoffMs = targetDate.getTime();
 
       const firstHalfKickoffEvent = rawData.find(e => e.Action === 'kickoff_team') || rawData[0];
       const originalKickoffMs = firstHalfKickoffEvent.Ts;
