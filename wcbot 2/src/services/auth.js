@@ -15,6 +15,7 @@ export async function getValidToken() {
   log.info("auth", "Fetching new TXLine guest token...");
   try {
     const res = await axios.post('https://txline.txodds.com/auth/guest/start', {}, {
+      timeout: 10000,
       headers: {
         'Content-Type': 'application/json'
       }

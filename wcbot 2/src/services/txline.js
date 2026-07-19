@@ -5,7 +5,7 @@ import { getValidToken, refreshToken } from './auth.js';
 const BASE_URL = process.env.TXLINE_BASE_URL || 'https://txline.txodds.com/api';
 
 // Create an axios instance for TXLine requests
-const txlineClient = axios.create({ baseURL: BASE_URL });
+const txlineClient = axios.create({ baseURL: BASE_URL, timeout: 10000 });
 
 txlineClient.interceptors.response.use(
   (response) => response,
