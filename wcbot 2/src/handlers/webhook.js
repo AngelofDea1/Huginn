@@ -1,7 +1,7 @@
 import { searchMatch, getFixtureSchedule, getMatchDetail, getLiveMatches, getUpcomingMatches } from '../services/txline.js';
 import { sendMessage } from '../services/whatsapp.js';
 import {
-  registerGroup, getGroup, setGroupStyle, followMatch, unfollowMatch
+  registerGroup, getGroup, setGroupStyle, followMatch, unfollowMatch, initMatchState
 } from '../utils/store.js';
 import {
   hasBeenWelcomed, markWelcomed
