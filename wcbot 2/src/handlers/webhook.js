@@ -89,9 +89,17 @@ export async function routeCommand(from, text, meta = {}) {
   if (lower === '/schedule' || lower === '/fixtures' || lower === '/upcoming') return handleSchedule(from);
   if (lower === '/live')                                        return handleLive(from);
   if (lower === '/demogoal') {
-    // Fake a goal event for the first active followed match, or a dummy one
+    const group = getGroup(from);
+    let fixtureId = 123456;
+    if (group && group.followedMatchIds && group.followedMatchIds.size > 0) {
+      fixtureId = Array.from(group.followedMatchIds)[0];
+    } else {
+      return sendMessage(from, "You need to follow a match first! Type /follow Spain");
+    }
+
+    // Fake a goal event for the currently followed match
     sseClient.emit('score_update', {
-      FixtureId: 123456,
+      FixtureId: parseInt(fixtureId),
       Action: "goal",
       Phase: 2,
       Clock: { Seconds: 1440 },
