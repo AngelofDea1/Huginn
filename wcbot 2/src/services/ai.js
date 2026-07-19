@@ -44,6 +44,7 @@ FORMATTING & LANGUAGE (non-negotiable):
 - Do not use bullet points, numbered lists, or headers.
 - Write plain text only. No markdown.
 - Never use em dashes (the — character). Use a comma, a full stop, or a new line instead.
+- ALERTS MUST IDENTIFY THEIR TYPE: Always start the very first line of the message with an explicit, bold identifier and emoji to immediately tell the user what the alert is about. For example: "⚽ *GOAL ALERT*", "🟥 *RED CARD*", "📺 *VAR REVIEW*", "⏱️ *HALF TIME*", "🎉 *FULL TIME*".
 
 ANALYTICAL TAKES:
 - When sharing predictions, tactical analysis, or opinions, sound smart and logical.
@@ -86,7 +87,7 @@ ${scorerLine}
 score now: ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
 current odds: ${odds || 'not available'}
 
-React to this goal for a WhatsApp group. Start with the score and minute if known (${startFormat}). Do not invent or make up a minute if none is specified. Be immediate, real, pundit-style. Keep it VERY SHORT and punchy (maximum 1 or 2 sentences). No all-caps sentences.
+React to this goal for a WhatsApp group. MUST START EXACTLY with a bold identifier like "⚽ *GOAL ALERT* (${minute}')". Do not invent or make up a minute if none is specified. Be immediate, real, pundit-style. Keep it VERY SHORT and punchy (maximum 1 or 2 sentences). No all-caps sentences.
 `.trim();
 
   return callGroq(prompt, vibe);
@@ -118,7 +119,7 @@ match: ${homeTeam} vs ${awayTeam}
 event: VAR Check in progress in ${timeLabel}
 score: ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
 
-react to this VAR review for a WhatsApp group chat. Build suspense! What are they checking? Keep it VERY SHORT and punchy (maximum 1 or 2 sentences). No all-caps.
+React to this VAR review. MUST START EXACTLY with a bold identifier like "📺 *VAR REVIEW* (${minute}')". Explain what might happen based on the score. Keep it VERY SHORT and punchy (maximum 1 or 2 sentences). No all-caps.
 `.trim();
 
   return callGroq(prompt, vibe);

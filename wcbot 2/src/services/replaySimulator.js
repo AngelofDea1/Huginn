@@ -48,28 +48,9 @@ class ReplaySimulator {
       const originalKickoffMs = firstHalfKickoffEvent.Ts;
       const timeShift = this.targetKickoffMs - originalKickoffMs;
 
-      // Reduce halftime gap
-      const htFinalised = rawData.find(e => e.Action === 'halftime_finalised');
-      const secondHalfKickoff = rawData.find(e => e.Action === 'kickoff');
-      
-      let gapReduction = 0;
-      if (htFinalised && secondHalfKickoff) {
-        const rawGap = secondHalfKickoff.Ts - htFinalised.Ts;
-        const standardGap = 15 * 60 * 1000; // 15 mins
-        if (rawGap > standardGap) {
-          gapReduction = rawGap - standardGap;
-        }
-      }
+      this.events = rawData.sort((a, b) => (a.Seq || 0) - (b.Seq || 0));
 
-      this.events = rawData.map(d => {
-        const isSecondHalf = htFinalised && d.Ts > htFinalised.Ts;
-        return {
-          ...d,
-          simulatedTs: d.Ts + timeShift - (isSecondHalf ? gapReduction : 0)
-        };
-      }).sort((a, b) => a.simulatedTs - b.simulatedTs);
-
-      log.info('simulator', `Loaded ${this.events.length} events for 1:1 replay. Target Kickoff: ${new Date(this.targetKickoffMs).toLocaleTimeString()}`);
+      log.info('simulator', `Loaded ${this.events.length} events for Fast-Forward replay.`);
       this.start();
     } catch (err) {
       log.error('simulator', `Failed to initialize replay: ${err.message}`);
@@ -78,19 +59,6 @@ class ReplaySimulator {
 
   start() {
     if (this.events.length === 0) return;
-    
-    // Process any events that should have already happened instantly
-    const now = Date.now();
-    while (this.currentIndex < this.events.length) {
-      const ev = this.events[this.currentIndex];
-      if (ev.simulatedTs <= now) {
-        // Emit silently if it's far in the past to catch up state
-        sseClient.emit('score_update', ev);
-        this.currentIndex++;
-      } else {
-        break;
-      }
-    }
     this.processNextEvent();
   }
 
@@ -101,9 +69,9 @@ class ReplaySimulator {
     }
 
     const nextEvent = this.events[this.currentIndex];
-    const delay = nextEvent.simulatedTs - Date.now();
+    const delay = 2000; // FAST-FORWARD: 2 seconds per event
 
-    log.info('simulator', `Next event '${nextEvent.Action}' scheduled in ${Math.round(delay/1000)}s.`);
+    log.info('simulator', `Next event '${nextEvent.Action}' scheduled in 2s.`);
 
     this.timer = setTimeout(() => {
       try {
