@@ -331,17 +331,6 @@ app.post('/api/reset-follow-state', async (req, res) => {
 // The matchPoller now listens to the SSE stream instead of polling on an interval.
 
 
-// ─── Demo Replay Injector ───────────────────────────────────────────────────
-app.post('/api/demo/inject', async (req, res) => {
-  try {
-    const { sseClient } = await import('./services/sse.js');
-    sseClient.emit('score_update', req.body);
-    res.json({ status: 'injected' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // ─── Cron: Check for pre-match bulletins every minute ─────────────────────────
 // Sends a pre-match briefing 30 mins before each followed match
 cron.schedule('* * * * *', async () => {
