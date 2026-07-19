@@ -360,7 +360,7 @@ export async function forceRelink() {
  *                              Leave false (default) for direct command replies so the
  *                              reply is visually threaded to the user's command.
  */
-export async function sendMessage(to, text, broadcast = false) {
+export async function sendMessage(to, text, broadcast = false, audioPath = null) {
   if (!sock) throw new Error('Socket not ready');
   const jid = to.includes('@') ? to : `${to}@s.whatsapp.net`;
 
@@ -383,11 +383,17 @@ export async function sendMessage(to, text, broadcast = false) {
   }
 
   if (originalMsg) {
+    if (audioPath && fs.existsSync(audioPath)) {
+      await sock.sendMessage(targetJid, { audio: { url: audioPath }, mimetype: 'audio/mp4', ptt: true }, { quoted: originalMsg });
+    }
     await sock.sendMessage(targetJid, { text }, { quoted: originalMsg });
   } else {
+    if (audioPath && fs.existsSync(audioPath)) {
+      await sock.sendMessage(targetJid, { audio: { url: audioPath }, mimetype: 'audio/mp4', ptt: true });
+    }
     await sock.sendMessage(targetJid, { text });
   }
-  log.info(`✉ → ${targetJid}: ${text.slice(0, 80).replace(/\n/g, ' ')}…`);
+  log.info(`✉ → ${targetJid}: ${text.slice(0, 80).replace(/\n/g, ' ')}… (audio: ${!!audioPath})`);
 }
 
 
@@ -420,7 +426,7 @@ function isValidRecipientJid(jid) {
   return false;
 }
 
-export async function broadcast(recipients, text) {
+export async function broadcast(recipients, text, audioPath = null) {
   // 1. Intercept web sessions early
   const webSessions = recipients.filter(id => id && id.startsWith('web_'));
   for (const session of webSessions) {
@@ -445,13 +451,13 @@ export async function broadcast(recipients, text) {
   if (!valid.length) return webResults;
 
   // broadcast=true: automated alerts must never quote a previous group member's message.
-  const results = await Promise.allSettled(valid.map(id => sendMessage(id, text, true)));
+  const results = await Promise.allSettled(valid.map(id => sendMessage(id, text, true, audioPath)));
   const failed  = results.filter(r => r.status === 'rejected').length;
   if (failed) log.warn(`broadcast: ${failed}/${valid.length} failed`);
   return [...webResults, ...results];
 }
 
-export async function notifyMatchGroups(groups, text) {
-  return broadcast(groups.map(g => g.id), text);
+export async function notifyMatchGroups(groups, text, audioPath = null) {
+  return broadcast(groups.map(g => g.id), text, audioPath);
 }
 

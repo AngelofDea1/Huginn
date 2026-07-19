@@ -8,6 +8,7 @@ import {
 } from '../utils/subscriptionStore.js';
 import { log } from '../utils/logger.js';
 import { STYLES, generatePlayerStats } from '../services/ai.js';
+import { sseClient } from '../services/sse.js';
 
 //  Webhook verification (Meta calls this once when you set up the webhook)
 export function verifyWebhook(req, res) {
@@ -87,6 +88,21 @@ export async function routeCommand(from, text, meta = {}) {
   if (lower === '/status')                                      return handleStatus(from);
   if (lower === '/schedule' || lower === '/fixtures' || lower === '/upcoming') return handleSchedule(from);
   if (lower === '/live')                                        return handleLive(from);
+  if (lower === '/demogoal') {
+    // Fake a goal event for the first active followed match, or a dummy one
+    sseClient.emit('score_update', {
+      FixtureId: 123456,
+      Action: "goal",
+      Phase: 2,
+      Clock: { Seconds: 1440 },
+      Score: {
+        Participant1: { Total: { Goals: 1 } },
+        Participant2: { Total: { Goals: 0 } }
+      },
+      Data: { Participant: 1 }
+    });
+    return sendMessage(from, "⚽ Firing demo goal into the SSE pipeline...");
+  }
   if (lower.startsWith('/stats'))                               return handleStats(from, cleanText);
   if (lower.startsWith('/predict')) {
     const { handlePredictCommand } = await import('./predict.js');

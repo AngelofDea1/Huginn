@@ -5,6 +5,7 @@ import {
   generateYellowCardAlert, generatePenaltyAlert,
   generateVarAlert, generateOddsShiftAlert
 } from './ai.js';
+import { generateVoiceNote } from './tts.js';
 import { processMatchPredictions } from '../handlers/predict.js';
 import { notifyMatchGroups } from './whatsapp.js';
 import {
@@ -164,7 +165,8 @@ async function processSSEEvent(evt) {
 
   // Dispatch all updates
   for (const text of updates) {
-    await notifyMatchGroups(groups, text);
+    const audioPath = await generateVoiceNote(text);
+    await notifyMatchGroups(groups, text, audioPath);
     
     // Web Push
     const teamSubscribers = await getSubscribersForTeams([homeTeam, awayTeam]);
