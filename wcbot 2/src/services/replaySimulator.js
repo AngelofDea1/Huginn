@@ -69,9 +69,9 @@ class ReplaySimulator {
     }
 
     const nextEvent = this.events[this.currentIndex];
-    const delay = 2000; // FAST-FORWARD: 2 seconds per event
+    const delay = 10000; // FAST-FORWARD: 10 seconds per event
 
-    log.info('simulator', `Next event '${nextEvent.Action}' scheduled in 2s.`);
+    log.info('simulator', `Next event '${nextEvent.Action}' scheduled in 10s.`);
 
     this.timer = setTimeout(() => {
       try {
