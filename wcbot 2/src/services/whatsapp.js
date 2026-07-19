@@ -384,12 +384,12 @@ export async function sendMessage(to, text, broadcast = false, audioPath = null)
 
   if (originalMsg) {
     if (audioPath && fs.existsSync(audioPath)) {
-      await sock.sendMessage(targetJid, { audio: { url: audioPath }, mimetype: 'audio/mp4', ptt: true }, { quoted: originalMsg });
+      await sock.sendMessage(targetJid, { audio: { url: audioPath }, mimetype: 'audio/mpeg', ptt: false }, { quoted: originalMsg });
     }
     await sock.sendMessage(targetJid, { text }, { quoted: originalMsg });
   } else {
     if (audioPath && fs.existsSync(audioPath)) {
-      await sock.sendMessage(targetJid, { audio: { url: audioPath }, mimetype: 'audio/mp4', ptt: true });
+      await sock.sendMessage(targetJid, { audio: { url: audioPath }, mimetype: 'audio/mpeg', ptt: false });
     }
     await sock.sendMessage(targetJid, { text });
   }
