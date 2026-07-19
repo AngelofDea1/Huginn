@@ -29,6 +29,7 @@ export function registerGroup(groupId, name = 'your group') {
     const newGroup = {
       name,
       style: 'hype',
+      voiceEnabled: false, // Default to false to avoid spam
       followedMatchIds: new Set(),
     };
     groups.set(groupId, newGroup);
@@ -50,6 +51,14 @@ export function setGroupStyle(groupId, style) {
   if (group) {
     group.style = style;
     persistGroup(groupId, group).catch(err => console.error('[store] persistGroup failed (style):', err.message));
+  }
+}
+
+export function setVoiceEnabled(groupId, enabled) {
+  const group = groups.get(groupId);
+  if (group) {
+    group.voiceEnabled = enabled;
+    persistGroup(groupId, group).catch(err => console.error('[store] persistGroup failed (voice):', err.message));
   }
 }
 
@@ -86,6 +95,7 @@ export async function loadGroupsFromRedis() {
       const entry = {
         name:             g.name,
         style:            g.style,
+        voiceEnabled:     g.voiceEnabled || false,
         followedMatchIds: g.followedMatchIds,
       };
       // Restore predictions if persisted

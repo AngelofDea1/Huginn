@@ -165,8 +165,17 @@ async function processSSEEvent(evt) {
 
   // Dispatch all updates
   for (const text of updates) {
-    const audioPath = await generateVoiceNote(text);
-    await notifyMatchGroups(groups, text, audioPath);
+    const voiceGroups = groups.filter(g => g.voiceEnabled);
+    const silentGroups = groups.filter(g => !g.voiceEnabled);
+
+    if (voiceGroups.length > 0) {
+      const audioPath = await generateVoiceNote(text);
+      await notifyMatchGroups(voiceGroups, text, audioPath);
+    }
+    
+    if (silentGroups.length > 0) {
+      await notifyMatchGroups(silentGroups, text, null);
+    }
     
     // Web Push
     const teamSubscribers = await getSubscribersForTeams([homeTeam, awayTeam]);
