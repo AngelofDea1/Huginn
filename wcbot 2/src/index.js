@@ -356,9 +356,9 @@ app.listen(PORT, async () => {
   const { sseClient } = await import('./services/sse.js');
   sseClient.connect();
 
-  // Start the France vs England Replay simulator
-  const { simulator } = await import('./services/replaySimulator.js');
-  simulator.initialize();
+  // The France vs England Replay simulator is now DISABLED for live TXOdds usage
+  // const { simulator } = await import('./services/replaySimulator.js');
+  // simulator.initialize();
 
   initializeWhatsApp();
 });
