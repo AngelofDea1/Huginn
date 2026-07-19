@@ -151,7 +151,7 @@ match: ${homeTeam} vs ${awayTeam}
 yellow card: ${player || 'a player'} from ${team} in ${timeLabel}
 score: ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
 
-react to this yellow card for a WhatsApp group chat. Start with the card and minute if known. Do not invent or make up a minute if none is specified. Explain if it's a dangerous booking. Keep it VERY SHORT and punchy (maximum 1 or 2 sentences). No all-caps.
+React to this yellow card. MUST START EXACTLY with a bold identifier like "🟨 *YELLOW CARD* (${minute}')". Do not invent or make up a minute if none is specified. Explain if it's a dangerous booking. Keep it VERY SHORT and punchy (maximum 1 or 2 sentences). No all-caps.
 `.trim();
 
   return callGroq(prompt, vibe);
@@ -165,7 +165,7 @@ export async function generateKickoffAlert({ half, homeTeam, awayTeam, vibe = 'h
 match: ${homeTeam} vs ${awayTeam}
 event: ${halfText}
 
-react to this kickoff for a WhatsApp group chat. Build hype, but keep it VERY SHORT and punchy (maximum 1 or 2 sentences). Do not write long paragraphs. No all-caps.
+React to this kickoff. MUST START EXACTLY with a bold identifier like "🏟️ *KICKOFF* (1H)" or "🏟️ *SECOND HALF KICKOFF*". Build hype, but keep it VERY SHORT and punchy (maximum 1 or 2 sentences). Do not write long paragraphs. No all-caps.
 `.trim();
 
   return callGroq(prompt, vibe);
@@ -178,7 +178,7 @@ match: ${homeTeam} vs ${awayTeam}
 stoppage time: ${minutes} minutes added
 score: ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
 
-react to this stoppage time announcement for a WhatsApp group. Explain what it means for the ending of the half/match based on the current score. Keep it VERY SHORT and punchy (maximum 1 or 2 sentences). No all-caps.
+React to this stoppage time announcement. MUST START EXACTLY with a bold identifier like "⏱️ *STOPPAGE TIME* (+${minutes}')". Explain what it means for the ending of the half/match based on the current score. Keep it VERY SHORT and punchy (maximum 1 or 2 sentences). No all-caps.
 `.trim();
 
   return callGroq(prompt, vibe);
@@ -195,7 +195,7 @@ first half events:
 ${eventSummary}
 current odds: ${odds || 'not available'}
 
-write a half-time WhatsApp summary. what happened, what to watch second half.
+Write a half-time summary. MUST START EXACTLY with a bold identifier like "⏱️ *HALF TIME*". what happened, what to watch second half.
 Keep it VERY SHORT and punchy (maximum 1 or 2 sentences). no all-caps. keep it human.
 `.trim();
 
@@ -208,7 +208,7 @@ export async function generateFullTimeReport({ homeTeam, awayTeam, homeScore, aw
 match: ${homeTeam} vs ${awayTeam}
 full time: ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
 
-write a full-time WhatsApp wrap-up. who was the hero? what was the story?
+Write a full-time wrap-up. MUST START EXACTLY with a bold identifier like "🎉 *FULL TIME*". who was the hero? what was the story?
 Keep it VERY SHORT and punchy (maximum 1 or 2 sentences). no all-caps. keep it real.
 `.trim();
 
