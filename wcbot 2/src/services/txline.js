@@ -70,9 +70,10 @@ export async function searchMatch(query) {
   const all = await getAllFixtures();
   const q = query.toLowerCase();
   return all.filter(m => 
-    m.home_team?.name?.toLowerCase().includes(q) || 
-    m.away_team?.name?.toLowerCase().includes(q)
-  );
+    m.status !== 'FT' &&
+    (m.home_team?.name?.toLowerCase().includes(q) || 
+     m.away_team?.name?.toLowerCase().includes(q))
+  ).sort((a, b) => new Date(a.kickoff_time) - new Date(b.kickoff_time));
 }
 
 function parseScore(update) {
@@ -126,7 +127,7 @@ export async function getMatchDetail(matchId) {
 
 export async function getLiveMatches() {
   const all = await getAllFixtures();
-  return all.filter(m => m.status === 'LIVE' || m.status === 'HT' || m.status === 'FT');
+  return all.filter(m => m.status === 'LIVE' || m.status === 'HT');
 }
 
 export async function getUpcomingMatches(hoursAhead = 6) {
