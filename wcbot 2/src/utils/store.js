@@ -114,6 +114,7 @@ export function initMatchState(matchId, data) {
     awayScore:     0,
     homeRedCards:  0,   // count-based red card tracking (restart-safe)
     awayRedCards:  0,
+    lastSeq:       0,   // tracking event stream cursor
     status:        'pre',
     odds:          null,
     sentKO:        false,
@@ -121,6 +122,7 @@ export function initMatchState(matchId, data) {
     sentFT:        false,
     sentPreMatch:  false,
     seeded:        false, // true after first poll baseline is established
+    lastUpdated:   Date.now(),
     ...data,
   });
 }
@@ -141,7 +143,19 @@ export function hasSeenEvent(matchId, eventId) { return false; }
 
 export function updateMatchState(matchId, updates) {
   const current = matchState.get(String(matchId)) || {};
-  matchState.set(String(matchId), { ...current, ...updates });
+  matchState.set(String(matchId), { ...current, ...updates, lastUpdated: Date.now() });
+}
+
+export function pruneOldMatchStates(maxAgeMs = 24 * 60 * 60 * 1000) {
+  const now = Date.now();
+  let pruned = 0;
+  for (const [matchId, state] of matchState.entries()) {
+    if (state.status === 'FT' && now - state.lastUpdated > maxAgeMs) {
+      matchState.delete(matchId);
+      pruned++;
+    }
+  }
+  return pruned;
 }
 
 export function getAllMatchStates() {
@@ -164,6 +178,9 @@ export function addWebChatMessage(sessionId, message) {
   }
   const session = webChatMessages.get(sessionId);
   session.messages.push(message);
+  if (session.messages.length > 50) {
+    session.messages.shift();
+  }
   session.lastActive = Date.now();
 }
 

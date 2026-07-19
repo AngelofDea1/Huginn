@@ -109,6 +109,80 @@ react to this red card for a WhatsApp group chat. Start with the card and minute
   return callGroq(prompt, vibe);
 }
 
+// ── VAR Review alert ──────────────────────────────────────────────────────────
+export async function generateVarAlert({ homeTeam, awayTeam, minute, homeScore, awayScore, vibe = 'hype' }) {
+  const timeLabel = minute ? `minute ${minute}` : 'unknown minute';
+  
+  const prompt = `
+match: ${homeTeam} vs ${awayTeam}
+event: VAR Check in progress in ${timeLabel}
+score: ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
+
+react to this VAR review for a WhatsApp group chat. Build suspense! What are they checking? (Guess if you want, but keep it thrilling). No all-caps. Use line breaks. 2-3 sentences max.
+`.trim();
+
+  return callGroq(prompt, vibe);
+}
+
+// ── Penalty Outcome alert ─────────────────────────────────────────────────────
+export async function generatePenaltyAlert({ outcome, player, team, minute, homeTeam, awayTeam, homeScore, awayScore, vibe = 'hype' }) {
+  const timeLabel = minute ? `minute ${minute}` : 'unknown minute';
+  const action = outcome === 'Scored' ? 'scored the penalty!' : 'MISSED the penalty!';
+  
+  const prompt = `
+match: ${homeTeam} vs ${awayTeam}
+event: Penalty kick by ${team} in ${timeLabel}
+outcome: ${action}
+score after penalty: ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
+
+react to this penalty outcome for a WhatsApp group. If it was scored, hype it up! If missed, express the shock! No all-caps. Use line breaks.
+`.trim();
+
+  return callGroq(prompt, vibe);
+}
+
+// ── Yellow card alert ─────────────────────────────────────────────────────────
+export async function generateYellowCardAlert({ player, team, minute, homeTeam, awayTeam, homeScore, awayScore, vibe = 'hype' }) {
+  const timeLabel = minute ? `minute ${minute}` : 'unknown minute';
+  
+  const prompt = `
+match: ${homeTeam} vs ${awayTeam}
+yellow card: ${player || 'a player'} from ${team} in ${timeLabel}
+score: ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
+
+react to this yellow card for a WhatsApp group chat. Start with the card and minute if known. Do not invent or make up a minute if none is specified. Explain if it's a dangerous booking. No all-caps. Use line breaks.
+`.trim();
+
+  return callGroq(prompt, vibe);
+}
+
+// ── Kickoff alert ─────────────────────────────────────────────────────────────
+export async function generateKickoffAlert({ half, homeTeam, awayTeam, vibe = 'hype' }) {
+  const halfText = half === '1H' ? 'Kickoff! The match is underway' : 'Second half kickoff! We are back underway';
+
+  const prompt = `
+match: ${homeTeam} vs ${awayTeam}
+event: ${halfText}
+
+react to this kickoff for a WhatsApp group chat. Build hype for the action about to unfold. No all-caps. Use line breaks.
+`.trim();
+
+  return callGroq(prompt, vibe);
+}
+
+// ── Stoppage time alert ───────────────────────────────────────────────────────
+export async function generateStoppageTimeAlert({ minutes, homeTeam, awayTeam, homeScore, awayScore, vibe = 'hype' }) {
+  const prompt = `
+match: ${homeTeam} vs ${awayTeam}
+stoppage time: ${minutes} minutes added
+score: ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
+
+react to this stoppage time announcement for a WhatsApp group. Explain what it means for the ending of the half/match based on the current score. No all-caps. Use line breaks.
+`.trim();
+
+  return callGroq(prompt, vibe);
+}
+
 // ── Half-time report ──────────────────────────────────────────────────────────
 export async function generateHalfTimeReport({ homeTeam, awayTeam, homeScore, awayScore, events, odds, vibe = 'hype' }) {
   const eventSummary = events?.slice(-5).map(e => `${e.minute}' ${e.type}: ${e.description}`).join('\n') || 'no major events logged';
@@ -310,8 +384,8 @@ async function callGroq(userPrompt, style = 'hype') {
     const raw = data.choices?.[0]?.message?.content?.trim() || `Something just happened.`;
     return ensureSpacing(raw);
   } catch (err) {
-    console.error('Groq API Error:', err.response?.data || err.message);
-    return `Something went wrong. Try again.`;
+    console.error('Groq AI generation failed:', err.message);
+    return null;
   }
 }
 

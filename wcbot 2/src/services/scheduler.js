@@ -37,23 +37,15 @@ export async function schedulePreMatchBulletins() {
     if (!kickoffTime) continue;
 
     const minsUntilKickoff = (kickoffTime - Date.now()) / 60000;
-    // Fire in the 28–35 minute window. Lower bound prevents a "30-min warning"
-    // being sent when kickoff is only 2 minutes away (factually wrong message).
-    if (minsUntilKickoff > 35 || minsUntilKickoff < 28) continue;
+    // Fire anytime within the 31-minute window so late followers don't miss it
+    if (minsUntilKickoff < 0 || minsUntilKickoff > 31) continue;
 
     const homeTeam = match.home_team?.name || 'Home';
     const awayTeam = match.away_team?.name || 'Away';
 
     log.event(`Pre-match: ${homeTeam} vs ${awayTeam} (${Math.round(minsUntilKickoff)} mins away)`);
 
-    let oddsStr = '';
-    try {
-      const odds = await getMatchOdds(matchId);
-      oddsStr = formatOdds(odds);
-    } catch { /* odds unavailable — send without */ }
-
-    const oddsPreview = oddsStr ? `\n\n📊 Opening odds: ${oddsStr}` : '';
-    const msg = `🔔 *30-minute warning!*\n\n*${homeTeam} vs ${awayTeam}* kicks off soon.\n\nGet ready for live goal alerts, red cards, and match commentary — all coming directly to this chat.${oddsPreview}`;
+    const msg = `🔔 *30-minute warning!*\n\n*${homeTeam} vs ${awayTeam}* kicks off soon.\n\nGet ready for live goal alerts, red cards, and match commentary — all coming directly to this chat.`;
 
     await notifyMatchGroups(groups, msg);
 

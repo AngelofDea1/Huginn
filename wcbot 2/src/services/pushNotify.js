@@ -2,22 +2,11 @@ import webpush from 'web-push';
 import { log } from '../utils/logger.js';
 import { saveSubscription, removeSubscription, deleteSubscriptionByEndpoint } from '../utils/subscriptionStore.js';
 
+// Hardcoded static VAPID keys so subscriptions survive Render server restarts
 let vapidKeys = {
-  publicKey: process.env.VAPID_PUBLIC_KEY,
-  privateKey: process.env.VAPID_PRIVATE_KEY
+  publicKey: process.env.VAPID_PUBLIC_KEY || 'BKMC2pv7HGWyJGHSE2iYGXfmfBhraNTdsUeBFOrYqm_UumokGr4aJ5CbMQUebD36c7dUbnLDfaKGSLZJTQbR1Ww',
+  privateKey: process.env.VAPID_PRIVATE_KEY || 't4qNKeMt0TVJQcEmfG7v-OyLJ6EsFIp-CD9_UvBQZgo'
 };
-
-if (!vapidKeys.publicKey || !vapidKeys.privateKey) {
-  // ⚠️ CRITICAL: dynamically generated VAPID keys are different on EVERY restart.
-  // Any push subscription registered with the old public key will immediately fail.
-  // To fix: run `node -e "const w=require('web-push'); console.log(JSON.stringify(w.generateVAPIDKeys()))"`,
-  // then set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY as permanent env vars on Render.
-  log.warn('⚠️  VAPID keys not set in env vars — generating ephemeral keys. Push subscriptions will break on every restart! Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY in Render env vars.');
-  const keys = webpush.generateVAPIDKeys();
-  vapidKeys = keys;
-  process.env.VAPID_PUBLIC_KEY = keys.publicKey;
-  process.env.VAPID_PRIVATE_KEY = keys.privateKey;
-}
 
 webpush.setVapidDetails(
   'mailto:support@huginn-sports.com',

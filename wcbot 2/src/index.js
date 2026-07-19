@@ -5,13 +5,13 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { initializeWhatsApp, activeQr, getAuthExport, forceRelink } from './services/whatsapp.js';
-import { pollMatches } from './services/matchPoller.js';
+import { initMatchPoller } from './services/matchPoller.js';
 import { schedulePreMatchBulletins } from './services/scheduler.js';
 import { log, logBuffer } from './utils/logger.js';
 import { handleChatMessage, getLiveMatchesAPI, handleGetMessages } from './handlers/chat.js';
 import { getVapidPublicKey, subscribeUser, unsubscribeUser, sendPushNotification } from './services/pushNotify.js';
 import { getAllActiveSubscriptions, resetPersistedFollowState } from './utils/subscriptionStore.js';
-import { loadGroupsFromRedis, pruneInactiveWebChats, resetRuntimeState } from './utils/store.js';
+import { loadGroupsFromRedis, pruneInactiveWebChats, pruneOldMatchStates, resetRuntimeState } from './utils/store.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = dirname(__filename);
@@ -57,6 +57,10 @@ setInterval(() => {
     if (pruned > 0) {
       log.info(`Pruned ${pruned} inactive web chat sessions from memory.`);
     }
+    const prunedMatches = pruneOldMatchStates(24 * 60 * 60 * 1000);
+    if (prunedMatches > 0) {
+      log.info(`Pruned ${prunedMatches} old match states from memory.`);
+    }
   } catch (err) {
     log.error('Error running web chat pruning job:', err.message);
   }
@@ -64,198 +68,6 @@ setInterval(() => {
 
 
 
-// ─── Live Demo Replay Controller ──────────────────────────────────────────────
-let demoTimeoutIds = [];
-let demoReplaySnapshots = [];
-
-try {
-  const snapshotFileContent = fs.readFileSync(join(__dirname, 'match_18241006_snapshot.json'), 'utf8');
-  demoReplaySnapshots = JSON.parse(snapshotFileContent);
-  log.info(`Loaded ${demoReplaySnapshots.length} snapshots for web control.`);
-} catch (e) {
-  log.warn('Could not load snapshot for live demo control:', e.message);
-}
-
-app.post('/api/replay/start', async (req, res) => {
-  const { kickoffTime } = req.body;
-  if (!demoReplaySnapshots.length) {
-    return res.status(503).json({ ok: false, error: 'Snapshot not loaded on server' });
-  }
-
-  const targetKickoff = kickoffTime ? Number(kickoffTime) : Date.now() + 30 * 60 * 1000;
-
-  // Clear existing demo schedules
-  demoTimeoutIds.forEach(clearTimeout);
-  demoTimeoutIds = [];
-
-  // Enable mock replay hook
-  global.mockReplayActive = true;
-  global.mockReplayIndex = 0;
-  global.getMockReplayDetails = function() {
-    if (!global.mockReplayActive) return null;
-    return demoReplaySnapshots.slice(0, global.mockReplayIndex + 1).map(s => ({
-      ...s,
-      StartTime: targetKickoff,
-      Ts: targetKickoff + (s.Elapsed !== null && s.Elapsed !== undefined ? s.Elapsed * 60 * 1000 : 0)
-    }));
-  };
-
-  const schedule = [
-    { snapshotIndex: null, offsetMs: -30 * 60 * 1000, label: 'Prematch' },
-    { snapshotIndex: 6,    offsetMs: 0,               label: 'Kickoff' },
-    { snapshotIndex: 7,    offsetMs: 10 * 60 * 1000,  label: "10 min" },
-    { snapshotIndex: 8,    offsetMs: 18 * 60 * 1000,  label: "18 min" },
-    { snapshotIndex: 9,    offsetMs: 22 * 60 * 1000,  label: "22 min" },
-    { snapshotIndex: 10,   offsetMs: 28 * 60 * 1000,  label: "28 min" },
-    { snapshotIndex: 11,   offsetMs: 32 * 60 * 1000,  label: "32 min" },
-    { snapshotIndex: 12,   offsetMs: 38 * 60 * 1000,  label: "38 min" },
-    { snapshotIndex: 13,   offsetMs: 42 * 60 * 1000,  label: "42 min" },
-    { snapshotIndex: 14,   offsetMs: 45 * 60 * 1000,  label: "HT 45 min" },
-    { snapshotIndex: 15,   offsetMs: 47 * 60 * 1000,  label: "HT finalised" },
-    { snapshotIndex: 16,   offsetMs: 62 * 60 * 1000,  label: "2H Kickoff" },
-    { snapshotIndex: 17,   offsetMs: 66 * 60 * 1000,  label: "50 min" },
-    { snapshotIndex: 18,   offsetMs: 71 * 60 * 1000,  label: "England Goal (55')" },
-    { snapshotIndex: 19,   offsetMs: 72 * 60 * 1000,  label: "56 min" },
-    { snapshotIndex: 20,   offsetMs: 77 * 60 * 1000,  label: "62 min" },
-    { snapshotIndex: 21,   offsetMs: 83 * 60 * 1000,  label: "67 min" },
-    { snapshotIndex: 22,   offsetMs: 88 * 60 * 1000,  label: "72 min" },
-    { snapshotIndex: 23,   offsetMs: 92 * 60 * 1000,  label: "76 min" },
-    { snapshotIndex: 24,   offsetMs: 96 * 60 * 1000,  label: "80 min" },
-    { snapshotIndex: 25,   offsetMs: 100 * 60 * 1000, label: "84 min" },
-    { snapshotIndex: 26,   offsetMs: 101 * 60 * 1000, label: "Argentina Goal (85')" },
-    { snapshotIndex: 27,   offsetMs: 102 * 60 * 1000, label: "86 min" },
-    { snapshotIndex: 28,   offsetMs: 106 * 60 * 1000, label: "Added Time (90')" },
-    { snapshotIndex: 29,   offsetMs: 108 * 60 * 1000, label: "Argentina Goal (92')" },
-    { snapshotIndex: 30,   offsetMs: 109 * 60 * 1000, label: "93 min" },
-    { snapshotIndex: 31,   offsetMs: 110 * 60 * 1000, label: "94 min" },
-    { snapshotIndex: 32,   offsetMs: 112 * 60 * 1000, label: "FT" },
-    { snapshotIndex: 33,   offsetMs: 113 * 60 * 1000, label: "End" }
-  ];
-
-  const now = Date.now();
-  schedule.forEach(entry => {
-    const fireTime = targetKickoff + entry.offsetMs;
-    const delay = fireTime - now;
-    if (delay >= -5000) {
-      const id = setTimeout(async () => {
-        try {
-          if (entry.snapshotIndex === null) {
-            const { notifyMatchGroups } = await import('./services/whatsapp.js');
-            const { getGroupsFollowingMatch, updateMatchState } = await import('./utils/store.js');
-            const { getSubscribersForTeams } = await import('./utils/subscriptionStore.js');
-            const { sendPushNotification } = await import('./services/pushNotify.js');
-            
-            updateMatchState('18241006', {
-              seeded: false, sentPreMatch: false, sentKO: false, sentHT: false, sentFT: false,
-              homeScore: 0, awayScore: 0, status: 'NS'
-            });
-
-            const groups = getGroupsFollowingMatch('18241006');
-            const msg = `🔔 *30-minute warning!*\n\n*England vs Argentina* kicks off soon.\n\nGet ready for live alerts and AI commentary coming directly to this chat.\n\n📊 Opening odds: 2.40 / 3.30 / 2.90 (H/D/A)`;
-            if (groups.length) {
-              await notifyMatchGroups(groups, msg);
-            }
-            try {
-              const subs = await getSubscribersForTeams(['England', 'Argentina']);
-              if (subs.length) {
-                await sendPushNotification('30 mins to kick-off! 🔔', 'England vs Argentina — World Cup Final starts soon.', '/', subs.map(s => s.subscription));
-              }
-            } catch {}
-            updateMatchState('18241006', { sentPreMatch: true });
-          } else {
-            global.mockReplayIndex = entry.snapshotIndex;
-            const { pollMatches } = await import('./services/matchPoller.js');
-            await pollMatches();
-          }
-        } catch (e) {
-          log.error(`Replay error: ${e.message}`);
-        }
-      }, Math.max(0, delay));
-      demoTimeoutIds.push(id);
-    }
-  });
-
-  return res.json({ ok: true, scheduled: schedule.length, kickoff: new Date(targetKickoff).toISOString() });
-});
-
-app.post('/api/replay/stop', (req, res) => {
-  demoTimeoutIds.forEach(clearTimeout);
-  demoTimeoutIds = [];
-  global.mockReplayActive = false;
-  return res.json({ ok: true, status: 'stopped' });
-});
-
-
-
-// ─── Manual pre-match blast (one-shot admin trigger) ──────────────────────────
-app.post('/api/send-prematch', async (req, res) => {
-  try {
-    const { getUpcomingMatches, getMatchOdds, formatOdds } = await import('./services/txline.js');
-    const { notifyMatchGroups } = await import('./services/whatsapp.js');
-    const { getGroupsFollowingMatch, getMatchState, updateMatchState } = await import('./utils/store.js');
-    const { persistMatchScore } = await import('./utils/subscriptionStore.js');
-    const { sendPushNotification } = await import('./services/pushNotify.js');
-    const { getSubscribersForTeams } = await import('./utils/subscriptionStore.js');
-
-    const upcoming = await getUpcomingMatches(24);
-    let sent = 0;
-
-    for (const match of upcoming) {
-      const matchId = match.id;
-      const groups  = getGroupsFollowingMatch(matchId);
-      if (!groups.length) continue; // nobody following this match
-
-      const homeTeam = match.home_team?.name || 'Home';
-      const awayTeam = match.away_team?.name || 'Away';
-      const state    = getMatchState(matchId);
-
-      if (state?.sentPreMatch) continue; // already sent for this match
-
-      let oddsStr = '';
-      try {
-        const odds = await getMatchOdds(matchId);
-        oddsStr = formatOdds(odds);
-      } catch {}
-
-      const oddsPreview = oddsStr ? `\n\n📊 Opening odds: ${oddsStr}` : '';
-      const kick = match.kickoff_time
-        ? new Date(match.kickoff_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-        : 'soon';
-
-      const msg = `🔔 *Match day!*\n\n*${homeTeam} vs ${awayTeam}* kicks off at ${kick}.\n\nGoal alerts, red cards, and live commentary will all come through here automatically.${oddsPreview}`;
-
-      await notifyMatchGroups(groups, msg);
-
-      let pushSubs = [];
-      try {
-        const subs = await getSubscribersForTeams([homeTeam, awayTeam]);
-        pushSubs = subs.map(s => s.subscription);
-      } catch {}
-      if (pushSubs.length) {
-        await sendPushNotification('Match day! 🔔', `${homeTeam} vs ${awayTeam} kicks off at ${kick}.`, '/', pushSubs);
-      }
-
-      updateMatchState(matchId, { sentPreMatch: true });
-      await persistMatchScore(matchId, {
-        homeScore:    match.home_score ?? 0,
-        awayScore:    match.away_score ?? 0,
-        homeRedCards: 0,
-        awayRedCards: 0,
-        status:       match.status || 'NS',
-        sentPreMatch: true,
-        sentKO:       false,
-        sentHT:       false,
-        sentFT:       false,
-      });
-      sent++;
-    }
-
-    res.json({ ok: true, matchesAlerted: sent });
-  } catch (err) {
-    log.error('send-prematch failed:', err.message);
-    res.status(500).json({ ok: false, error: err.message });
-  }
-});
 
 
 // ─── WhatsApp QR Scan Page ─────────────────────────────────────────────────────
@@ -515,15 +327,8 @@ app.post('/api/reset-follow-state', async (req, res) => {
   }
 });
 
-// ─── Cron: Poll TxLINE every 5 seconds ───────────────────────────────────────
-// Detects goals, red cards, HT, FT, big odds shifts
-cron.schedule('*/5 * * * * *', async () => {
-  try {
-    await pollMatches();
-  } catch (err) {
-    log.error('Poll error:', err.message);
-  }
-});
+// ─── Real-time SSE ────────────────────────────────────────────────────────
+// The matchPoller now listens to the SSE stream instead of polling on an interval.
 
 // ─── Cron: Check for pre-match bulletins every minute ─────────────────────────
 // Sends a pre-match briefing 30 mins before each followed match
@@ -539,10 +344,21 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
   log.info(`⚽ WC Companion Bot running on port ${PORT}`);
   log.info(`🌐 Web interface: http://localhost:${PORT}`);
-  log.info(`🔄 Polling TxLINE every 5 seconds`);
+  log.info(`🔄 Real-time SSE connection enabled.`);
   
   // Hydrate followed matches / group styles from Upstash Redis
   await loadGroupsFromRedis();
   
+  // Start the SSE Poller logic and Replay Simulator
+  await initMatchPoller();
+  
+  // Connect to live real-time production TXLine SSE stream
+  const { sseClient } = await import('./services/sse.js');
+  sseClient.connect();
+
+  // Start the France vs England Replay simulator
+  const { simulator } = await import('./services/replaySimulator.js');
+  simulator.initialize();
+
   initializeWhatsApp();
 });

@@ -1,28 +1,38 @@
 import axios from 'axios';
 import { log } from '../utils/logger.js';
+import { getValidToken } from './auth.js';
 
-// Configuration
 const BASE_URL = process.env.TXLINE_BASE_URL || 'https://txline.txodds.com/api';
-const JWT = process.env.TXLINE_JWT;
-const API_KEY = process.env.TXLINE_API_KEY;
 
-function getHeaders() {
+async function getHeaders() {
+  const token = await getValidToken();
   return {
-    'Authorization': `Bearer ${JWT}`,
-    'X-Api-Key': API_KEY,
+    'Authorization': `Bearer ${token}`,
+    'X-Api-Token': process.env.TXLINE_API_KEY, // Note: the guest token plus API key
     'Content-Type': 'application/json'
   };
 }
 
 export async function getAllFixtures() {
-  const { data } = await axios.get(`${BASE_URL}/fixtures`, { headers: getHeaders() });
-  return data.map(m => ({
-    id: m.FixtureId,
-    home_team: { name: m.Participant1 },
-    away_team: { name: m.Participant2 },
-    kickoff_time: m.StartTime ? new Date(m.StartTime).toISOString() : new Date().toISOString(),
-    status: 'NS'
-  }));
+  const headers = await getHeaders();
+  const { data } = await axios.get(`${BASE_URL}/fixtures/snapshot`, { headers });
+  if (!data) return [];
+  
+  return data.map(m => {
+    const home_score = m.Score?.Participant1?.Total?.Goals || 0;
+    const away_score = m.Score?.Participant2?.Total?.Goals || 0;
+    const minute = m.Clock?.Seconds ? Math.floor(m.Clock.Seconds / 60) : 0;
+    return {
+      id: m.FixtureId,
+      home_team: { name: m.Participant1 },
+      away_team: { name: m.Participant2 },
+      home_score,
+      away_score,
+      minute,
+      kickoff_time: m.StartTime ? new Date(m.StartTime).toISOString() : new Date().toISOString(),
+      status: m.GameState === 'live' || m.GameState === 2 || m.GameState === 3 ? 'LIVE' : (m.Phase === 5 ? 'FT' : 'NS')
+    };
+  });
 }
 
 export async function searchMatch(query) {
@@ -43,11 +53,21 @@ function parseScore(update) {
 }
 
 export async function getMatchDetail(matchId) {
-  const { data } = await axios.get(`${BASE_URL}/fixtures/${matchId}/snapshot`, { headers: getHeaders() });
+  const headers = await getHeaders();
+  const { data } = await axios.get(`${BASE_URL}/scores/snapshot/${matchId}`, { headers });
   if (!data || data.length === 0) return null;
 
-  const latest = data[data.length - 1];
-  const score = parseScore(latest);
+  const events = data;
+  let latestWithScore = events[events.length - 1];
+  for (let i = events.length - 1; i >= 0; i--) {
+    if (events[i].Score) {
+      latestWithScore = events[i];
+      break;
+    }
+  }
+
+  const score = parseScore(latestWithScore);
+  const latest = events[events.length - 1];
   const minute = latest.Clock?.Seconds ? Math.floor(latest.Clock.Seconds / 60) : (latest.Elapsed || 0);
 
   let status = 'NS';
@@ -61,25 +81,14 @@ export async function getMatchDetail(matchId) {
     away_score: score.away,
     minute,
     status,
-    events: [], // Clean slate: Poller will derive goals from diffs
+    events: events.sort((a, b) => a.Seq - b.Seq).map(d => ({ action: d.Action, seq: d.Seq, data: d.Data, phase: d.Phase })),
     _raw: latest
   };
 }
 
 export async function getLiveMatches() {
-  const { data } = await axios.get(`${BASE_URL}/live`, { headers: getHeaders() });
-  if (!data) return [];
-  return data.map(m => {
-    return {
-      id: m.FixtureId,
-      home_team: { name: m.Participant1 },
-      away_team: { name: m.Participant2 },
-      status: 'LIVE',
-      home_score: m.Score?.Participant1?.Total?.Goals || 0,
-      away_score: m.Score?.Participant2?.Total?.Goals || 0,
-      minute: m.Clock?.Seconds ? Math.floor(m.Clock.Seconds / 60) : 0
-    };
-  });
+  const all = await getAllFixtures();
+  return all.filter(m => m.status === 'LIVE' || m.status === 'HT' || m.status === 'FT');
 }
 
 export async function getUpcomingMatches(hoursAhead = 6) {
