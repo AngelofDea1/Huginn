@@ -1,55 +1,69 @@
 import axios from 'axios';
 import { log } from '../utils/logger.js';
-import { getValidToken } from './auth.js';
-import { matchState } from './replaySimulator.js';
+import { getValidToken, refreshToken } from './auth.js';
 
 const BASE_URL = process.env.TXLINE_BASE_URL || 'https://txline.txodds.com/api';
+
+// Create an axios instance for TXLine requests
+const txlineClient = axios.create({ baseURL: BASE_URL });
+
+txlineClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    // If it's a 401 and we haven't already retried
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      log.warn('txline', 'Received 401 Unauthorized. Refreshing token...');
+      try {
+        const newToken = await refreshToken();
+        originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
+        return txlineClient(originalRequest);
+      } catch (err) {
+        log.error('txline', `Token refresh failed: ${err.message}`);
+        return Promise.reject(error);
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 async function getHeaders() {
   const token = await getValidToken();
   return {
     'Authorization': `Bearer ${token}`,
-    'X-Api-Token': process.env.TXLINE_API_KEY, // Note: the guest token plus API key
+    'X-Api-Token': process.env.TXLINE_API_KEY,
     'Content-Type': 'application/json'
   };
 }
 
 export async function getAllFixtures() {
-  const headers = await getHeaders();
-  const { data } = await axios.get(`${BASE_URL}/fixtures/snapshot`, { headers });
-  let fixtures = [];
-  if (data) {
-    fixtures = data.map(m => {
-      const home_score = m.Score?.Participant1?.Total?.Goals || 0;
-      const away_score = m.Score?.Participant2?.Total?.Goals || 0;
-      const minute = m.Clock?.Seconds ? Math.floor(m.Clock.Seconds / 60) : 0;
-      return {
-        id: m.FixtureId,
-        home_team: { name: m.Participant1 },
-        away_team: { name: m.Participant2 },
-        home_score,
-        away_score,
-        minute,
-        kickoff_time: m.StartTime ? new Date(m.StartTime).toISOString() : new Date().toISOString(),
-        status: m.GameState === 'live' || m.GameState === 2 || m.GameState === 3 ? 'LIVE' : (m.Phase === 5 ? 'FT' : 'NS')
-      };
-    });
+  try {
+    const headers = await getHeaders();
+    const { data } = await txlineClient.get('/fixtures/snapshot', { headers });
+    let fixtures = [];
+    if (data && Array.isArray(data)) {
+      fixtures = data.map(m => {
+        const home_score = m.Score?.Participant1?.Total?.Goals || 0;
+        const away_score = m.Score?.Participant2?.Total?.Goals || 0;
+        const minute = m.Clock?.Seconds ? Math.floor(m.Clock.Seconds / 60) : 0;
+        return {
+          id: m.FixtureId,
+          home_team: { name: m.Participant1 },
+          away_team: { name: m.Participant2 },
+          home_score,
+          away_score,
+          minute,
+          kickoff_time: m.StartTime ? new Date(m.StartTime).toISOString() : new Date().toISOString(),
+          status: m.GameState === 'live' || m.GameState === 2 || m.GameState === 3 ? 'LIVE' : (m.Phase === 5 ? 'FT' : 'NS')
+        };
+      });
+    }
+    return fixtures;
+  } catch (err) {
+    log.error('Error fetching fixtures:', err.message);
+    return [];
   }
-
-  // 1:1 Simulator: Inject France vs England based on matchState
-  fixtures.push({
-    id: 18257865,
-    home_team: { name: 'France' },
-    away_team: { name: 'England' },
-    home_score: matchState.home_score,
-    away_score: matchState.away_score,
-    minute: matchState.minute,
-    extraTime: matchState.extraTime,
-    kickoff_time: new Date(new Date().setHours(12, 0, 0, 0)).toISOString(),
-    status: matchState.status
-  });
-
-  return fixtures;
 }
 
 export async function searchMatch(query) {
@@ -70,37 +84,44 @@ function parseScore(update) {
 }
 
 export async function getMatchDetail(matchId) {
-  const headers = await getHeaders();
-  const { data } = await axios.get(`${BASE_URL}/scores/snapshot/${matchId}`, { headers });
-  if (!data || data.length === 0) return null;
+  try {
+    const headers = await getHeaders();
+    const { data } = await txlineClient.get(`/scores/snapshot/${matchId}`, { headers });
+    if (!data || data.length === 0) return null;
 
-  const events = data;
-  let latestWithScore = events[events.length - 1];
-  for (let i = events.length - 1; i >= 0; i--) {
-    if (events[i].Score) {
-      latestWithScore = events[i];
-      break;
+    const events = Array.isArray(data) ? data : [data];
+    if (events.length === 0) return null;
+
+    let latestWithScore = events[events.length - 1];
+    for (let i = events.length - 1; i >= 0; i--) {
+      if (events[i].Score) {
+        latestWithScore = events[i];
+        break;
+      }
     }
+
+    const score = parseScore(latestWithScore);
+    const latest = events[events.length - 1];
+    const minute = latest.Clock?.Seconds ? Math.floor(latest.Clock.Seconds / 60) : (latest.Elapsed || 0);
+
+    let status = 'NS';
+    if (latest.GameState === 'live' || latest.GameState === 2 || latest.GameState === 3) status = 'LIVE';
+    if (latest.Phase === 3) status = 'HT';
+    if (latest.Phase === 5) status = 'FT';
+
+    return {
+      id: matchId,
+      home_score: score.home,
+      away_score: score.away,
+      minute,
+      status,
+      events: events.sort((a, b) => (a.Seq || 0) - (b.Seq || 0)).map(d => ({ action: d.Action, seq: d.Seq, data: d.Data, phase: d.Phase })),
+      _raw: latest
+    };
+  } catch (err) {
+    log.error(`Error fetching match detail for ${matchId}:`, err.message);
+    return null;
   }
-
-  const score = parseScore(latestWithScore);
-  const latest = events[events.length - 1];
-  const minute = latest.Clock?.Seconds ? Math.floor(latest.Clock.Seconds / 60) : (latest.Elapsed || 0);
-
-  let status = 'NS';
-  if (latest.GameState === 'live' || latest.GameState === 2 || latest.GameState === 3) status = 'LIVE';
-  if (latest.Phase === 3) status = 'HT';
-  if (latest.Phase === 5) status = 'FT';
-
-  return {
-    id: matchId,
-    home_score: score.home,
-    away_score: score.away,
-    minute,
-    status,
-    events: events.sort((a, b) => a.Seq - b.Seq).map(d => ({ action: d.Action, seq: d.Seq, data: d.Data, phase: d.Phase })),
-    _raw: latest
-  };
 }
 
 export async function getLiveMatches() {
@@ -126,13 +147,27 @@ export async function getFixtureSchedule() {
 }
 
 export async function getMatchOdds(matchId) {
-  return null;
+  try {
+    const headers = await getHeaders();
+    const { data } = await txlineClient.get(`/odds/snapshot/${matchId}`, { headers });
+    if (!data || data.length === 0) return null;
+    return Array.isArray(data) ? data[data.length - 1] : data;
+  } catch (err) {
+    log.error(`Error fetching match odds for ${matchId}:`, err.message);
+    return null;
+  }
 }
 
 export function formatOdds(oddsObj) {
-  return '';
+  if (!oddsObj) return '';
+  return `Home: ${oddsObj.home || '-'}, Draw: ${oddsObj.draw || '-'}, Away: ${oddsObj.away || '-'}`;
 }
 
 export function detectOddsShift(oldOdds, newOdds) {
+  if (!oldOdds || !newOdds) return null;
+  const shift = Math.abs((newOdds.home || 0) - (oldOdds.home || 0));
+  if (shift > 0.5) {
+    return `Significant odds shift detected: Home odds changed by ${shift.toFixed(2)}`;
+  }
   return null;
 }

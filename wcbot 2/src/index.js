@@ -330,6 +330,7 @@ app.post('/api/reset-follow-state', async (req, res) => {
 // ─── Real-time SSE ────────────────────────────────────────────────────────
 // The matchPoller now listens to the SSE stream instead of polling on an interval.
 
+
 // ─── Cron: Check for pre-match bulletins every minute ─────────────────────────
 // Sends a pre-match briefing 30 mins before each followed match
 cron.schedule('* * * * *', async () => {
@@ -349,16 +350,15 @@ app.listen(PORT, async () => {
   // Hydrate followed matches / group styles from Upstash Redis
   await loadGroupsFromRedis();
   
-  // Start the SSE Poller logic and Replay Simulator
+  // Start the SSE Poller logic
+
   await initMatchPoller();
   
   // Connect to live real-time production TXLine SSE stream
   const { sseClient } = await import('./services/sse.js');
   sseClient.connect();
 
-  // Fast-Forward Demo Simulator
-  const { simulator } = await import('./services/replaySimulator.js');
-  simulator.initialize();
+
 
   initializeWhatsApp();
 });

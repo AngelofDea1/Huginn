@@ -12,6 +12,7 @@ const manualCommands = [
   { cmd: "/unfollow [team]", desc: "Stop receiving alerts for a specific team. Your other followed teams are not affected." },
   { cmd: "/live", desc: "Show all currently active World Cup matches, live scores, and current odds in a clean summary." },
   { cmd: "/schedule", desc: "View the full list of upcoming fixtures and kickoff times for the remainder of the tournament." },
+  { cmd: "/predict [team]", desc: "Lock in your prediction for the winner of an upcoming match. Huginn will track all group predictions and announce the winners at full-time." },
   { cmd: "/stats [player]", desc: "Get a full player profile containing career goals, assists, playing style, known injury history, and what to expect from them at this World Cup. Powered by AI." },
 
   { cmd: "/status", desc: "See which teams you are currently following and which commentary style is active." },

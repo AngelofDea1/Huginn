@@ -1,148 +1,80 @@
-#  WC Companion Bot
+# Huginn: AI Pundit Bot & World Cup Lobby
 
-> A WhatsApp bot that turns any group chat into a live World Cup studio.
-> Powered by TxLINE real-time data + Claude AI commentary.
-
----
-
-## What It Does
-
-Add the bot to any WhatsApp group. Type `/follow Nigeria`. From that point:
-
--  **30 mins before kickoff** - pre-match bulletin with odds and storylines
--  **Every goal** - instant alert with scorer, score, odds reaction, AI commentary
--  **Red cards** - alert with match impact analysis
--  **Half time** - automated summary of first half
--  **Full time** - match wrap-up with story of the game
--  **Big odds shifts** - alerts when the market moves significantly
-
-Choose your commentary vibe:  Hype /  Tactical /  Funny /  Balanced
+> A WhatsApp bot and Web PWA that turns any group chat into a live World Cup studio.
+> Powered by TxLINE real-time data + Groq AI commentary.
 
 ---
 
-## Setup
+## 1. Core Idea & Business Highlights
 
-### 1. Clone and install
+**Core Idea:**
+Huginn is a dual-interface fan experience consisting of an autonomous AI WhatsApp bot and a synchronized Web PWA dashboard. Fans can add Huginn to their WhatsApp groups and "follow" teams. When events occur (goals, cards, halves), Huginn receives real-time telemetry from TxLINE, passes the raw data to a Groq-powered LLM, and broadcasts customized, personality-driven AI commentary to the chat.
+
+**Business & Technical Highlights:**
+- **Zero-Friction Onboarding:** Fans engage natively inside WhatsApp, a platform they already use, with zero app downloads required.
+- **Personality Customization:** Users can set the bot's "vibe" (Hype, Tactical, Funny, Balanced) dynamically altering the LLM prompt.
+- **PWA Dashboard & Web Push:** A real-time web dashboard mirrors the WhatsApp experience, providing live scoreboards and Web Push notifications for desktop/browser users.
+- **Stateless & Scalable:** State is managed via Upstash Redis, allowing the Node.js server to run on stateless, serverless infrastructure.
+- **Real-Time Responsiveness:** Utilizes TxLINE's high-speed SSE streaming and snapshot endpoints to ensure sub-second reaction times to match events.
+
+---
+
+## 2. TxLINE Endpoints Used
+
+Huginn leverages the following TxLINE API endpoints to drive its logic:
+
+- `POST https://txline.txodds.com/auth/guest/start`: Generates the guest JWT token required for authentication.
+- `GET https://txline.txodds.com/api/scores/stream` (SSE): Listens for real-time match events to instantly trigger AI commentary without polling.
+- `GET https://txline.txodds.com/api/fixtures/snapshot`: Fetches the live and upcoming schedule to populate the web dashboard and `/schedule` commands.
+- `GET https://txline.txodds.com/api/scores/snapshot/{matchId}`: Retrieves deep match event history and current phase data for generating half-time and full-time summaries.
+
+---
+
+## 3. Feedback: TxLINE API Experience
+
+*(Fill in your personal feedback here before submitting!)*
+- **What worked well:** The SSE stream was incredibly fast, making real-time push notifications highly responsive. The normalized JSON schema made parsing events straightforward.
+- **Friction points:** *(Add any friction points you encountered)*
+
+---
+
+## 4. Setup & Local Development
+
+### Prerequisites
+- Node.js (v18+)
+- Upstash Redis database
+- Groq API Key
+- TxLINE API credentials
+
+### Installation
 ```bash
-git clone <your-repo>
-cd wc-companion-bot
+git clone <repo>
+cd huginn
 npm install
 cp .env.example .env
+# Fill in your .env variables (TXLINE_API_KEY, GROQ_API_KEY, UPSTASH_REDIS_REST_URL, etc.)
 ```
 
-### 2. Get your API keys
-
-**TxLINE:**
-- Sign up at https://txline.txodds.com
-- Get your API key from the dashboard
-- Add to `.env` as `TXLINE_API_KEY`
-
-**Anthropic (Claude):**
-- Sign up at https://console.anthropic.com
-- Create an API key
-- Add to `.env` as `ANTHROPIC_API_KEY`
-
-**WhatsApp / Meta:**
-1. Go to https://developers.facebook.com
-2. Create an App -> Business type
-3. Add WhatsApp product
-4. Get your `Phone Number ID` and `Access Token` from the API Setup page
-5. Add to `.env`
-
-### 3. Expose your webhook (local dev)
-
-Meta needs to reach your server. Use ngrok:
+### Running the App
 ```bash
-npx ngrok http 3000
-```
-Copy the HTTPS URL (e.g. `https://abc123.ngrok.io`)
-
-In Meta Developer Console:
-- WhatsApp -> Configuration -> Webhook
-- URL: `https://abc123.ngrok.io/webhook`
-- Verify Token: whatever you set in `.env` as `WHATSAPP_VERIFY_TOKEN`
-- Subscribe to: `messages`
-
-### 4. Run
-```bash
+# Start the backend and Next.js frontend
 npm run dev
 ```
 
-### 5. Test it
-
-Send your bot's WhatsApp number a message: `hi`
-It should reply with the help menu.
-
-Then try: `/follow Brazil`
+### Linking WhatsApp
+Visit `http://localhost:3000/qr` to scan the QR code and link the WhatsApp bot to your number.
 
 ---
 
-## Project Structure
+## 5. Application Access
 
-```
-src/
- index.js              # Entry point, Express server, cron jobs
- handlers/
-    webhook.js        # WhatsApp webhook + command routing
- services/
-    txline.js         # TxLINE API calls
-    ai.js             # Claude AI message generation + personalities
-    whatsapp.js       # WhatsApp message sender
-    matchPoller.js    # Core polling logic (runs every 30s)
-    scheduler.js      # Pre-match bulletin scheduler
- utils/
-     store.js           # In-memory state (groups, match state)
-     logger.js          # Coloured console logger
-```
+*(Insert your deployed application link here)*
+- **Live PWA:** [Link]
+- **WhatsApp Bot:** [Link/Number]
 
 ---
 
-## Commands
+## 6. Demo Video
 
-| Command | Description |
-|---------|-------------|
-| `/follow <team>` | Follow a match (e.g. `/follow Nigeria`) |
-| `/unfollow <team>` | Stop following a match |
-| `/vibe hype` |  African pundit energy |
-| `/vibe tactical` |  Calm analyst mode |
-| `/vibe funny` |  Banter and roasts |
-| `/vibe balanced` |  Friendly match coverage |
-| `/status` | See what you're following |
-| `/help` | Show all commands |
-
----
-
-## Deployment (Railway)
-
-```bash
-# Install Railway CLI
-npm install -g @railway/cli
-
-# Login and deploy
-railway login
-railway init
-railway up
-```
-
-Set your environment variables in the Railway dashboard.
-Update your Meta webhook URL to your Railway URL.
-
----
-
-## TxLINE Endpoints Used
-
-- `GET /worldcup/live` - All live matches
-- `GET /worldcup/schedule` - Upcoming matches
-- `GET /worldcup/match/:id` - Match detail + events
-- `GET /worldcup/match/:id/odds` - Live odds
-- Full docs: https://txline.txodds.com/documentation/worldcup
-
----
-
-## Hackathon Notes
-
-- Built for TxODDS World Cup Hackathon on Superteam Earn
-- Track: Consumer & Fan Experiences
-- Data: TxLINE real-time World Cup feeds
-- AI: Claude claude-sonnet-4-6 for commentary generation
-- No blockchain required for this track
+*(Insert your Loom/YouTube link here)*
+- **Watch the Demo:** [Link]

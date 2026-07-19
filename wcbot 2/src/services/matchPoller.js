@@ -3,7 +3,7 @@ import {
   generateHalfTimeReport, generateFullTimeReport,
   generateKickoffAlert, generateStoppageTimeAlert, 
   generateYellowCardAlert, generatePenaltyAlert,
-  generateVarAlert
+  generateVarAlert, generateOddsShiftAlert
 } from './ai.js';
 import { processMatchPredictions } from '../handlers/predict.js';
 import { notifyMatchGroups } from './whatsapp.js';
@@ -39,7 +39,15 @@ export async function initMatchPoller() {
     try {
       await processSSEEvent(evt);
     } catch (err) {
-      log.error('poller', `Error processing event: ${err.message}`);
+      log.error('poller', `Error processing score event: ${err.message}`);
+    }
+  });
+
+  sseClient.on('odds_update', async (evt) => {
+    try {
+      await processOddsEvent(evt);
+    } catch (err) {
+      log.error('poller', `Error processing odds event: ${err.message}`);
     }
   });
 
@@ -174,3 +182,73 @@ async function processSSEEvent(evt) {
     }
   }
 }
+
+const oddsCache = new Map();
+
+async function processOddsEvent(evt) {
+  const matchId = String(evt.FixtureId || evt.fixtureId || evt.id);
+  if (!matchId || matchId === 'undefined') return;
+
+  const groups = getGroupsFollowingMatch(matchId);
+  if (!groups.length) return; // No one cares about this match right now
+
+  let fixture = fixtureCache.get(matchId);
+  if (!fixture) {
+    const all = await getAllFixtures();
+    fixture = all.find(f => String(f.id) === matchId);
+    if (fixture) fixtureCache.set(matchId, fixture);
+  }
+
+  const homeTeam = fixture?.home_team?.name || 'Home';
+  const awayTeam = fixture?.away_team?.name || 'Away';
+  
+  // Extract odds (TXLine typically provides 1x2 or Moneyline)
+  let homeOdds, drawOdds, awayOdds;
+  
+  if (evt.Markets && Array.isArray(evt.Markets)) {
+    const mainMarket = evt.Markets.find(m => m.Name === '1x2' || m.Id === 1);
+    if (mainMarket && mainMarket.Selections) {
+       homeOdds = mainMarket.Selections.find(s => s.Name === '1' || s.Name === 'Home')?.Price;
+       drawOdds = mainMarket.Selections.find(s => s.Name === 'X' || s.Name === 'Draw')?.Price;
+       awayOdds = mainMarket.Selections.find(s => s.Name === '2' || s.Name === 'Away')?.Price;
+    }
+  } else if (evt.Odds) {
+    homeOdds = evt.Odds.Home || evt.Odds['1'];
+    drawOdds = evt.Odds.Draw || evt.Odds['X'];
+    awayOdds = evt.Odds.Away || evt.Odds['2'];
+  }
+
+  if (!homeOdds) return; // Unparseable odds format
+
+  const newOdds = { home: parseFloat(homeOdds), draw: parseFloat(drawOdds), away: parseFloat(awayOdds) };
+  const oldOdds = oddsCache.get(matchId);
+  
+  oddsCache.set(matchId, newOdds);
+
+  if (!oldOdds) return; // Need a baseline to compare
+
+  // Detect significant shift
+  const shift = Math.abs(newOdds.home - oldOdds.home);
+  if (shift > 0.4) {
+    const direction = newOdds.home > oldOdds.home ? 'drifting' : 'shortening';
+    const magnitude = ((shift / oldOdds.home) * 100).toFixed(1);
+    
+    // We only trigger for large shifts to avoid spam
+    const alertMsg = await generateOddsShiftAlert({
+      homeTeam,
+      awayTeam,
+      field: 'home_win',
+      from: oldOdds.home,
+      to: newOdds.home,
+      magnitude,
+      direction,
+      minute: fixture?.minute || '?',
+      vibe: 'tactical'
+    });
+
+    if (alertMsg) {
+      await notifyMatchGroups(groups, alertMsg);
+    }
+  }
+}
+

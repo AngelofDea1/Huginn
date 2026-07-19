@@ -6,20 +6,30 @@ import { getValidToken } from './auth.js';
 class TXLineSSE extends EventEmitter {
   constructor() {
     super();
-    this.stream = null;
-    this.isConnected = false;
+    this.scoresStream = null;
+    this.oddsStream = null;
+    this.isScoresConnected = false;
+    this.isOddsConnected = false;
   }
 
   async connect() {
-    if (this.isConnected) return;
+    this.connectStream('scores', 'https://txline.txodds.com/api/scores/stream');
+    this.connectStream('odds', 'https://txline.txodds.com/api/odds/stream');
+  }
+
+  async connectStream(type, url) {
+    const isConnectedProp = type === 'scores' ? 'isScoresConnected' : 'isOddsConnected';
+    const streamProp = type === 'scores' ? 'scoresStream' : 'oddsStream';
+
+    if (this[isConnectedProp]) return;
     
-    log.info('sse', 'Connecting to TXLine SSE stream...');
+    log.info('sse', `Connecting to TXLine ${type} SSE stream...`);
     try {
       const token = await getValidToken();
       
       const response = await axios({
         method: 'get',
-        url: 'https://txline.txodds.com/api/scores/stream',
+        url: url,
         responseType: 'stream',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -28,43 +38,44 @@ class TXLineSSE extends EventEmitter {
         }
       });
 
-      this.stream = response.data;
-      this.isConnected = true;
-      log.info('sse', 'Successfully connected to TXLine SSE stream.');
+      this[streamProp] = response.data;
+      this[isConnectedProp] = true;
+      log.info('sse', `Successfully connected to TXLine ${type} SSE stream.`);
 
       let buffer = '';
-      this.stream.on('data', chunk => {
+      this[streamProp].on('data', chunk => {
         buffer += chunk.toString();
         const parts = buffer.split('\n\n');
         buffer = parts.pop(); // Keep the incomplete part
 
         for (const part of parts) {
-          this.parseEvent(part);
+          this.parseEvent(part, type);
         }
       });
 
-      this.stream.on('end', () => {
-        log.info('sse', 'SSE stream ended unexpectedly. Reconnecting...');
-        this.isConnected = false;
-        setTimeout(() => this.connect(), 5000);
+      this[streamProp].on('end', () => {
+        log.info('sse', `SSE ${type} stream ended unexpectedly. Reconnecting...`);
+        this[isConnectedProp] = false;
+        setTimeout(() => this.connectStream(type, url), 5000);
       });
 
-      this.stream.on('error', err => {
-        log.error('sse', `SSE stream error: ${err.message}`);
-        this.isConnected = false;
-        setTimeout(() => this.connect(), 5000);
+      this[streamProp].on('error', err => {
+        log.error('sse', `SSE ${type} stream error: ${err.message}`);
+        this[isConnectedProp] = false;
+        setTimeout(() => this.connectStream(type, url), 5000);
       });
 
     } catch (error) {
-      log.error('sse', `Failed to connect to SSE: ${error.message}`);
-      setTimeout(() => this.connect(), 5000); // Retry logic
+      if (error.response && error.response.status === 401) {
+        log.warn('sse', `SSE ${type} returned 401 Unauthorized. Refreshing token...`);
+        import('./auth.js').then(m => m.refreshToken()).catch(e => log.error('sse', 'Refresh failed'));
+      }
+      log.error('sse', `Failed to connect to ${type} SSE: ${error.message}`);
+      setTimeout(() => this.connectStream(type, url), 5000); // Retry logic
     }
   }
 
-  parseEvent(rawStr) {
-    // SSE format:
-    // event: update
-    // data: {"FixtureId":123,...}
+  parseEvent(rawStr, type) {
     const lines = rawStr.split('\n');
     let eventName = 'message';
     let dataStr = '';
@@ -80,16 +91,17 @@ class TXLineSSE extends EventEmitter {
     if (dataStr) {
       try {
         const payload = JSON.parse(dataStr);
-        // TXLine sends an array of events
+        const emitName = type === 'scores' ? 'score_update' : 'odds_update';
+        
         if (Array.isArray(payload)) {
            for (const item of payload) {
-             this.emit('score_update', item);
+             this.emit(emitName, item);
            }
         } else {
-           this.emit('score_update', payload);
+           this.emit(emitName, payload);
         }
       } catch (err) {
-        log.error('sse', `Failed to parse SSE JSON: ${err.message}`);
+        log.error('sse', `Failed to parse ${type} SSE JSON: ${err.message}`);
       }
     }
   }
