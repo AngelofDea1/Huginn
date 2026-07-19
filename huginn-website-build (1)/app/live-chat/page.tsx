@@ -11,10 +11,11 @@ type Fixture = {
   away: string;
   kickoffIso: string; // raw ISO string for date grouping
   time: string;       // formatted local time for display
-  status: "LIVE" | "SOON" | "FT";
+  status: "LIVE" | "SOON" | "FT" | "HT";
   minute: number | null;
   homeScore: number | null;
   awayScore: number | null;
+  extraTime: number | null;
 };
 
 type Message = {
@@ -114,9 +115,10 @@ export default function LiveChatPage() {
         home: m.home_team?.name || "Home",
         away: m.away_team?.name || "Away",
         kickoffIso: m.kickoff_time || new Date().toISOString(),
-        time: m.minute ? `${m.minute}'` : "LIVE",
-        status: "LIVE" as const,
+        time: m.status === 'HT' ? "Half Time" : (m.minute ? `${m.minute}'` : "LIVE"),
+        status: m.status as any,
         minute: m.minute ?? null,
+        extraTime: m.extraTime ?? null,
         homeScore: m.home_score ?? 0,
         awayScore: m.away_score ?? 0,
       }));
@@ -135,6 +137,7 @@ export default function LiveChatPage() {
           time: t,
           status: "SOON" as const,
           minute: null,
+          extraTime: null,
           homeScore: null,
           awayScore: null,
         };
@@ -221,7 +224,7 @@ export default function LiveChatPage() {
 
   // ── Group fixtures by date ───────────────────────────────────────────────────
   const grouped = fixtures.reduce<Record<string, Fixture[]>>((acc, f) => {
-    const label = f.status === "LIVE" ? "🔴 Live Now" : formatDate(f.kickoffIso);
+    const label = f.status === "LIVE" || f.status === "HT" ? "🔴 Live Now" : formatDate(f.kickoffIso);
     if (!acc[label]) acc[label] = [];
     acc[label].push(f);
     return acc;
@@ -296,9 +299,9 @@ export default function LiveChatPage() {
                         >
                           {/* Status row */}
                           <div className="flex items-center justify-between mb-2">
-                            {f.status === "LIVE" ? (
-                              <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded-sm">
-                                {f.minute ? `● ${f.minute}'` : "● LIVE"}
+                            {f.status === "LIVE" || f.status === "HT" ? (
+                              <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-sm ${f.status === "HT" ? "text-amber-400 bg-amber-400/10" : "text-emerald-400 bg-emerald-400/10"}`}>
+                                {f.status === "HT" ? "● Waiting for second half..." : (f.minute ? `● ${f.minute}${f.extraTime ? `+${f.extraTime}` : ''}'` : "● LIVE")}
                               </span>
                             ) : (
                               <span className="text-[10px] font-mono text-muted-foreground bg-secondary px-1.5 py-0.5 rounded-sm">

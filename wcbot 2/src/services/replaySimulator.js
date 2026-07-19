@@ -6,6 +6,14 @@ import { sseClient } from './sse.js';
 const BASE_URL = process.env.TXLINE_BASE_URL || 'https://txline.txodds.com/api';
 const FRANCE_FIXTURE_ID = 18257865;
 
+export const matchState = {
+  status: 'NS', // NS, LIVE, HT, FT
+  home_score: 0,
+  away_score: 0,
+  minute: 0,
+  extraTime: null
+};
+
 class ReplaySimulator {
   constructor() {
     this.events = [];
@@ -31,9 +39,37 @@ class ReplaySimulator {
         return;
       }
 
-      // Fast-forward demo mode: Events happen every 5 seconds!
-      this.events = rawData;
-      log.info('simulator', `Loaded ${this.events.length} events for Fast-Forward Demo Video.`);
+      // Calculate Target Kickoff (12:00 PM local time today)
+      const now = new Date();
+      const targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0, 0);
+      this.targetKickoffMs = targetDate.getTime();
+
+      const firstHalfKickoffEvent = rawData.find(e => e.Action === 'kickoff_team') || rawData[0];
+      const originalKickoffMs = firstHalfKickoffEvent.Ts;
+      const timeShift = this.targetKickoffMs - originalKickoffMs;
+
+      // Reduce halftime gap
+      const htFinalised = rawData.find(e => e.Action === 'halftime_finalised');
+      const secondHalfKickoff = rawData.find(e => e.Action === 'kickoff');
+      
+      let gapReduction = 0;
+      if (htFinalised && secondHalfKickoff) {
+        const rawGap = secondHalfKickoff.Ts - htFinalised.Ts;
+        const standardGap = 15 * 60 * 1000; // 15 mins
+        if (rawGap > standardGap) {
+          gapReduction = rawGap - standardGap;
+        }
+      }
+
+      this.events = rawData.map(d => {
+        const isSecondHalf = htFinalised && d.Ts > htFinalised.Ts;
+        return {
+          ...d,
+          simulatedTs: d.Ts + timeShift - (isSecondHalf ? gapReduction : 0)
+        };
+      }).sort((a, b) => a.simulatedTs - b.simulatedTs);
+
+      log.info('simulator', `Loaded ${this.events.length} events for 1:1 replay. Target Kickoff: ${new Date(this.targetKickoffMs).toLocaleTimeString()}`);
       this.start();
     } catch (err) {
       log.error('simulator', `Failed to initialize replay: ${err.message}`);
@@ -42,6 +78,19 @@ class ReplaySimulator {
 
   start() {
     if (this.events.length === 0) return;
+    
+    // Process any events that should have already happened instantly
+    const now = Date.now();
+    while (this.currentIndex < this.events.length) {
+      const ev = this.events[this.currentIndex];
+      if (ev.simulatedTs <= now) {
+        // Emit silently if it's far in the past to catch up state
+        sseClient.emit('score_update', ev);
+        this.currentIndex++;
+      } else {
+        break;
+      }
+    }
     this.processNextEvent();
   }
 
@@ -52,15 +101,32 @@ class ReplaySimulator {
     }
 
     const nextEvent = this.events[this.currentIndex];
+    const delay = nextEvent.simulatedTs - Date.now();
 
-    // FAST-FORWARD MODE: 8 seconds between every event
-    const delay = 8000;
-    
-    log.info('simulator', `Next event '${nextEvent.Action}' scheduled in ${delay/1000}s.`);
+    log.info('simulator', `Next event '${nextEvent.Action}' scheduled in ${Math.round(delay/1000)}s.`);
 
     this.timer = setTimeout(() => {
       try {
         log.info('simulator', `Dispatching event: ${nextEvent.Action} (Seq: ${nextEvent.Seq})`);
+        
+        // Mutate global state
+        if (nextEvent.Action === 'kickoff_team' || nextEvent.Action === 'kickoff') matchState.status = 'LIVE';
+        if (nextEvent.Action === 'halftime_finalised') matchState.status = 'HT';
+        if (nextEvent.Action === 'game_finalised') matchState.status = 'FT';
+        if (nextEvent.Score?.Participant1?.Total?.Goals !== undefined) {
+          matchState.home_score = nextEvent.Score.Participant1.Total.Goals;
+          matchState.away_score = nextEvent.Score.Participant2.Total.Goals;
+        }
+        if (nextEvent.Action === 'additional_time') {
+           matchState.extraTime = nextEvent.Data?.Minutes || 0;
+        }
+        // Update minute based on elapsed clock
+        if (nextEvent.Clock?.Seconds) {
+           matchState.minute = Math.floor(nextEvent.Clock.Seconds / 60);
+        } else if (nextEvent.Elapsed) {
+           matchState.minute = nextEvent.Elapsed;
+        }
+
         sseClient.emit('score_update', nextEvent);
       } catch (err) {
         log.error('simulator', `Error dispatching event: ${err.message}`);
@@ -68,7 +134,7 @@ class ReplaySimulator {
 
       this.currentIndex++;
       this.processNextEvent();
-    }, delay);
+    }, delay > 0 ? delay : 0);
   }
 
   stop() {

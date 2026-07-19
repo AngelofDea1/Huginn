@@ -86,7 +86,7 @@ ${scorerLine}
 score now: ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
 current odds: ${odds || 'not available'}
 
-React to this goal for a WhatsApp group. Start with the score and minute if known (${startFormat}). Do not invent or make up a minute if none is specified. Be immediate, real, pundit-style. No all-caps sentences. Use short line breaks between thoughts. 3-4 sentences max.
+React to this goal for a WhatsApp group. Start with the score and minute if known (${startFormat}). Do not invent or make up a minute if none is specified. Be immediate, real, pundit-style. Keep it VERY SHORT and punchy (maximum 1 or 2 sentences). No all-caps sentences.
 `.trim();
 
   return callGroq(prompt, vibe);
@@ -103,7 +103,7 @@ red card: ${player || 'a player'} from ${team} in ${timeLabel}
 score: ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
 odds after: ${odds || 'not available'}
 
-react to this red card for a WhatsApp group chat. Start with the card and minute if known (${startFormat}). Do not invent or make up a minute if none is specified. Explain what it changes. No all-caps. Use line breaks between thoughts.
+react to this red card for a WhatsApp group chat. Start with the card and minute if known (${startFormat}). Do not invent or make up a minute if none is specified. Explain what it changes. Keep it VERY SHORT and punchy (maximum 1 or 2 sentences). No all-caps.
 `.trim();
 
   return callGroq(prompt, vibe);
@@ -118,7 +118,7 @@ match: ${homeTeam} vs ${awayTeam}
 event: VAR Check in progress in ${timeLabel}
 score: ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
 
-react to this VAR review for a WhatsApp group chat. Build suspense! What are they checking? (Guess if you want, but keep it thrilling). No all-caps. Use line breaks. 2-3 sentences max.
+react to this VAR review for a WhatsApp group chat. Build suspense! What are they checking? Keep it VERY SHORT and punchy (maximum 1 or 2 sentences). No all-caps.
 `.trim();
 
   return callGroq(prompt, vibe);
@@ -135,7 +135,7 @@ event: Penalty kick by ${team} in ${timeLabel}
 outcome: ${action}
 score after penalty: ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
 
-react to this penalty outcome for a WhatsApp group. If it was scored, hype it up! If missed, express the shock! No all-caps. Use line breaks.
+react to this penalty outcome for a WhatsApp group. If scored, hype it up! If missed, express the shock! Keep it VERY SHORT and punchy (maximum 1 or 2 sentences). No all-caps.
 `.trim();
 
   return callGroq(prompt, vibe);
@@ -150,7 +150,7 @@ match: ${homeTeam} vs ${awayTeam}
 yellow card: ${player || 'a player'} from ${team} in ${timeLabel}
 score: ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
 
-react to this yellow card for a WhatsApp group chat. Start with the card and minute if known. Do not invent or make up a minute if none is specified. Explain if it's a dangerous booking. No all-caps. Use line breaks.
+react to this yellow card for a WhatsApp group chat. Start with the card and minute if known. Do not invent or make up a minute if none is specified. Explain if it's a dangerous booking. Keep it VERY SHORT and punchy (maximum 1 or 2 sentences). No all-caps.
 `.trim();
 
   return callGroq(prompt, vibe);
@@ -177,7 +177,7 @@ match: ${homeTeam} vs ${awayTeam}
 stoppage time: ${minutes} minutes added
 score: ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
 
-react to this stoppage time announcement for a WhatsApp group. Explain what it means for the ending of the half/match based on the current score. No all-caps. Use line breaks.
+react to this stoppage time announcement for a WhatsApp group. Explain what it means for the ending of the half/match based on the current score. Keep it VERY SHORT and punchy (maximum 1 or 2 sentences). No all-caps.
 `.trim();
 
   return callGroq(prompt, vibe);
@@ -195,7 +195,7 @@ ${eventSummary}
 current odds: ${odds || 'not available'}
 
 write a half-time WhatsApp summary. what happened, what to watch second half.
-no all-caps. use short paragraphs separated by line breaks. keep it human.
+Keep it VERY SHORT and punchy (maximum 1 or 2 sentences). no all-caps. keep it human.
 `.trim();
 
   return callGroq(prompt, vibe);
@@ -208,7 +208,7 @@ match: ${homeTeam} vs ${awayTeam}
 full time: ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
 
 write a full-time WhatsApp wrap-up. who was the hero? what was the story?
-no all-caps. use short paragraphs separated by line breaks. keep it real.
+Keep it VERY SHORT and punchy (maximum 1 or 2 sentences). no all-caps. keep it real.
 `.trim();
 
   return callGroq(prompt, vibe);

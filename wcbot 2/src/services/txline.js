@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { log } from '../utils/logger.js';
 import { getValidToken } from './auth.js';
+import { matchState } from './replaySimulator.js';
 
 const BASE_URL = process.env.TXLINE_BASE_URL || 'https://txline.txodds.com/api';
 
@@ -35,16 +36,17 @@ export async function getAllFixtures() {
     });
   }
 
-  // Fast-Forward Demo: Force France vs England to be LIVE
+  // 1:1 Simulator: Inject France vs England based on matchState
   fixtures.push({
     id: 18257865,
     home_team: { name: 'France' },
     away_team: { name: 'England' },
-    home_score: 0,
-    away_score: 0,
-    minute: null,
-    kickoff_time: new Date().toISOString(),
-    status: 'LIVE'
+    home_score: matchState.home_score,
+    away_score: matchState.away_score,
+    minute: matchState.minute,
+    extraTime: matchState.extraTime,
+    kickoff_time: new Date(new Date().setHours(12, 0, 0, 0)).toISOString(),
+    status: matchState.status
   });
 
   return fixtures;
